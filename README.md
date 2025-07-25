@@ -4,23 +4,43 @@ An MCP (Model Context Protocol) server that provides LLMs with access to the lat
 
 ## Overview
 
-GovernmentReporter creates a ChromaDB vector database storing US federal Supreme Court opinions, Executive Orders, and federal legislation. The database is wrapped in an MCP server, enabling LLMs to access current government publications through semantic search and retrieval.
+GovernmentReporter creates a ChromaDB vector database storing semantic embeddings and lightweight metadata for US federal Supreme Court opinions, Executive Orders, and federal legislation. Rather than storing full document text, the system uses on-demand API retrieval to access current documents from authoritative government sources. The database is wrapped in an MCP server, enabling LLMs to access fresh government publications through semantic search and real-time retrieval.
 
 ## Features
 
-- **Comprehensive Government Data**: Stores US Supreme Court opinions, Executive Orders, and federal legislation
-- **Real-time Access**: Pulls latest documents from government APIs
-- **Semantic Search**: Vector database enables intelligent document retrieval
+- **Comprehensive Government Data**: Indexes US Supreme Court opinions, Executive Orders, and federal legislation
+- **Fresh Data Guarantee**: Retrieves latest document text on-demand from government APIs
+- **Semantic Search**: Vector database enables intelligent document discovery using lightweight metadata
+- **Cost-Effective Storage**: Stores only embeddings and metadata, not full text
 - **MCP Integration**: Compatible with LLMs that support the Model Context Protocol
 - **Local Processing**: Uses locally-run models for metadata generation
 
 ## Architecture
 
 - **Language**: Python
-- **Vector Database**: ChromaDB
-- **Local LLM**: deepseek-r1:8b (via Ollama)
+- **Vector Database**: ChromaDB (embeddings + metadata only)
+- **Local LLM**: deepseek-r1:8b (via Ollama) for metadata generation
+- **Government APIs**: 
+  - CourtListener API (Supreme Court opinions)
+  - Federal Register API (Executive Orders)
+  - Congress.gov API (Federal legislation)
 - **Development**: VS Code with Claude Code support
 - **Protocol**: Model Context Protocol (MCP)
+
+## Data Flow
+
+1. **Document Indexing**:
+   - Fetch documents from government APIs
+   - Generate embeddings from full document text
+   - Create lightweight metadata with API identifiers and context identified by DeepSeek.
+   - Store embeddings + metadata in ChromaDB
+
+2. **Query Processing**:
+   - Convert user query to embedding
+   - Search ChromaDB for semantically similar documents
+   - Retrieve metadata for top matches
+   - Make API calls to fetch current full text
+   - Return fresh document content to LLM
 
 ## Prerequisites
 
@@ -28,6 +48,7 @@ GovernmentReporter creates a ChromaDB vector database storing US federal Supreme
 - [Ollama](https://ollama.ai/) installed locally
 - macOS (tested on Apple M2 Pro)
 - 16GB+ RAM recommended
+- Internet connection for API access
 
 ## Installation
 
@@ -72,36 +93,59 @@ python -m governmentreporter.server
 
 The system follows a three-step process:
 
-1. **Data Ingestion**: Fetches documents from government APIs
-   - Supreme Court opinions
-   - Executive Orders
-   - Federal legislation
+1. **Initial Indexing**: 
+   - Fetches documents from government APIs
+   - Generates semantic embeddings from full text
+   - Creates lightweight metadata using deepseek-r1:8b
+   - Stores embeddings + metadata in ChromaDB
 
-2. **Vector Database Population**
-   - Generates metadata using deepseek-r1:8b
-   - Creates embeddings from document text
-   - Stores vectors in ChromaDB
+2. **Semantic Search**:
+   - User query converted to embedding
+   - ChromaDB returns similar document metadata
+   - System identifies relevant government documents
 
-3. **MCP Server Deployment**
-   - Serves the database through MCP protocol
-   - Enables LLM access via semantic search
+3. **Real-time Retrieval**:
+   - Makes API calls using stored identifiers
+   - Fetches current document text from authoritative sources
+   - Returns fresh content to LLM via MCP
 
-### Example Query
-
-Once connected to an MCP-compatible LLM:
+### Example Query Flow
 
 ```
-"Find recent Supreme Court decisions about environmental regulation"
+User: "Find recent Supreme Court decisions about environmental regulation"
+
+1. Query embedded and searched in ChromaDB
+2. Matching case metadata returned (case names, citations, dates, API endpoints)
+3. Full text retrieved from CourtListener API for top matches
+4. Current Supreme Court opinions provided to LLM
 ```
+
+## Government Data Sources
+
+### Supreme Court Opinions
+- **Source**: CourtListener API (Free Law Project)
+- **Coverage**: Comprehensive collection from multiple authoritative sources
+- **API**: `https://www.courtlistener.com/api/rest/v4/`
+
+### Executive Orders
+- **Source**: Federal Register API
+- **Coverage**: All presidential Executive Orders
+- **API**: `https://www.federalregister.gov/api/v1/`
+
+### Federal Legislation
+- **Source**: Congress.gov API (Library of Congress)
+- **Coverage**: Bills, resolutions, and legislative data
+- **API**: `https://api.congress.gov/v3/`
 
 ## Configuration
 
 Edit `config.json` to customize:
 
-- API endpoints and keys
-- ChromaDB settings
-- Ollama model parameters
-- MCP server configuration
+- Government API endpoints and rate limiting
+- ChromaDB settings and collection parameters
+- Ollama model configuration for metadata generation
+- MCP server settings
+- Document type priorities and filtering
 
 ## Running Tests
 
@@ -122,8 +166,16 @@ python -m pytest tests/
 **Minimum Recommended:**
 - Apple M2 Pro or equivalent
 - 16GB RAM
-- 50GB free storage
+- 10GB free storage (significantly reduced due to metadata-only approach)
+- Stable internet connection for API access
 - macOS 15.5+
+
+## API Considerations
+
+- **Rate Limits**: Government APIs have usage restrictions
+- **Caching**: Frequently accessed documents are temporarily cached
+- **Fallbacks**: Multiple data sources where available
+- **Reliability**: Robust error handling and retry logic
 
 ## License
 
@@ -131,15 +183,20 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Disclaimer
 
-This project accesses public government documents. Ensure compliance with relevant APIs' terms of service and usage guidelines.
+This project accesses public government documents through official APIs. Users must comply with:
+- Government API terms of service
+- Rate limiting requirements
+- Appropriate use policies
+
+The system retrieves current data from authoritative sources but users should verify critical information from primary government sources.
 
 ## Support
 
 For issues and questions:
 - Create an issue in the GitHub repository
 - Check the documentation in the `docs/` folder
-- Review API documentation for data sources
+- Review government API documentation for data sources
 
 ---
 
-**Note**: This project is designed for research and educational purposes. Always verify information from primary government sources.
+**Note**: This project is designed for research and educational purposes. The metadata-only storage approach ensures access to the most current government publications while maintaining cost-effective operation.
