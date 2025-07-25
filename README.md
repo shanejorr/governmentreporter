@@ -19,7 +19,7 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
 
 - **Language**: Python
 - **Vector Database**: ChromaDB (embeddings + metadata only)
-- **Local LLM**: deepseek-r1:8b (via Ollama) for metadata generation
+- **Cloud LLM**: Gemini 2.5 Flash-Lite API for metadata generation
 - **Government APIs**: 
   - CourtListener API (Supreme Court opinions)
   - Federal Register API (Executive Orders)
@@ -32,7 +32,7 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
 1. **Document Indexing**:
    - Fetch documents from government APIs
    - Generate embeddings from full document text
-   - Create lightweight metadata with API identifiers and context identified by DeepSeek.
+   - Create lightweight metadata with API identifiers and context identified by Gemini 2.5 Flash-Lite.
    - Store embeddings + metadata in ChromaDB
 
 2. **Query Processing**:
@@ -45,9 +45,9 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
 ## Prerequisites
 
 - Python 3.8+
-- [Ollama](https://ollama.ai/) installed locally
+- Google API key for Gemini 2.5 Flash-Lite
 - macOS (tested on Apple M2 Pro)
-- 16GB+ RAM recommended
+- 8GB+ RAM recommended
 - Internet connection for API access
 
 ## Installation
@@ -63,13 +63,13 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
    pip install -r requirements.txt
    ```
 
-3. **Install and setup Ollama**
+3. **Setup Google API key**
    ```bash
-   # Install Ollama (if not already installed)
-   curl -fsSL https://ollama.ai/install.sh | sh
+   # Set up your Google API key as environment variable
+   export GOOGLE_API_KEY="your-api-key-here"
    
-   # Pull the deepseek-r1 model
-   ollama pull deepseek-r1:8b
+   # Or add to your .env file
+   echo "GOOGLE_API_KEY=your-api-key-here" >> .env
    ```
 
 4. **Configure the MCP server**
@@ -96,7 +96,7 @@ The system follows a three-step process:
 1. **Initial Indexing**: 
    - Fetches documents from government APIs
    - Generates semantic embeddings from full text
-   - Creates lightweight metadata using deepseek-r1:8b
+   - Creates lightweight metadata using Gemini 2.5 Flash-Lite
    - Stores embeddings + metadata in ChromaDB
 
 2. **Semantic Search**:
@@ -143,7 +143,7 @@ Edit `config.json` to customize:
 
 - Government API endpoints and rate limiting
 - ChromaDB settings and collection parameters
-- Ollama model configuration for metadata generation
+- Gemini API configuration for metadata generation
 - MCP server settings
 - Document type priorities and filtering
 
@@ -165,8 +165,8 @@ python -m pytest tests/
 
 **Minimum Recommended:**
 - Apple M2 Pro or equivalent
-- 16GB RAM
-- 10GB free storage (significantly reduced due to metadata-only approach)
+- 8GB RAM (reduced requirement due to cloud-based LLM)
+- 5GB free storage (significantly reduced due to metadata-only approach)
 - Stable internet connection for API access
 - macOS 15.5+
 
