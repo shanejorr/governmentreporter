@@ -34,7 +34,15 @@ class GeminiMetadataGenerator:
         
         try:
             response = self.model.generate_content(prompt)
-            metadata = json.loads(response.text)
+            
+            # Strip markdown code fences if present
+            response_text = response.text.strip()
+            if response_text.startswith('```json') and response_text.endswith('```'):
+                response_text = response_text[7:-3].strip()  # Remove ```json and ```
+            elif response_text.startswith('```') and response_text.endswith('```'):
+                response_text = response_text[3:-3].strip()  # Remove ``` and ```
+            
+            metadata = json.loads(response_text)
             
             # Validate and clean the response
             return self._validate_scotus_metadata(metadata)
