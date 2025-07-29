@@ -10,7 +10,8 @@
       "WebFetch(domain:ai.google.dev)",
       "Bash(python:*)",
       "Bash(mkdir:*)",
-      "WebFetch(domain:www.courtlistener.com)"
+      "WebFetch(domain:www.courtlistener.com)",
+      "Bash(find:*)"
     ],
     "deny": []
   }

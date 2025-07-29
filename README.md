@@ -1,16 +1,30 @@
 # GovernmentReporter
 
-An MCP (Model Context Protocol) server that provides LLMs with access to the latest US federal government publications through retrieval augmented generation (RAG).
+An MCP (Model Context Protocol) server that provides LLMs with access to the latest US federal government publications through retrieval augmented generation (RAG) using **hierarchical document chunking**.
 
 ## Overview
 
-GovernmentReporter creates a ChromaDB vector database storing semantic embeddings and lightweight metadata for US federal Supreme Court opinions, Executive Orders, and federal legislation. Rather than storing full document text, the system uses on-demand API retrieval to access current documents from authoritative government sources. The database is wrapped in an MCP server, enabling LLMs to access fresh government publications through semantic search and real-time retrieval.
+GovernmentReporter creates a ChromaDB vector database storing semantic embeddings and rich metadata for hierarchically chunked US federal Supreme Court opinions, Executive Orders, and federal legislation. The system uses **intelligent chunking** to break down Supreme Court opinions by opinion type (syllabus, majority, concurring, dissenting) and sections, enabling precise legal research and retrieval. Rather than storing full document text, the system uses on-demand API retrieval to access current documents from authoritative government sources.
 
 ## Features
 
+### 🧩 Hierarchical Document Chunking
+- **Opinion Type Separation**: Automatically identifies syllabus, majority, concurring, and dissenting opinions
+- **Section-Level Granularity**: Chunks opinions by legal sections (I, II, III) and subsections (A, B, C)
+- **Justice Attribution**: Concurring and dissenting opinions properly attributed to specific justices
+- **Smart Token Management**: Target 400-800 tokens per chunk while preserving paragraph integrity
+
+### 📊 Rich Legal Metadata  
+- **Legal Topics**: AI-extracted primary areas of law (Constitutional Law, Administrative Law, etc.)
+- **Constitutional Provisions**: Precise citations (Art. I, § 9, cl. 7, First Amendment, etc.)
+- **Statutes Interpreted**: Bluebook format citations (12 U.S.C. § 5497, 42 U.S.C. § 1983)
+- **Key Legal Questions**: Specific questions the court addressed
+- **Court Holdings**: Extracted from syllabus and decisions
+
+### 🚀 Advanced Capabilities
 - **Comprehensive Government Data**: Indexes US Supreme Court opinions, Executive Orders, and federal legislation
 - **Fresh Data Guarantee**: Retrieves latest document text on-demand from government APIs
-- **Semantic Search**: Vector database enables intelligent document discovery using lightweight metadata
+- **Semantic Search**: Vector database enables intelligent document discovery at chunk level
 - **Cost-Effective Storage**: Stores only embeddings and metadata, not full text
 - **MCP Integration**: Compatible with LLMs that support the Model Context Protocol
 - **Bulk Processing**: Automated pipeline for processing large datasets (10,000+ Supreme Court opinions)
@@ -31,18 +45,30 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
 
 ## Data Flow
 
-1. **Document Indexing**:
-   - Fetch documents from government APIs
-   - Generate embeddings from full document text
-   - Create lightweight metadata with API identifiers and context identified by Gemini 2.5 Flash-Lite.
-   - Store embeddings + metadata in ChromaDB
+### 1. **Hierarchical Document Processing**:
+   - Fetch documents from government APIs (CourtListener, Federal Register, Congress.gov)
+   - **Intelligent Chunking**: Break down Supreme Court opinions by:
+     - Opinion type (syllabus, majority, concurring, dissenting)
+     - Legal sections (I, II, III) and subsections (A, B, C)
+     - Justice attribution for concurring/dissenting opinions
+   - **Rich Metadata Extraction**: Use Gemini 2.5 Flash-Lite to extract:
+     - Legal topics and key questions
+     - Constitutional provisions and statutes cited
+     - Court holdings and legal reasoning
+   - Generate embeddings for each chunk (400-800 tokens)
+   - Store chunk embeddings + metadata in ChromaDB
 
-2. **Query Processing**:
+### 2. **Semantic Search & Retrieval**:
    - Convert user query to embedding
-   - Search ChromaDB for semantically similar documents
-   - Retrieve metadata for top matches
-   - Make API calls to fetch current full text
-   - Return fresh document content to LLM
+   - Search ChromaDB for semantically similar **chunks**
+   - Retrieve chunk metadata with opinion type, justice, section info
+   - Make API calls to fetch current full text from authoritative sources
+   - Return contextually relevant legal content to LLM
+
+### 3. **Chunk-Aware Query Results**:
+   - Users can search specifically within syllabus, majority, or dissenting opinions
+   - Results include precise section references and justice attribution
+   - Legal metadata enables topic-specific and citation-based searches
 
 ## Prerequisites
 
@@ -91,19 +117,48 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
 python -m governmentreporter.server
 ```
 
-### Bulk Data Processing
+### Quick Start - Process Single Opinion
+
+```bash
+# Process a single opinion with hierarchical chunking
+python main.py process 9973155
+
+# Alternative using dedicated script
+python scripts/process_scotus_opinion.py 9973155
+```
+
+### Hierarchical Chunking Operations
+
+```bash
+# Test the chunking system with example data
+python scripts/test_opinion_chunking.py
+
+# Process specific case (Consumer Financial Protection Bureau v. Community Financial Services)
+python scripts/process_scotus_opinion.py 9973155
+
+# Expected output:
+# ✅ Generated 52 chunks
+# 📊 Chunk breakdown:
+#    - Syllabus: 2 chunks  
+#    - Majority: 23 chunks
+#    - Concurring: 27 chunks (by Barrett, Jackson)
+# 📋 Case: Consumer Financial Protection Bureau v. Community Financial Services Assn.
+# 📄 Citation: 601 U.S. 416 (2024)
+```
+
+### Bulk Data Processing with Chunking
 
 For initial setup or comprehensive data collection, use the bulk processing tools:
 
 ```bash
-# Download and process all Supreme Court opinions since 1900
+# Download and process all Supreme Court opinions since 1900 (with chunking)
 uv run python scripts/download_scotus_bulk.py
 
 # Check total available opinions
 uv run python scripts/download_scotus_bulk.py --count-only
 
-# Process limited number for testing
-uv run python scripts/download_scotus_bulk.py --max-opinions 100
+# Process limited number for testing chunking system
+uv run python scripts/download_scotus_bulk.py --max-opinions 10
 
 # Check current processing progress
 uv run python scripts/download_scotus_bulk.py --stats
@@ -112,22 +167,36 @@ uv run python scripts/download_scotus_bulk.py --stats
 uv run python scripts/download_scotus_bulk.py --since-date 2020-01-01 --collection-name recent_scotus
 ```
 
-The bulk processor can also be used programmatically:
+### Programmatic Usage
+
+The chunking system can be used programmatically:
 
 ```python
-from governmentreporter.processors import SCOTUSBulkProcessor
+from governmentreporter.processors import SCOTUSOpinionProcessor, SCOTUSBulkProcessor
 
-processor = SCOTUSBulkProcessor(
-    since_date="2010-01-01",
+# Process single opinion with hierarchical chunking
+processor = SCOTUSOpinionProcessor()
+chunks = processor.process_opinion(9973155)
+
+print(f"Generated {len(chunks)} chunks")
+for chunk in chunks[:3]:  # Show first 3 chunks
+    print(f"- {chunk.opinion_type.title()} by {chunk.justice or 'Court'}")
+    print(f"  Section: {chunk.section or 'N/A'}")
+    print(f"  Topics: {chunk.legal_topics[:2]}")  # First 2 topics
+    print(f"  Text: {chunk.text[:100]}...\n")
+
+# Bulk processing with chunking
+bulk_processor = SCOTUSBulkProcessor(
+    since_date="2020-01-01",
     rate_limit_delay=1.0
 )
 
 # Get processing statistics
-stats = processor.get_processing_stats()
+stats = bulk_processor.get_processing_stats()
 print(f"Progress: {stats['progress_percentage']:.1f}%")
 
-# Run bulk processing
-results = processor.process_all_opinions(max_opinions=1000)
+# Run bulk processing (now with chunking)
+results = bulk_processor.process_all_opinions(max_opinions=100)
 print(f"Success rate: {results['success_rate']:.1%}")
 ```
 
@@ -151,16 +220,90 @@ The system follows a three-step process:
    - Fetches current document text from authoritative sources
    - Returns fresh content to LLM via MCP
 
-### Example Query Flow
+### Example Query Flows
 
+#### General Legal Research
 ```
 User: "Find recent Supreme Court decisions about environmental regulation"
 
-1. Query embedded and searched in ChromaDB
-2. Matching case metadata returned (case names, citations, dates, API endpoints)
+1. Query embedded and searched in ChromaDB across all chunks
+2. Matching chunks returned with metadata:
+   - Case names, citations, dates
+   - Opinion type (syllabus, majority, concurring, dissenting)
+   - Justice attribution and section references
+   - Legal topics: ["Environmental Law", "Administrative Law", "Commerce Clause"]
 3. Full text retrieved from CourtListener API for top matches
-4. Current Supreme Court opinions provided to LLM
+4. Contextually relevant Supreme Court content provided to LLM
 ```
+
+#### Opinion-Type Specific Search
+```
+User: "Show me dissenting opinions about free speech from Justice Thomas"
+
+1. Query filtered for dissenting opinions with justice="Thomas"
+2. Chunks matching free speech topics returned with:
+   - Specific dissenting opinion text
+   - Constitutional provisions cited (First Amendment)
+   - Section references within the dissent
+3. Justice Thomas's specific dissenting arguments provided
+```
+
+#### Citation and Legal Analysis
+```
+User: "Find cases interpreting 42 U.S.C. § 1983"
+
+1. Query searches statute_interpreted metadata field
+2. Returns chunks citing this specific statute with:
+   - Court's interpretation in majority opinions
+   - Concurring/dissenting views on the statute
+   - Related constitutional provisions
+3. Comprehensive statutory analysis across multiple cases provided
+```
+
+## Hierarchical Chunking System
+
+### Supreme Court Opinion Structure
+
+GovernmentReporter automatically identifies and chunks Supreme Court opinions using sophisticated pattern recognition:
+
+#### Opinion Types Detected:
+- **Syllabus**: Court's official summary (usually 2-4 chunks)
+- **Majority Opinion**: Main opinion of the court (10-30 chunks depending on length)
+- **Concurring Opinions**: Justices agreeing with result but with different reasoning
+- **Dissenting Opinions**: Justices disagreeing with the majority
+
+#### Section Detection:
+- **Major Sections**: Roman numerals (I, II, III, IV)
+- **Subsections**: Capital letters (A, B, C, D)
+- **Smart Chunking**: Preserves paragraph boundaries and legal arguments
+
+#### Metadata Per Chunk:
+```json
+{
+  "text": "The actual chunk content...",
+  "opinion_type": "majority",
+  "justice": "Thomas",
+  "section": "II.A", 
+  "chunk_index": 3,
+  "case_name": "Consumer Financial Protection Bureau v. Community Financial Services Assn.",
+  "citation": "601 U.S. 416 (2024)",
+  "legal_topics": ["Constitutional Law", "Administrative Law", "Appropriations Clause"],
+  "constitutional_provisions": ["Art. I, § 9, cl. 7"],
+  "statutes_interpreted": ["12 U.S.C. § 5497(a)(1)"],
+  "holding": "Congress' statutory authorization satisfies the Appropriations Clause"
+}
+```
+
+### Processing Pipeline
+
+1. **API Retrieval**: Fetch opinion and cluster data from CourtListener
+2. **Opinion Type Detection**: Use regex patterns to identify different opinion types
+3. **Section Parsing**: Detect Roman numeral sections and lettered subsections
+4. **Intelligent Chunking**: Target 400-800 tokens while preserving legal structure
+5. **Metadata Extraction**: Use Gemini 2.5 Flash-Lite for rich legal metadata
+6. **Citation Formatting**: Build proper bluebook citations from cluster data
+7. **Embedding Generation**: Create semantic embeddings for each chunk
+8. **Database Storage**: Store chunks with complete metadata in ChromaDB
 
 ## Government Data Sources
 

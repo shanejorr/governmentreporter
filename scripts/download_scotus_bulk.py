@@ -25,7 +25,7 @@ from governmentreporter.processors import SCOTUSBulkProcessor
 def main() -> None:
     """Main entry point for the script."""
     parser = argparse.ArgumentParser(
-        description="Download and process all SCOTUS opinions from CourtListener API"
+        description="Download and process all SCOTUS opinions using hierarchical chunking from CourtListener API"
     )
     parser.add_argument(
         "--output-dir",

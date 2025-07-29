@@ -6,10 +6,10 @@ from typing import Optional
 
 def get_court_listener_token() -> str:
     """Get Court Listener API token from environment variables.
-    
+
     Returns:
         str: The API token
-        
+
     Raises:
         ValueError: If token is not found
     """
@@ -34,10 +34,10 @@ def get_congress_gov_token() -> Optional[str]:
 
 def get_google_gemini_api_key() -> str:
     """Get Google Gemini API key from environment variables.
-    
+
     Returns:
         str: The API key
-        
+
     Raises:
         ValueError: If key is not found
     """

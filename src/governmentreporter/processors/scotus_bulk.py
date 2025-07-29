@@ -8,16 +8,17 @@ from typing import Any, Dict, Optional, Set
 
 from ..apis import CourtListenerClient
 from ..database import ChromaDBClient
-from ..metadata import GeminiMetadataGenerator
 from ..utils import GoogleEmbeddingsClient
+from .scotus_opinion_chunker import SCOTUSOpinionProcessor
 
 
 class SCOTUSBulkProcessor:
-    """Processes all SCOTUS opinions through the complete pipeline.
+    """Processes all SCOTUS opinions through the complete hierarchical chunking pipeline.
 
     This class handles the systematic processing of Supreme Court opinions
     from the CourtListener API, including:
     - API pagination and rate limiting
+    - Hierarchical chunking by opinion type and sections
     - Complete pipeline processing (metadata, embeddings, storage)
     - Progress tracking and error handling
     - Resumable operations
@@ -51,8 +52,8 @@ class SCOTUSBulkProcessor:
         # Initialize clients
         self.court_client = CourtListenerClient()
         self.db_client = ChromaDBClient()
-        self.metadata_generator = GeminiMetadataGenerator()
         self.embeddings_client = GoogleEmbeddingsClient()
+        self.opinion_processor = SCOTUSOpinionProcessor()
 
         # Progress tracking
         self.progress_file = self.output_dir / "processing_progress.json"
@@ -104,7 +105,7 @@ class SCOTUSBulkProcessor:
             f.write(json.dumps(error_entry) + "\n")
 
     def _process_single_opinion(self, opinion_summary: Dict[str, Any]) -> bool:
-        """Process a single opinion through the complete pipeline.
+        """Process a single opinion through the hierarchical chunking pipeline.
 
         Args:
             opinion_summary: Opinion metadata from the listing API
@@ -120,56 +121,64 @@ class SCOTUSBulkProcessor:
         print(f"Processing opinion {opinion_id}...")
 
         try:
-            # Step 1: Get full opinion details with retry logic
-            for attempt in range(self.max_retries):
-                try:
-                    raw_opinion_data = self.court_client.get_opinion(int(opinion_id))
-                    break
-                except Exception as e:
-                    if attempt == self.max_retries - 1:
-                        raise e
-                    print(f"  Retry {attempt + 1} for opinion {opinion_id}: {e}")
-                    time.sleep(self.rate_limit_delay * 2)
+            # Step 1: Process opinion with hierarchical chunking
+            print("  Running hierarchical chunking pipeline...")
+            processed_chunks = self.opinion_processor.process_opinion(int(opinion_id))
 
-            basic_metadata = self.court_client.extract_basic_metadata(raw_opinion_data)
-
-            # Skip if no text content
-            plain_text = basic_metadata.get("plain_text", "").strip()
-            if not plain_text:
-                print(f"  Skipping opinion {opinion_id}: No text content")
+            if not processed_chunks:
+                print(f"  Skipping opinion {opinion_id}: No chunks generated")
                 self.processed_ids.add(opinion_id)
                 return True
 
-            print(f"  Text length: {len(plain_text)} characters")
+            print(f"  Generated {len(processed_chunks)} chunks")
 
-            # Step 2: Generate AI metadata
-            print("  Generating metadata with Gemini...")
-            ai_metadata = self.metadata_generator.generate_scotus_metadata(plain_text)
+            # Show chunk breakdown
+            chunk_stats: Dict[str, int] = {}
+            for chunk in processed_chunks:
+                opinion_type = chunk.opinion_type
+                chunk_stats[opinion_type] = chunk_stats.get(opinion_type, 0) + 1
 
-            # Step 3: Generate embeddings
-            print("  Generating embeddings...")
-            embedding = self.embeddings_client.generate_embedding(plain_text)
+            chunk_info = ", ".join([f"{k}: {v}" for k, v in chunk_stats.items()])
+            print(f"    Breakdown: {chunk_info}")
 
-            # Step 4: Combine metadata
-            combined_metadata = {**basic_metadata, **ai_metadata}
-            final_metadata = {
-                k: v for k, v in combined_metadata.items() if k != "plain_text"
-            }
+            # Step 2: Generate embeddings and store each chunk
+            print("  Generating embeddings and storing chunks...")
+            stored_count = 0
 
-            # Step 5: Store in ChromaDB
-            print("  Storing in ChromaDB...")
-            self.db_client.store_scotus_opinion(
-                opinion_id=opinion_id,
-                plain_text=plain_text,
-                embedding=embedding,
-                metadata=final_metadata,
-            )
+            for i, chunk in enumerate(processed_chunks):
+                try:
+                    # Generate embedding for this chunk
+                    embedding = self.embeddings_client.generate_embedding(chunk.text)
 
-            # Mark as processed
-            self.processed_ids.add(opinion_id)
-            print(f"  ✅ Successfully processed opinion {opinion_id}")
+                    # Create unique chunk ID
+                    chunk_id = f"{opinion_id}_chunk_{i}"
 
-            return True
+                    # Prepare metadata (remove text to avoid duplication)
+                    chunk_metadata = chunk.to_dict()
+                    chunk_metadata.pop("text", None)
+
+                    # Store chunk in ChromaDB
+                    self.db_client.store_scotus_opinion(
+                        opinion_id=chunk_id,
+                        plain_text=chunk.text,
+                        embedding=embedding,
+                        metadata=chunk_metadata,
+                    )
+
+                    stored_count += 1
+
+                except Exception as e:
+                    print(f"    ⚠️  Failed to store chunk {i}: {e}")
+                    continue
+
+            print(f"  ✅ Stored {stored_count}/{len(processed_chunks)} chunks")
+
+            # Mark as processed if we stored at least some chunks
+            if stored_count > 0:
+                self.processed_ids.add(opinion_id)
+                return True
+            else:
+                raise Exception("No chunks were successfully stored")
 
         except Exception as e:
             error_msg = f"Failed to process opinion {opinion_id}: {str(e)}"
