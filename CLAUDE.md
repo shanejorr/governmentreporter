@@ -48,6 +48,7 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 - Designed for macOS with 16GB+ RAM
 - MCP protocol integration for LLM compatibility
 - Real-time document retrieval ensures fresh government data
+- I am an intermediate Python programmer. If I ask you to do something and you do not think it is the best approach please say so. If I ask a question please answer truthfully. Do not simply agree with me.
 
 ## Dependencies
 
