@@ -3,7 +3,13 @@
     "allow": [
       "Bash(uv add:*)",
       "Bash(uv run:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(pandoc SCOTUS_PIPELINE_GUIDE.md -o SCOTUS_PIPELINE_GUIDE.pdf)",
+      "Bash(pandoc SCOTUS_PIPELINE_GUIDE.md --pdf-engine=wkhtmltopdf -o SCOTUS_PIPELINE_GUIDE.pdf)",
+      "Bash(pandoc SCOTUS_PIPELINE_GUIDE.md --pdf-engine=wkhtmltopdf --pdf-engine-opt=--margin-top --pdf-engine-opt=0.5in --pdf-engine-opt=--margin-bottom --pdf-engine-opt=0.5in --pdf-engine-opt=--margin-left --pdf-engine-opt=0.5in --pdf-engine-opt=--margin-right --pdf-engine-opt=0.5in -o SCOTUS_PIPELINE_GUIDE.pdf)",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(python:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }
