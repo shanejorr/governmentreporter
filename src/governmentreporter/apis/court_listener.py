@@ -1,8 +1,9 @@
 """Court Listener API client for fetching US federal court opinions."""
 
 import httpx
+import time
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Iterator, List
 from ..utils.config import get_court_listener_token
 
 
@@ -70,3 +71,87 @@ class CourtListenerClient:
             "page_count": opinion_data.get("page_count"),
             "download_url": opinion_data.get("download_url"),
         }
+    
+    def list_scotus_opinions(
+        self,
+        since_date: str = "1900-01-01",
+        max_results: Optional[int] = None,
+        rate_limit_delay: float = 0.1
+    ) -> Iterator[Dict[str, Any]]:
+        """Iterate through all Supreme Court opinions since a given date.
+        
+        Args:
+            since_date: Start date in YYYY-MM-DD format (default: 1900-01-01)
+            max_results: Maximum number of results to return (None for all)
+            rate_limit_delay: Delay between requests in seconds
+            
+        Yields:
+            Dict containing opinion metadata (without full text)
+            
+        Raises:
+            httpx.HTTPError: If an API request fails
+        """
+        url = f"{self.BASE_URL}/opinions/"
+        params = {
+            "cluster__docket__court": "scotus",
+            "date_created__gte": since_date,
+            "order_by": "date_created"
+        }
+        
+        results_count = 0
+        
+        with httpx.Client(timeout=30.0) as client:
+            while url and (max_results is None or results_count < max_results):
+                # Add rate limiting
+                if rate_limit_delay > 0:
+                    time.sleep(rate_limit_delay)
+                
+                print(f"Fetching: {url}")
+                response = client.get(url, headers=self.headers, params=params)
+                response.raise_for_status()
+                
+                data = response.json()
+                
+                # Yield each opinion in the current page
+                for opinion in data.get("results", []):
+                    if max_results is not None and results_count >= max_results:
+                        return
+                    
+                    yield opinion
+                    results_count += 1
+                
+                # Get next page URL
+                url = data.get("next")
+                # Clear params for subsequent requests (they're included in the next URL)
+                params = None
+                
+                print(f"Progress: Processed {results_count} opinions")
+    
+    def get_scotus_opinion_count(
+        self,
+        since_date: str = "1900-01-01"
+    ) -> int:
+        """Get the total count of Supreme Court opinions since a given date.
+        
+        Args:
+            since_date: Start date in YYYY-MM-DD format
+            
+        Returns:
+            Total number of opinions matching the criteria
+            
+        Raises:
+            httpx.HTTPError: If the API request fails
+        """
+        url = f"{self.BASE_URL}/opinions/"
+        params = {
+            "cluster__docket__court": "scotus",
+            "date_created__gte": since_date,
+            "count": "on"
+        }
+        
+        with httpx.Client(timeout=30.0) as client:
+            response = client.get(url, headers=self.headers, params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            return data.get("count", 0)

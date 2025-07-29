@@ -1,115 +1,109 @@
 #!/usr/bin/env python3
 """
-Script to bulk download all US Supreme Court opinions from Court Listener.
+Script to download all US Supreme Court opinions from CourtListener API since 1900.
 
-This script downloads the complete SCOTUS opinions dataset as a tar.gz file
-and extracts it to a local directory for processing.
+This script uses the CourtListener API to iterate through all SCOTUS opinions,
+processes each one through the complete pipeline (metadata generation, embeddings),
+and stores them in ChromaDB.
 """
 
+import argparse
 import sys
 from pathlib import Path
-from typing import Optional
-import requests
-import tarfile
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
+# Add src to path for imports
+sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-def download_scotus_bulk(
-    output_dir: str = "raw-data/scotus_data",
-    download_file: str = "scotus_opinions.tar.gz"
-) -> bool:
-    """Download and extract the bulk SCOTUS opinions dataset.
-    
-    Args:
-        output_dir: Directory to extract the data to
-        download_file: Name of the downloaded tar.gz file
-        
-    Returns:
-        True if successful, False otherwise
-    """
-    url = "https://www.courtlistener.com/api/bulk-data/opinions/scotus.tar.gz"
-    
-    try:
-        print(f"Starting download from {url}")
-        
-        # Create output directory if it doesn't exist
-        output_path = Path(output_dir)
-        output_path.mkdir(exist_ok=True)
-        
-        # Download with progress tracking
-        response = requests.get(url, stream=True)
-        response.raise_for_status()
-        
-        total_size = int(response.headers.get('content-length', 0))
-        
-        download_path = Path(download_file)
-        with open(download_path, 'wb') as f:
-            downloaded = 0
-            for chunk in response.iter_content(chunk_size=8192):
-                if chunk:  # Filter out keep-alive chunks
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if total_size > 0:
-                        percent = (downloaded / total_size) * 100
-                        print(f"Downloaded: {percent:.1f}%", end='\r')
-        
-        print(f"\nDownload complete! File saved as {download_path}")
-        
-        # Extract the archive
-        print(f"Extracting to {output_path}/")
-        with tarfile.open(download_path, "r:gz") as tar:
-            tar.extractall(output_path)
-        
-        print("Extraction complete!")
-        
-        # Optionally remove the tar.gz file to save space
-        # download_path.unlink()
-        
-        return True
-        
-    except requests.RequestException as e:
-        print(f"Error downloading file: {e}", file=sys.stderr)
-        return False
-    except tarfile.TarError as e:
-        print(f"Error extracting archive: {e}", file=sys.stderr)
-        return False
-    except Exception as e:
-        print(f"Unexpected error: {e}", file=sys.stderr)
-        return False
+from governmentreporter.processors import SCOTUSBulkProcessor
 
 
 def main() -> None:
     """Main entry point for the script."""
-    import argparse
-    
     parser = argparse.ArgumentParser(
-        description="Download bulk SCOTUS opinions from Court Listener"
+        description="Download and process all SCOTUS opinions from CourtListener API"
     )
     parser.add_argument(
         "--output-dir",
         default="raw-data/scotus_data",
-        help="Output directory for extracted data (default: raw-data/scotus_data)"
+        help="Output directory for progress and error logs (default: raw-data/scotus_data)",
     )
     parser.add_argument(
-        "--download-file",
-        default="scotus_opinions.tar.gz",
-        help="Name for downloaded file (default: scotus_opinions.tar.gz)"
+        "--since-date",
+        default="1900-01-01",
+        help="Start date for opinion retrieval in YYYY-MM-DD format (default: 1900-01-01)",
     )
-    
+    parser.add_argument(
+        "--max-opinions",
+        type=int,
+        help="Maximum number of opinions to process (default: all)",
+    )
+    parser.add_argument(
+        "--rate-limit-delay",
+        type=float,
+        default=0.75,
+        help="Delay between API requests in seconds (default: 0.75)",
+    )
+    parser.add_argument(
+        "--collection-name",
+        default="federal_court_scotus_opinions",
+        help="ChromaDB collection name (default: federal_court_scotus_opinions)",
+    )
+    parser.add_argument(
+        "--count-only",
+        action="store_true",
+        help="Only show the count of available opinions without processing",
+    )
+    parser.add_argument(
+        "--stats",
+        action="store_true",
+        help="Show current processing statistics",
+    )
+
     args = parser.parse_args()
-    
-    success = download_scotus_bulk(
-        output_dir=args.output_dir,
-        download_file=args.download_file
-    )
-    
-    if not success:
+
+    try:
+        processor = SCOTUSBulkProcessor(
+            output_dir=args.output_dir,
+            since_date=args.since_date,
+            rate_limit_delay=args.rate_limit_delay,
+            collection_name=args.collection_name,
+        )
+
+        if args.count_only:
+            count = processor.get_total_count()
+            print(f"Total SCOTUS opinions since {args.since_date}: {count:,}")
+            return
+
+        if args.stats:
+            stats = processor.get_processing_stats()
+            print("Current Processing Statistics:")
+            print(f"  Total available: {stats['total_available']:,}")
+            print(f"  Already processed: {stats['processed_count']:,}")
+            print(f"  Remaining: {stats['remaining_count']:,}")
+            print(f"  Progress: {stats['progress_percentage']:.1f}%")
+            print(f"  Since date: {stats['since_date']}")
+            print(f"  Collection: {stats['collection_name']}")
+            print(f"  Output directory: {stats['output_dir']}")
+            return
+
+        # Run the bulk processing
+        results = processor.process_all_opinions(max_opinions=args.max_opinions)
+
+        # Print final results
+        print(f"\n🎉 Bulk processing completed!")
+        print(f"Processed: {results['processed_count']:,} opinions")
+        print(f"Failed: {results['failed_count']:,} opinions")
+        print(f"Success rate: {results['success_rate']:.1%}")
+        print(f"Total time: {results['elapsed_time']/60:.1f} minutes")
+
+    except Exception as e:
+        print(f"❌ Script failed: {e}")
         sys.exit(1)
-    
-    print(f"All SCOTUS opinions successfully downloaded to {args.output_dir}/")
 
 
 if __name__ == "__main__":
