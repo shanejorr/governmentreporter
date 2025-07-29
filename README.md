@@ -13,7 +13,9 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
 - **Semantic Search**: Vector database enables intelligent document discovery using lightweight metadata
 - **Cost-Effective Storage**: Stores only embeddings and metadata, not full text
 - **MCP Integration**: Compatible with LLMs that support the Model Context Protocol
-- **Local Processing**: Uses locally-run models for metadata generation
+- **Bulk Processing**: Automated pipeline for processing large datasets (10,000+ Supreme Court opinions)
+- **Resumable Operations**: Progress tracking and error recovery for long-running processes
+- **Programmatic API**: Reusable library components for custom data processing workflows
 
 ## Architecture
 
@@ -87,6 +89,46 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
 
 ```bash
 python -m governmentreporter.server
+```
+
+### Bulk Data Processing
+
+For initial setup or comprehensive data collection, use the bulk processing tools:
+
+```bash
+# Download and process all Supreme Court opinions since 1900
+uv run python scripts/download_scotus_bulk.py
+
+# Check total available opinions
+uv run python scripts/download_scotus_bulk.py --count-only
+
+# Process limited number for testing
+uv run python scripts/download_scotus_bulk.py --max-opinions 100
+
+# Check current processing progress
+uv run python scripts/download_scotus_bulk.py --stats
+
+# Custom date range and collection
+uv run python scripts/download_scotus_bulk.py --since-date 2020-01-01 --collection-name recent_scotus
+```
+
+The bulk processor can also be used programmatically:
+
+```python
+from governmentreporter.processors import SCOTUSBulkProcessor
+
+processor = SCOTUSBulkProcessor(
+    since_date="2010-01-01",
+    rate_limit_delay=1.0
+)
+
+# Get processing statistics
+stats = processor.get_processing_stats()
+print(f"Progress: {stats['progress_percentage']:.1f}%")
+
+# Run bulk processing
+results = processor.process_all_opinions(max_opinions=1000)
+print(f"Success rate: {results['success_rate']:.1%}")
 ```
 
 ### Data Pipeline
