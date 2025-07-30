@@ -6,6 +6,7 @@ from typing import Any, Dict, Iterator, List, Optional
 
 import httpx
 
+from ..utils.citations import build_bluebook_citation
 from ..utils.config import get_court_listener_token
 from .base import Document, GovernmentAPIClient
 
@@ -25,11 +26,11 @@ class CourtListenerClient(GovernmentAPIClient):
             "User-Agent": "GovernmentReporter/0.1.0",
         }
         super().__init__(api_key=self.token)
-    
+
     def _get_base_url(self) -> str:
         """Return the base URL for the API."""
         return "https://www.courtlistener.com/api/rest/v4"
-    
+
     def _get_rate_limit_delay(self) -> float:
         """Return the rate limit delay in seconds between requests."""
         return 0.1
@@ -52,22 +53,22 @@ class CourtListenerClient(GovernmentAPIClient):
             response = client.get(url, headers=self.headers)
             response.raise_for_status()
             return response.json()
-    
+
     def search_documents(
-        self, 
-        query: str, 
-        start_date: Optional[str] = None, 
+        self,
+        query: str,
+        start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        limit: int = 10
+        limit: int = 10,
     ) -> List[Document]:
         """Search for Supreme Court opinions using the API.
-        
+
         Args:
             query: Search query string (currently not used - returns all SCOTUS opinions)
             start_date: Optional start date filter (YYYY-MM-DD format)
             end_date: Optional end date filter (YYYY-MM-DD format)
             limit: Maximum number of results to return
-            
+
         Returns:
             List of Document objects
         """
@@ -75,43 +76,70 @@ class CourtListenerClient(GovernmentAPIClient):
         for opinion_data in self.list_scotus_opinions(
             since_date=start_date or "1900-01-01",
             max_results=limit,
-            rate_limit_delay=self.rate_limit_delay
+            rate_limit_delay=self.rate_limit_delay,
         ):
             metadata = self.extract_basic_metadata(opinion_data)
+
+            # Get cluster data for case name and citation
+            cluster_url = opinion_data.get("cluster")
+            case_name = f"Opinion {metadata['id']}"  # Default fallback
+            citation = None
+
+            if cluster_url:
+                try:
+                    cluster_data = self.get_opinion_cluster(cluster_url)
+                    case_name = cluster_data.get("case_name", case_name)
+                    citation = build_bluebook_citation(cluster_data)
+                    # Add cluster metadata to the opinion metadata
+                    metadata["case_name"] = case_name
+                    metadata["citation"] = citation
+                except Exception as e:
+                    print(
+                        f"Warning: Failed to fetch cluster data for opinion {metadata['id']}: {str(e)}"
+                    )
+
             doc = Document(
                 id=str(metadata["id"]),
-                title=f"Opinion {metadata['id']}",  # TODO: Get case name from cluster
+                title=case_name,
                 date=metadata["date"] or "",
                 type="Supreme Court Opinion",
                 source="CourtListener",
                 metadata=metadata,
-                url=metadata.get("download_url")
+                url=metadata.get("download_url"),
             )
             documents.append(doc)
         return documents
-    
+
     def get_document(self, document_id: str) -> Document:
         """Retrieve a specific Supreme Court opinion by ID.
-        
+
         Args:
             document_id: Opinion ID from CourtListener
-            
+
         Returns:
             Document object with full content
         """
         opinion_data = self.get_opinion(int(document_id))
         metadata = self.extract_basic_metadata(opinion_data)
-        
-        # Get cluster data for case name
+
+        # Get cluster data for case name and citation
         cluster_url = opinion_data.get("cluster")
         case_name = "Unknown Case"
+        citation = None
+
         if cluster_url:
             try:
                 cluster_data = self.get_opinion_cluster(cluster_url)
                 case_name = cluster_data.get("case_name", "Unknown Case")
-            except Exception:
-                pass
-        
+                citation = build_bluebook_citation(cluster_data)
+                # Add cluster metadata to the opinion metadata
+                metadata["case_name"] = case_name
+                metadata["citation"] = citation
+            except Exception as e:
+                print(
+                    f"Warning: Failed to fetch cluster data for opinion {document_id}: {str(e)}"
+                )
+
         return Document(
             id=document_id,
             title=case_name,
@@ -120,15 +148,15 @@ class CourtListenerClient(GovernmentAPIClient):
             source="CourtListener",
             content=metadata["plain_text"],
             metadata=metadata,
-            url=metadata.get("download_url")
+            url=metadata.get("download_url"),
         )
-    
+
     def get_document_text(self, document_id: str) -> str:
         """Retrieve the plain text content of an opinion.
-        
+
         Args:
             document_id: Opinion ID from CourtListener
-            
+
         Returns:
             Plain text content of the opinion
         """

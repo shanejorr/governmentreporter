@@ -144,7 +144,7 @@ class SCOTUSBulkProcessor:
             for i, chunk in enumerate(processed_chunks):
                 try:
                     # Generate embedding for this chunk
-                    embedding = self.embeddings_client.generate_embedding(chunk.text)
+                    embedding = self.opinion_processor.embeddings_client.generate_embedding(chunk.text)
 
                     # Create unique chunk ID
                     chunk_id = f"{opinion_id}_chunk_{i}"
@@ -154,7 +154,7 @@ class SCOTUSBulkProcessor:
                     chunk_metadata.pop("text", None)
 
                     # Store chunk in ChromaDB
-                    self.db_client.store_scotus_opinion(
+                    self.opinion_processor.db_client.store_scotus_opinion(
                         opinion_id=chunk_id,
                         plain_text=chunk.text,
                         embedding=embedding,

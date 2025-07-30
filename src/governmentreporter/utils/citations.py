@@ -1,6 +1,6 @@
 """Bluebook citation formatting utilities."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 
 def build_bluebook_citation(cluster_data: Dict[str, Any]) -> Optional[str]:
@@ -44,36 +44,3 @@ def build_bluebook_citation(cluster_data: Dict[str, Any]) -> Optional[str]:
 
     # Format as bluebook citation
     return f"{volume} {reporter} {page} ({year})"
-
-
-def extract_cited_cases(opinions_cited: List[Dict[str, Any]]) -> List[str]:
-    """Extract cited case names from opinions_cited array.
-
-    Args:
-        opinions_cited: Array of cited opinion objects from Court Listener
-
-    Returns:
-        List of case names or citation strings for cited cases
-    """
-    cited_cases = []
-
-    for opinion in opinions_cited:
-        # Try to get case name from cluster info if available
-        cluster_info = opinion.get("cluster", {})
-        case_name = cluster_info.get("case_name")
-
-        if case_name:
-            cited_cases.append(case_name.strip())
-        else:
-            # Fall back to citation if available
-            citations = cluster_info.get("citations", [])
-            if citations:
-                citation = citations[0]
-                volume = citation.get("volume")
-                reporter = citation.get("reporter")
-                page = citation.get("page")
-
-                if all([volume, reporter, page]):
-                    cited_cases.append(f"{volume} {reporter} {page}")
-
-    return cited_cases

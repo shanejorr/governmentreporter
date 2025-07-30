@@ -79,7 +79,7 @@ class SCOTUSOpinionChunker:
         self.target_chunk_size = target_chunk_size
         self.max_chunk_size = max_chunk_size
         self.tokenizer = tiktoken.get_encoding("cl100k_base")
-        self._token_cache = {}  # Cache for token counts
+        self._token_cache: Dict[Any, int] = {}  # Cache for token counts
 
         # Regex patterns for opinion detection
         self.majority_pattern = re.compile(
@@ -99,26 +99,26 @@ class SCOTUSOpinionChunker:
 
     def count_tokens(self, text: str) -> int:
         """Count tokens in text using tiktoken with caching.
-        
+
         Args:
             text: Text to count tokens for
-            
+
         Returns:
             Number of tokens in the text
         """
         # Use first 100 chars + length as cache key to avoid memory bloat
         cache_key = (text[:100], len(text)) if len(text) > 100 else text
-        
+
         if cache_key not in self._token_cache:
             self._token_cache[cache_key] = len(self.tokenizer.encode(text))
-            
+
             # Limit cache size to prevent memory issues
             if len(self._token_cache) > 1000:
                 # Remove oldest entries (FIFO)
                 keys_to_remove = list(self._token_cache.keys())[:500]
                 for key in keys_to_remove:
                     del self._token_cache[key]
-        
+
         return self._token_cache[cache_key]
 
     def split_by_opinion_type(
@@ -226,7 +226,7 @@ class SCOTUSOpinionChunker:
             return []
 
         chunks = []
-        current_chunk_parts = []
+        current_chunk_parts: List[str] = []
 
         for paragraph in paragraphs:
             # Check if adding this paragraph would exceed max size
@@ -238,7 +238,10 @@ class SCOTUSOpinionChunker:
                 current_chunk_parts.append(paragraph)
             else:
                 # If current chunk exists and has reasonable size, save it
-                if current_chunk_parts and self.count_tokens("\n\n".join(current_chunk_parts)) >= 100:
+                if (
+                    current_chunk_parts
+                    and self.count_tokens("\n\n".join(current_chunk_parts)) >= 100
+                ):
                     chunks.append("\n\n".join(current_chunk_parts))
                     current_chunk_parts = [paragraph]
                 else:
@@ -250,7 +253,9 @@ class SCOTUSOpinionChunker:
 
                         for sentence in sentences:
                             test_parts = temp_chunk_parts + [sentence]
-                            test_chunk = " ".join(test_parts) if temp_chunk_parts else sentence
+                            test_chunk = (
+                                " ".join(test_parts) if temp_chunk_parts else sentence
+                            )
                             if self.count_tokens(test_chunk) <= self.max_chunk_size:
                                 temp_chunk_parts.append(sentence)
                             else:
@@ -412,47 +417,44 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
 
     def process_document(self, document_id: str) -> List[ProcessedChunk]:
         """Process a Supreme Court opinion into chunks with embeddings.
-        
+
         Args:
             document_id: The Court Listener opinion ID as a string
-            
+
         Returns:
             List of ProcessedChunk objects with embeddings
         """
         opinion_id = int(document_id)
         opinion_chunks = self._process_opinion_chunks(opinion_id)
-        
+
         # Convert to ProcessedChunk with embeddings
         processed_chunks = []
         for i, chunk in enumerate(opinion_chunks):
             embedding = self.embeddings_client.generate_embedding(chunk.text)
-            
+
             # Convert chunk metadata to dict
             metadata = chunk.to_dict()
             # Remove text from metadata to avoid duplication
             metadata.pop("text", None)
-            
+
             processed_chunk = ProcessedChunk(
-                text=chunk.text,
-                embedding=embedding,
-                metadata=metadata,
-                chunk_index=i
+                text=chunk.text, embedding=embedding, metadata=metadata, chunk_index=i
             )
             processed_chunks.append(processed_chunk)
-            
+
         return processed_chunks
-    
+
     def process_opinion(self, opinion_id: int) -> List[ProcessedOpinionChunk]:
         """Legacy method - process opinion without embeddings.
-        
+
         Args:
             opinion_id: The Court Listener opinion ID
-            
+
         Returns:
             List of ProcessedOpinionChunk objects (without embeddings)
         """
         return self._process_opinion_chunks(opinion_id)
-    
+
     def _process_opinion_chunks(self, opinion_id: int) -> List[ProcessedOpinionChunk]:
         """Process a Supreme Court opinion into chunks with complete metadata.
 
@@ -473,7 +475,9 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
         try:
             cluster_data = self.court_listener.get_opinion_cluster(cluster_url)
         except Exception as e:
-            raise ValueError(f"Failed to fetch cluster data for opinion {opinion_id}: {str(e)}")
+            raise ValueError(
+                f"Failed to fetch cluster data for opinion {opinion_id}: {str(e)}"
+            )
 
         # Step 3: Extract plain text
         plain_text = opinion_data.get("plain_text", "")
@@ -488,7 +492,9 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
             legal_metadata = self.gemini_generator.extract_legal_metadata(plain_text)
         except Exception as e:
             # If Gemini extraction fails, use empty metadata
-            print(f"Warning: Failed to extract legal metadata for opinion {opinion_id}: {str(e)}")
+            print(
+                f"Warning: Failed to extract legal metadata for opinion {opinion_id}: {str(e)}"
+            )
             legal_metadata = {
                 "legal_topics": [],
                 "key_legal_questions": [],
@@ -500,7 +506,7 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
         # Step 6: Build citation string
         citation = build_bluebook_citation(cluster_data)
 
-        # Step 7: Extract cited cases  
+        # Step 7: Extract cited cases
         opinions_cited_data = opinion_data.get("opinions_cited", [])
         cited_cases = self._extract_cited_cases_from_urls(opinions_cited_data)
 
@@ -544,17 +550,19 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
 
         return processed_chunks
 
-    def _extract_cited_cases_from_urls(self, opinions_cited_urls: List[str]) -> List[str]:
+    def _extract_cited_cases_from_urls(
+        self, opinions_cited_urls: List[str]
+    ) -> List[str]:
         """Extract cited case information from opinion URLs.
-        
+
         Args:
             opinions_cited_urls: List of URLs to cited opinions
-            
+
         Returns:
             List of case identifiers or names for cited cases
         """
         cited_cases = []
-        
+
         for url in opinions_cited_urls:
             if isinstance(url, str) and "/opinions/" in url:
                 # Extract opinion ID from URL
@@ -565,7 +573,7 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
                         cited_cases.append(f"Opinion {opinion_id}")
                 except (IndexError, AttributeError):
                     continue
-                    
+
         return cited_cases
 
     def _format_date(self, date_str: Optional[str]) -> str:
