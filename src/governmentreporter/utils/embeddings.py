@@ -50,4 +50,3 @@ class GoogleEmbeddingsClient:
 
         except Exception as e:
             raise Exception(f"Failed to generate embedding: {str(e)}")
-

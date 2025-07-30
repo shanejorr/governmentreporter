@@ -76,7 +76,6 @@ class ChromaDBClient:
             ids=[opinion_id],
         )
 
-
     def get_opinion_by_id(
         self, opinion_id: str, collection_name: str = "federal_court_scotus_opinions"
     ) -> Optional[Dict[str, Any]]:

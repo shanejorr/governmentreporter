@@ -48,10 +48,9 @@ def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
 
     # Use the new integrated process_and_store method
     result = processor.process_and_store(
-        document_id=str(opinion_id),
-        collection_name="scotus_opinions"
+        document_id=str(opinion_id), collection_name="scotus_opinions"
     )
-    
+
     if not result["success"]:
         print(f"   ❌ Failed to process opinion: {result['error']}")
         return {
@@ -59,14 +58,14 @@ def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
             "total_chunks": 0,
             "stored_chunks": 0,
             "success": False,
-            "error": result["error"]
+            "error": result["error"],
         }
-    
+
     print(f"   ✅ Generated and stored {result['chunks_stored']} chunks")
-    
+
     # Step 3: Get processed chunks for display (without embeddings)
     processed_chunks = processor.process_opinion(opinion_id)
-    
+
     # Show chunk breakdown
     chunk_stats = {}
     for chunk in processed_chunks:

@@ -183,7 +183,7 @@ def get_opinion_full_text(case_name: str, citation: str) -> Dict[str, Any]:
 @mcp.tool()
 def process_new_opinion(opinion_id: int) -> Dict[str, Any]:
     """Process a new Supreme Court opinion through the hierarchical chunking pipeline.
-    
+
     DEPRECATED: Use the bulk processor or process_scotus_opinion.py script instead.
     This function duplicates functionality now in SCOTUSOpinionProcessor.process_and_store().
 
@@ -196,16 +196,15 @@ def process_new_opinion(opinion_id: int) -> Dict[str, Any]:
     try:
         # Use the integrated process_and_store method
         result = opinion_processor.process_and_store(
-            document_id=str(opinion_id),
-            collection_name="federal_court_scotus_opinions"
+            document_id=str(opinion_id), collection_name="federal_court_scotus_opinions"
         )
-        
+
         if not result["success"]:
             return {"error": result.get("error", "Processing failed")}
-        
+
         # Get chunks for metadata (without embeddings)
         chunks = opinion_processor.process_opinion(opinion_id)
-        
+
         # Generate statistics
         chunk_stats: Dict[str, int] = {}
         for chunk in chunks:
@@ -233,7 +232,7 @@ def get_legal_topics(limit: int = 100) -> List[str]:
 
     Args:
         limit: Maximum number of topics to return (default: 100)
-        
+
     Returns:
         List of unique legal topics across sampled documents
     """
@@ -245,7 +244,7 @@ def get_legal_topics(limit: int = 100) -> List[str]:
         results = collection.query(
             query_texts=[""],  # Empty query to get random sample
             n_results=min(limit, 500),  # Sample up to 500 documents
-            include=["metadatas"]
+            include=["metadatas"],
         )
 
         topics = set()
