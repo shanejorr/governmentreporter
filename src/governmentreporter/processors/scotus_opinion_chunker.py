@@ -63,7 +63,32 @@ class ProcessedOpinionChunk:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for database storage."""
-        return asdict(self)
+        import json
+
+        data = asdict(self)
+
+        # Convert list fields to JSON strings for ChromaDB compatibility
+        list_fields = [
+            "opinions_cited",
+            "legal_topics",
+            "key_legal_questions",
+            "constitutional_provisions",
+            "statutes_interpreted",
+        ]
+
+        # Process all fields to ensure ChromaDB compatibility
+        processed_data = {}
+        for field, value in data.items():
+            if value is None:
+                # Convert None to empty string
+                processed_data[field] = ""
+            elif field in list_fields and isinstance(value, list):
+                # Convert list to JSON string
+                processed_data[field] = json.dumps(value)
+            else:
+                processed_data[field] = value
+
+        return processed_data
 
 
 class SCOTUSOpinionChunker:

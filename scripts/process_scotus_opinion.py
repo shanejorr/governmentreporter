@@ -20,8 +20,7 @@ load_dotenv()
 
 # opinion_id = 9973155
 
-from governmentreporter.processors.scotus_opinion_chunker import \
-    SCOTUSOpinionProcessor
+from governmentreporter.processors.scotus_opinion_chunker import SCOTUSOpinionProcessor
 
 
 def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
@@ -127,16 +126,18 @@ def main():
 
     try:
         result = process_scotus_opinion(opinion_id)
-        print(f"\n{'✅' if result['success'] else '⚠️'} Processing completed!")
+        print(f"\n{'✅' if result['success'] else '❌'} Processing completed!")
         print(f"Opinion ID: {result['opinion_id']}")
-        print(f"Case: {result['case_name']}")
-        print(f"Citation: {result['citation']}")
-        print(f"Total chunks: {result['total_chunks']}")
-        print(f"Stored chunks: {result['stored_chunks']}")
-        print(f"Chunk types: {', '.join(result['chunk_types'])}")
 
-        if not result["success"]:
-            print("⚠️  Some chunks failed to store - check the output above for details")
+        if result["success"]:
+            print(f"Case: {result['case_name']}")
+            print(f"Citation: {result['citation']}")
+            print(f"Total chunks: {result['total_chunks']}")
+            print(f"Stored chunks: {result['stored_chunks']}")
+            print(f"Chunk types: {', '.join(result['chunk_types'])}")
+        else:
+            print(f"Error: {result.get('error', 'Unknown error')}")
+            print("⚠️  Processing failed - check the output above for details")
 
     except Exception as e:
         print(f"\n❌ Processing failed with error: {str(e)}")
