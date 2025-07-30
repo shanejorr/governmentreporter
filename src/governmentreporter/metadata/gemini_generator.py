@@ -32,7 +32,7 @@ class GeminiMetadataGenerator:
         Returns:
             Dict containing extracted metadata
         """
-        prompt = self._create_scotus_metadata_prompt(plain_text)
+        prompt = self._create_legal_metadata_prompt(plain_text)
 
         try:
             response = self.model.generate_content(prompt)
@@ -47,84 +47,20 @@ class GeminiMetadataGenerator:
             metadata = json.loads(response_text)
 
             # Validate and clean the response
-            return self._validate_scotus_metadata(metadata)
+            return self._validate_legal_metadata(metadata)
 
         except (json.JSONDecodeError, Exception) as e:
             # If parsing fails, return minimal metadata
             return {
-                "summary": "Unable to extract summary",
-                "topics": [],
-                "author": None,
-                "majority": [],
-                "minority": [],
+                "legal_topics": [],
+                "key_legal_questions": [],
+                "constitutional_provisions": [],
+                "statutes_interpreted": [],
+                "holding": None,
+                "procedural_outcome": None,
+                "vote_breakdown": None,
                 "extraction_error": str(e),
             }
-
-    def _create_scotus_metadata_prompt(self, plain_text: str) -> str:
-        """Create a prompt for extracting Supreme Court opinion metadata."""
-        return f"""
-You are a legal expert analyzing a US Supreme Court opinion. Extract the following metadata from the provided text and return it as a JSON object with exactly these fields:
-
-1. "summary": A paragraph summarizing the case that includes the legal issue, holding, and rationale. Use the case syllabus if available.
-2. "topics": An array of 5-10 topic tags including the legal areas in dispute (examples: "1st Amendment", "free speech", "voting rights act", "constitutional law", "civil rights", "commerce clause", etc.)
-3. "author": Full name (first and last) of the majority opinion author, or null if not identifiable
-4. "majority": Array of last names of justices in the majority, or empty array if not identifiable
-5. "minority": Array of last names of justices in the minority/dissent, or empty array if not identifiable
-
-Requirements:
-- Return ONLY a valid JSON object with these exact field names
-- Ensure all field names are in lowercase
-- The summary should be 2-4 sentences focusing on the legal issue, court's holding, and key reasoning
-- Topics should be specific legal concepts, not generic terms
-- Justice names should be last names only for majority/minority arrays
-- If information cannot be determined, use null for strings or empty arrays for lists
-
-Supreme Court Opinion Text:
-{plain_text[:15000]}  # Limit text to avoid token limits
-
-Return the JSON object:
-"""
-
-    def _validate_scotus_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate and clean the extracted metadata."""
-        validated = {
-            "summary": metadata.get("summary", ""),
-            "topics": metadata.get("topics", []),
-            "author": metadata.get("author"),
-            "majority": metadata.get("majority", []),
-            "minority": metadata.get("minority", []),
-        }
-
-        # Ensure topics is a list
-        if not isinstance(validated["topics"], list):
-            validated["topics"] = []
-
-        # Ensure majority/minority are lists
-        if not isinstance(validated["majority"], list):
-            validated["majority"] = []
-        if not isinstance(validated["minority"], list):
-            validated["minority"] = []
-
-        # Clean up topic strings
-        validated["topics"] = [
-            topic.strip()
-            for topic in validated["topics"]
-            if isinstance(topic, str) and topic.strip()
-        ]
-
-        # Clean up justice name lists
-        validated["majority"] = [
-            name.strip()
-            for name in validated["majority"]
-            if isinstance(name, str) and name.strip()
-        ]
-        validated["minority"] = [
-            name.strip()
-            for name in validated["minority"]
-            if isinstance(name, str) and name.strip()
-        ]
-
-        return validated
 
     def extract_legal_metadata(self, plain_text: str) -> Dict[str, Any]:
         """Extract comprehensive legal metadata for Supreme Court opinion chunking.
@@ -160,6 +96,8 @@ Return the JSON object:
                 "constitutional_provisions": [],
                 "statutes_interpreted": [],
                 "holding": None,
+                "procedural_outcome": None,
+                "vote_breakdown": None,
                 "extraction_error": str(e),
             }
 
@@ -176,15 +114,22 @@ You are a legal expert analyzing a US Supreme Court opinion. Extract the followi
 
 4. "statutes_interpreted": Array of specific statutes cited or interpreted by the court. Use precise bluebook citation format (e.g., "42 U.S.C. § 1983", "15 U.S.C. § 1692"). Do NOT include general statutory references
 
-5. "holding": A single sentence stating the court's holding/decision from the syllabus or conclusion
+5. "holding": A single sentence stating the court's holding/decision from the syllabus or conclusion. (taken from syllabus)
+
+6. "procedural_outcome": The court's procedural decision regarding the lower court's ruling (e.g., "Reversed", "Affirmed", "Reversed and remanded", "Affirmed in part and reversed in part", "Vacated and remanded"). Extract from the court's final disposition.
+
+7. "vote_breakdown": The voting breakdown of the justices (e.g., "9-0", "7-2", "6-3", "5-4", "Unanimous", "Per curiam"). Extract from the opinion header or conclusion.
 
 Requirements:
 - Return ONLY a valid JSON object with these exact field names
 - All field names must be in lowercase  
 - For constitutional_provisions and statutes_interpreted, be very precise with citations
+- Use legal bluebook format when citing statutes and constitutional provisions
 - Only include actual legal citations, not general references
 - If information cannot be determined, use empty arrays for lists or null for strings
 - The holding should be a concise statement of what the court decided
+- For procedural_outcome, use standard legal terminology for dispositions
+- For vote_breakdown, prefer numerical format (e.g., "9-0") over descriptive terms when both are available
 
 Supreme Court Opinion Text:
 {plain_text[:20000]}  # Limit text to avoid token limits
@@ -200,6 +145,8 @@ Return the JSON object:
             "constitutional_provisions": metadata.get("constitutional_provisions", []),
             "statutes_interpreted": metadata.get("statutes_interpreted", []),
             "holding": metadata.get("holding"),
+            "procedural_outcome": metadata.get("procedural_outcome"),
+            "vote_breakdown": metadata.get("vote_breakdown"),
         }
 
         # Ensure all array fields are lists
@@ -219,10 +166,11 @@ Return the JSON object:
                     if isinstance(item, str) and item.strip()
                 ]
 
-        # Clean up holding
-        if validated["holding"] and isinstance(validated["holding"], str):
-            validated["holding"] = validated["holding"].strip()
-        else:
-            validated["holding"] = None
+        # Clean up string fields
+        for field in ["holding", "procedural_outcome", "vote_breakdown"]:
+            if validated[field] and isinstance(validated[field], str):
+                validated[field] = validated[field].strip()
+            else:
+                validated[field] = None
 
         return validated
