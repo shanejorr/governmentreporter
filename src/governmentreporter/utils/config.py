@@ -23,12 +23,18 @@ def get_court_listener_token() -> str:
 
 
 def get_federal_register_token() -> Optional[str]:
-    """Get Federal Register API token from environment variables."""
+    """Get Federal Register API token from environment variables.
+    
+    NOTE: Federal Register API integration is planned but not yet implemented.
+    """
     return os.getenv("FEDERAL_REGISTER_API_TOKEN")
 
 
 def get_congress_gov_token() -> Optional[str]:
-    """Get Congress.gov API token from environment variables."""
+    """Get Congress.gov API token from environment variables.
+    
+    NOTE: Congress.gov API integration is planned but not yet implemented.
+    """
     return os.getenv("CONGRESS_GOV_API_TOKEN")
 
 

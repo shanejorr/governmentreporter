@@ -7,8 +7,6 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Set
 
 from ..apis import CourtListenerClient
-from ..database import ChromaDBClient
-from ..utils import GoogleEmbeddingsClient
 from .scotus_opinion_chunker import SCOTUSOpinionProcessor
 
 
@@ -51,8 +49,6 @@ class SCOTUSBulkProcessor:
 
         # Initialize clients
         self.court_client = CourtListenerClient()
-        self.db_client = ChromaDBClient()
-        self.embeddings_client = GoogleEmbeddingsClient()
         self.opinion_processor = SCOTUSOpinionProcessor()
 
         # Progress tracking

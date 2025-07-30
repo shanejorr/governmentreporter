@@ -76,31 +76,6 @@ class ChromaDBClient:
             ids=[opinion_id],
         )
 
-    def search_similar_opinions(
-        self,
-        query_embedding: List[float],
-        n_results: int = 5,
-        collection_name: str = "federal_court_scotus_opinions",
-    ) -> Dict[str, Any]:
-        """Search for similar opinions using vector similarity.
-
-        Args:
-            query_embedding: Vector embedding of the search query
-            n_results: Number of results to return
-            collection_name: Name of the collection to search
-
-        Returns:
-            Dict containing search results
-        """
-        collection = self.get_or_create_collection(collection_name)
-
-        results = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=n_results,
-            include=["documents", "metadatas", "distances"],
-        )
-
-        return results
 
     def get_opinion_by_id(
         self, opinion_id: str, collection_name: str = "federal_court_scotus_opinions"

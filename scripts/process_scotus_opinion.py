@@ -18,10 +18,8 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-from src.governmentreporter.database import ChromaDBClient
 from src.governmentreporter.processors.scotus_opinion_chunker import \
     SCOTUSOpinionProcessor
-from src.governmentreporter.utils import GoogleEmbeddingsClient
 
 
 def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
@@ -46,12 +44,30 @@ def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
     print("   - Hierarchically chunking by opinion type and sections")
     print("   - Extracting legal metadata using Gemini 2.5 Flash-Lite")
     print("   - Building bluebook citations")
+    print("   - Generating embeddings for each chunk")
 
+    # Use the new integrated process_and_store method
+    result = processor.process_and_store(
+        document_id=str(opinion_id),
+        collection_name="scotus_opinions"
+    )
+    
+    if not result["success"]:
+        print(f"   ❌ Failed to process opinion: {result['error']}")
+        return {
+            "opinion_id": opinion_id,
+            "total_chunks": 0,
+            "stored_chunks": 0,
+            "success": False,
+            "error": result["error"]
+        }
+    
+    print(f"   ✅ Generated and stored {result['chunks_stored']} chunks")
+    
+    # Step 3: Get processed chunks for display (without embeddings)
     processed_chunks = processor.process_opinion(opinion_id)
-
-    print(f"   ✅ Generated {len(processed_chunks)} chunks")
-
-    # Step 3: Show chunk breakdown
+    
+    # Show chunk breakdown
     chunk_stats = {}
     for chunk in processed_chunks:
         opinion_type = chunk.opinion_type
@@ -68,54 +84,7 @@ def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
         )
         print(f"      - {opinion_type.title()}: {stats['count']} chunks{justice_info}")
 
-    # Step 4: Generate embeddings for each chunk
-    print("3. Generating embeddings for each chunk...")
-    embeddings_client = GoogleEmbeddingsClient()
-
-    chunk_data_for_storage = []
-    for i, chunk in enumerate(processed_chunks):
-        # Generate embedding for this chunk
-        embedding = embeddings_client.generate_embedding(chunk.text)
-
-        # Prepare data for storage
-        chunk_data = {
-            "chunk_id": f"{opinion_id}_chunk_{i}",
-            "text": chunk.text,
-            "embedding": embedding,
-            "metadata": chunk.to_dict(),
-        }
-
-        # Remove text from metadata to avoid duplication
-        chunk_data["metadata"].pop("text", None)
-
-        chunk_data_for_storage.append(chunk_data)
-
-        if (i + 1) % 10 == 0 or i == len(processed_chunks) - 1:
-            print(
-                f"   - Generated embeddings for {i + 1}/{len(processed_chunks)} chunks"
-            )
-
-    # Step 5: Store all chunks in ChromaDB
-    print("4. Storing chunks in ChromaDB...")
-    db_client = ChromaDBClient()
-
-    stored_count = 0
-    for chunk_data in chunk_data_for_storage:
-        try:
-            # Store each chunk individually
-            db_client.store_scotus_opinion(
-                opinion_id=chunk_data["chunk_id"],
-                plain_text=chunk_data["text"],
-                embedding=chunk_data["embedding"],
-                metadata=chunk_data["metadata"],
-            )
-            stored_count += 1
-        except Exception as e:
-            print(f"   ⚠️  Failed to store chunk {chunk_data['chunk_id']}: {e}")
-
-    print(f"   ✅ Successfully stored {stored_count}/{len(processed_chunks)} chunks")
-
-    # Step 6: Display sample metadata
+    # Step 4: Display sample metadata
     if processed_chunks:
         sample_chunk = processed_chunks[0]
         print("\n📋 Sample metadata from first chunk:")
@@ -133,12 +102,12 @@ def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
     # Return processing results
     return {
         "opinion_id": opinion_id,
-        "total_chunks": len(processed_chunks),
-        "stored_chunks": stored_count,
+        "total_chunks": result["chunks_processed"],
+        "stored_chunks": result["chunks_stored"],
         "chunk_types": list(chunk_stats.keys()),
         "case_name": processed_chunks[0].case_name if processed_chunks else "Unknown",
         "citation": processed_chunks[0].citation if processed_chunks else "Unknown",
-        "success": stored_count == len(processed_chunks),
+        "success": result["success"],
     }
 
 

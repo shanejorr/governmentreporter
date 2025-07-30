@@ -183,6 +183,9 @@ def get_opinion_full_text(case_name: str, citation: str) -> Dict[str, Any]:
 @mcp.tool()
 def process_new_opinion(opinion_id: int) -> Dict[str, Any]:
     """Process a new Supreme Court opinion through the hierarchical chunking pipeline.
+    
+    DEPRECATED: Use the bulk processor or process_scotus_opinion.py script instead.
+    This function duplicates functionality now in SCOTUSOpinionProcessor.process_and_store().
 
     Args:
         opinion_id: CourtListener opinion ID
@@ -191,36 +194,18 @@ def process_new_opinion(opinion_id: int) -> Dict[str, Any]:
         Processing results and statistics
     """
     try:
-        # Process the opinion
+        # Use the integrated process_and_store method
+        result = opinion_processor.process_and_store(
+            document_id=str(opinion_id),
+            collection_name="federal_court_scotus_opinions"
+        )
+        
+        if not result["success"]:
+            return {"error": result.get("error", "Processing failed")}
+        
+        # Get chunks for metadata (without embeddings)
         chunks = opinion_processor.process_opinion(opinion_id)
-
-        if not chunks:
-            return {"error": f"No chunks generated for opinion {opinion_id}"}
-
-        # Generate embeddings and store chunks
-        stored_count = 0
-        for i, chunk in enumerate(chunks):
-            try:
-                # Generate embedding
-                embedding = embeddings_client.generate_embedding(chunk.text)
-
-                # Store in database
-                chunk_id = f"{opinion_id}_chunk_{i}"
-                metadata = chunk.to_dict()
-                metadata.pop("text", None)  # Remove text to avoid duplication
-
-                db_client.store_scotus_opinion(
-                    opinion_id=chunk_id,
-                    plain_text=chunk.text,
-                    embedding=embedding,
-                    metadata=metadata,
-                )
-                stored_count += 1
-
-            except Exception as e:
-                logger.error(f"Failed to store chunk {i}: {e}")
-                continue
-
+        
         # Generate statistics
         chunk_stats: Dict[str, int] = {}
         for chunk in chunks:
@@ -231,10 +216,10 @@ def process_new_opinion(opinion_id: int) -> Dict[str, Any]:
             "opinion_id": opinion_id,
             "case_name": chunks[0].case_name if chunks else "Unknown",
             "citation": chunks[0].citation if chunks else "Unknown",
-            "total_chunks": len(chunks),
-            "stored_chunks": stored_count,
+            "total_chunks": result["chunks_processed"],
+            "stored_chunks": result["chunks_stored"],
             "chunk_breakdown": chunk_stats,
-            "success": stored_count == len(chunks),
+            "success": result["success"],
         }
 
     except Exception as e:
@@ -243,26 +228,37 @@ def process_new_opinion(opinion_id: int) -> Dict[str, Any]:
 
 
 @mcp.tool()
-def get_legal_topics() -> List[str]:
-    """Get a list of legal topics found in the database.
+def get_legal_topics(limit: int = 100) -> List[str]:
+    """Get a list of common legal topics found in the database.
 
+    Args:
+        limit: Maximum number of topics to return (default: 100)
+        
     Returns:
-        List of unique legal topics across all documents
+        List of unique legal topics across sampled documents
     """
     try:
         collection = db_client.get_or_create_collection("federal_court_scotus_opinions")
 
-        # Get all documents to extract topics
-        results = collection.get(include=["metadatas"])
+        # Sample a subset of documents instead of loading all
+        # This is much more efficient for large collections
+        results = collection.query(
+            query_texts=[""],  # Empty query to get random sample
+            n_results=min(limit, 500),  # Sample up to 500 documents
+            include=["metadatas"]
+        )
 
         topics = set()
-        if results["metadatas"]:
-            for metadata in results["metadatas"]:
-                legal_topics = metadata.get("legal_topics", [])
-                if isinstance(legal_topics, list):
-                    topics.update(legal_topics)
+        if results["metadatas"] and len(results["metadatas"]) > 0:
+            for metadata_list in results["metadatas"]:
+                for metadata in metadata_list:
+                    legal_topics = metadata.get("legal_topics", [])
+                    if isinstance(legal_topics, list):
+                        topics.update(legal_topics)
 
-        return sorted(list(topics))
+        # Return sorted list, limited to requested number
+        sorted_topics = sorted(list(topics))
+        return sorted_topics[:limit]
 
     except Exception as e:
         logger.error(f"Error getting legal topics: {e}")

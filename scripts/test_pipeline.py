@@ -117,7 +117,7 @@ def test_pipeline():
 
         # Use a shorter excerpt for testing to avoid API costs
         test_text = basic_metadata["plain_text"][:3000] + "..."
-        ai_metadata = metadata_generator.generate_scotus_metadata(test_text)
+        ai_metadata = metadata_generator.extract_legal_metadata(test_text)
 
         print(f"   ✅ Summary: {ai_metadata.get('summary', 'N/A')[:100]}...")
         print(f"   ✅ Topics: {ai_metadata.get('topics', [])}")

@@ -51,36 +51,3 @@ class GoogleEmbeddingsClient:
         except Exception as e:
             raise Exception(f"Failed to generate embedding: {str(e)}")
 
-    def generate_query_embedding(self, query: str) -> List[float]:
-        """Generate an embedding for a search query.
-
-        Args:
-            query: The search query text
-
-        Returns:
-            List of floats representing the query embedding vector
-        """
-        try:
-            result = genai.embed_content(
-                model=self.model_name, content=query, task_type="retrieval_query"
-            )
-
-            return result["embedding"]
-
-        except Exception as e:
-            raise Exception(f"Failed to generate query embedding: {str(e)}")
-
-    def batch_generate_embeddings(self, texts: List[str]) -> List[List[float]]:
-        """Generate embeddings for multiple texts.
-
-        Args:
-            texts: List of texts to embed
-
-        Returns:
-            List of embedding vectors
-        """
-        embeddings = []
-        for text in texts:
-            embedding = self.generate_embedding(text)
-            embeddings.append(embedding)
-        return embeddings

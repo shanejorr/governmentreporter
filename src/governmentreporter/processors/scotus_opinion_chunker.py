@@ -8,8 +8,11 @@ from typing import Any, Dict, List, Optional, Tuple
 import tiktoken
 
 from ..apis.court_listener import CourtListenerClient
+from ..database.chroma_client import ChromaDBClient
 from ..metadata.gemini_generator import GeminiMetadataGenerator
 from ..utils.citations import build_bluebook_citation, extract_cited_cases
+from ..utils.embeddings import GoogleEmbeddingsClient
+from .base import BaseDocumentProcessor, ProcessedChunk
 
 
 @dataclass
@@ -76,6 +79,7 @@ class SCOTUSOpinionChunker:
         self.target_chunk_size = target_chunk_size
         self.max_chunk_size = max_chunk_size
         self.tokenizer = tiktoken.get_encoding("cl100k_base")
+        self._token_cache = {}  # Cache for token counts
 
         # Regex patterns for opinion detection
         self.majority_pattern = re.compile(
@@ -94,8 +98,28 @@ class SCOTUSOpinionChunker:
         self.subsection_pattern = re.compile(r"^\s*[A-Z]\.?\s*$", re.MULTILINE)
 
     def count_tokens(self, text: str) -> int:
-        """Count tokens in text using tiktoken."""
-        return len(self.tokenizer.encode(text))
+        """Count tokens in text using tiktoken with caching.
+        
+        Args:
+            text: Text to count tokens for
+            
+        Returns:
+            Number of tokens in the text
+        """
+        # Use first 100 chars + length as cache key to avoid memory bloat
+        cache_key = (text[:100], len(text)) if len(text) > 100 else text
+        
+        if cache_key not in self._token_cache:
+            self._token_cache[cache_key] = len(self.tokenizer.encode(text))
+            
+            # Limit cache size to prevent memory issues
+            if len(self._token_cache) > 1000:
+                # Remove oldest entries (FIFO)
+                keys_to_remove = list(self._token_cache.keys())[:500]
+                for key in keys_to_remove:
+                    del self._token_cache[key]
+        
+        return self._token_cache[cache_key]
 
     def split_by_opinion_type(
         self, plain_text: str
@@ -202,47 +226,45 @@ class SCOTUSOpinionChunker:
             return []
 
         chunks = []
-        current_chunk = ""
+        current_chunk_parts = []
 
         for paragraph in paragraphs:
             # Check if adding this paragraph would exceed max size
-            test_chunk = (
-                current_chunk + "\n\n" + paragraph if current_chunk else paragraph
-            )
+            test_parts = current_chunk_parts + [paragraph]
+            test_chunk = "\n\n".join(test_parts)
             token_count = self.count_tokens(test_chunk)
 
             if token_count <= self.max_chunk_size:
-                current_chunk = test_chunk
+                current_chunk_parts.append(paragraph)
             else:
                 # If current chunk exists and has reasonable size, save it
-                if current_chunk and self.count_tokens(current_chunk) >= 100:
-                    chunks.append(current_chunk)
-                    current_chunk = paragraph
+                if current_chunk_parts and self.count_tokens("\n\n".join(current_chunk_parts)) >= 100:
+                    chunks.append("\n\n".join(current_chunk_parts))
+                    current_chunk_parts = [paragraph]
                 else:
                     # If paragraph is too large by itself, we need to split it
                     if self.count_tokens(paragraph) > self.max_chunk_size:
                         # Split paragraph by sentences
                         sentences = re.split(r"(?<=[.!?])\s+", paragraph)
-                        temp_chunk = current_chunk
+                        temp_chunk_parts = current_chunk_parts.copy()
 
                         for sentence in sentences:
-                            test_chunk = (
-                                temp_chunk + " " + sentence if temp_chunk else sentence
-                            )
+                            test_parts = temp_chunk_parts + [sentence]
+                            test_chunk = " ".join(test_parts) if temp_chunk_parts else sentence
                             if self.count_tokens(test_chunk) <= self.max_chunk_size:
-                                temp_chunk = test_chunk
+                                temp_chunk_parts.append(sentence)
                             else:
-                                if temp_chunk:
-                                    chunks.append(temp_chunk)
-                                temp_chunk = sentence
+                                if temp_chunk_parts:
+                                    chunks.append(" ".join(temp_chunk_parts))
+                                temp_chunk_parts = [sentence]
 
-                        current_chunk = temp_chunk
+                        current_chunk_parts = temp_chunk_parts
                     else:
-                        current_chunk = paragraph
+                        current_chunk_parts = [paragraph]
 
         # Add final chunk if it exists
-        if current_chunk:
-            chunks.append(current_chunk)
+        if current_chunk_parts:
+            chunks.append("\n\n".join(current_chunk_parts))
 
         return chunks
 
@@ -361,7 +383,7 @@ class SCOTUSOpinionChunker:
         return all_chunks
 
 
-class SCOTUSOpinionProcessor:
+class SCOTUSOpinionProcessor(BaseDocumentProcessor):
     """Main processor for Supreme Court opinions that combines all components."""
 
     def __init__(
@@ -370,6 +392,8 @@ class SCOTUSOpinionProcessor:
         gemini_api_key: Optional[str] = None,
         target_chunk_size: int = 600,
         max_chunk_size: int = 800,
+        embeddings_client: Optional[GoogleEmbeddingsClient] = None,
+        db_client: Optional[ChromaDBClient] = None,
     ):
         """Initialize the processor with API clients.
 
@@ -378,12 +402,58 @@ class SCOTUSOpinionProcessor:
             gemini_api_key: Google Gemini API key
             target_chunk_size: Target size for chunks in tokens
             max_chunk_size: Maximum allowed chunk size in tokens
+            embeddings_client: Client for generating embeddings
+            db_client: Database client for storage
         """
+        super().__init__(embeddings_client, db_client)
         self.court_listener = CourtListenerClient(court_listener_token)
         self.gemini_generator = GeminiMetadataGenerator(gemini_api_key)
         self.chunker = SCOTUSOpinionChunker(target_chunk_size, max_chunk_size)
 
+    def process_document(self, document_id: str) -> List[ProcessedChunk]:
+        """Process a Supreme Court opinion into chunks with embeddings.
+        
+        Args:
+            document_id: The Court Listener opinion ID as a string
+            
+        Returns:
+            List of ProcessedChunk objects with embeddings
+        """
+        opinion_id = int(document_id)
+        opinion_chunks = self._process_opinion_chunks(opinion_id)
+        
+        # Convert to ProcessedChunk with embeddings
+        processed_chunks = []
+        for i, chunk in enumerate(opinion_chunks):
+            embedding = self.embeddings_client.generate_embedding(chunk.text)
+            
+            # Convert chunk metadata to dict
+            metadata = chunk.to_dict()
+            # Remove text from metadata to avoid duplication
+            metadata.pop("text", None)
+            
+            processed_chunk = ProcessedChunk(
+                text=chunk.text,
+                embedding=embedding,
+                metadata=metadata,
+                chunk_index=i
+            )
+            processed_chunks.append(processed_chunk)
+            
+        return processed_chunks
+    
     def process_opinion(self, opinion_id: int) -> List[ProcessedOpinionChunk]:
+        """Legacy method - process opinion without embeddings.
+        
+        Args:
+            opinion_id: The Court Listener opinion ID
+            
+        Returns:
+            List of ProcessedOpinionChunk objects (without embeddings)
+        """
+        return self._process_opinion_chunks(opinion_id)
+    
+    def _process_opinion_chunks(self, opinion_id: int) -> List[ProcessedOpinionChunk]:
         """Process a Supreme Court opinion into chunks with complete metadata.
 
         Args:
