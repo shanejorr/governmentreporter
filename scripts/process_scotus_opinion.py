@@ -18,7 +18,9 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-from src.governmentreporter.processors.scotus_opinion_chunker import \
+# opinion_id = 9973155
+
+from governmentreporter.processors.scotus_opinion_chunker import \
     SCOTUSOpinionProcessor
 
 
