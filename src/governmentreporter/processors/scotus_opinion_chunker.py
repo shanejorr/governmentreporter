@@ -10,7 +10,7 @@ import tiktoken
 from ..apis.court_listener import CourtListenerClient
 from ..database.chroma_client import ChromaDBClient
 from ..metadata.gemini_generator import GeminiMetadataGenerator
-from ..utils.citations import build_bluebook_citation, extract_cited_cases
+from ..utils.citations import build_bluebook_citation
 from ..utils.embeddings import GoogleEmbeddingsClient
 from .base import BaseDocumentProcessor, ProcessedChunk
 
@@ -470,7 +470,10 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
         if not cluster_url:
             raise ValueError(f"No cluster URL found for opinion {opinion_id}")
 
-        cluster_data = self.court_listener.get_opinion_cluster(cluster_url)
+        try:
+            cluster_data = self.court_listener.get_opinion_cluster(cluster_url)
+        except Exception as e:
+            raise ValueError(f"Failed to fetch cluster data for opinion {opinion_id}: {str(e)}")
 
         # Step 3: Extract plain text
         plain_text = opinion_data.get("plain_text", "")
@@ -481,14 +484,25 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
         chunks = self.chunker.chunk_opinion(plain_text)
 
         # Step 5: Extract legal metadata (only once for the entire opinion)
-        legal_metadata = self.gemini_generator.extract_legal_metadata(plain_text)
+        try:
+            legal_metadata = self.gemini_generator.extract_legal_metadata(plain_text)
+        except Exception as e:
+            # If Gemini extraction fails, use empty metadata
+            print(f"Warning: Failed to extract legal metadata for opinion {opinion_id}: {str(e)}")
+            legal_metadata = {
+                "legal_topics": [],
+                "key_legal_questions": [],
+                "constitutional_provisions": [],
+                "statutes_interpreted": [],
+                "holding": None,
+            }
 
         # Step 6: Build citation string
         citation = build_bluebook_citation(cluster_data)
 
-        # Step 7: Extract cited cases
+        # Step 7: Extract cited cases  
         opinions_cited_data = opinion_data.get("opinions_cited", [])
-        cited_cases = extract_cited_cases(opinions_cited_data)
+        cited_cases = self._extract_cited_cases_from_urls(opinions_cited_data)
 
         # Step 8: Combine all metadata for each chunk
         processed_chunks = []
@@ -529,6 +543,30 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
             processed_chunks.append(processed_chunk)
 
         return processed_chunks
+
+    def _extract_cited_cases_from_urls(self, opinions_cited_urls: List[str]) -> List[str]:
+        """Extract cited case information from opinion URLs.
+        
+        Args:
+            opinions_cited_urls: List of URLs to cited opinions
+            
+        Returns:
+            List of case identifiers or names for cited cases
+        """
+        cited_cases = []
+        
+        for url in opinions_cited_urls:
+            if isinstance(url, str) and "/opinions/" in url:
+                # Extract opinion ID from URL
+                # URL format: https://www.courtlistener.com/api/rest/v4/opinions/85272/
+                try:
+                    opinion_id = url.strip("/").split("/")[-1]
+                    if opinion_id.isdigit():
+                        cited_cases.append(f"Opinion {opinion_id}")
+                except (IndexError, AttributeError):
+                    continue
+                    
+        return cited_cases
 
     def _format_date(self, date_str: Optional[str]) -> str:
         """Format date string for consistent storage."""
