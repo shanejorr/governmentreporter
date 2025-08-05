@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """
-Script to process a Supreme Court opinion using the new hierarchical chunking pipeline:
+Script to process a Supreme Court opinion through the hierarchical chunking pipeline.
+
+This script fetches Supreme Court opinions from CourtListener, processes them into
+semanticly meaningful chunks, enriches them with AI-generated metadata, and stores
+them in ChromaDB for retrieval.
+
+Pipeline Overview:
 1. Fetch opinion data from CourtListener API
 2. Fetch cluster data for case metadata
 3. Hierarchically chunk the opinion by type and sections
@@ -24,21 +30,48 @@ from governmentreporter.processors.scotus_opinion_chunker import SCOTUSOpinionPr
 
 
 def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
-    """Process a Supreme Court opinion through the new hierarchical chunking pipeline.
+    """Process a Supreme Court opinion through the hierarchical chunking pipeline.
 
     Args:
-        opinion_id: CourtListener opinion ID
+        opinion_id: CourtListener opinion ID (unique identifier for the opinion)
 
     Returns:
-        Dict containing processing results and statistics
+        Dict containing processing results and statistics including:
+            - opinion_id: The processed opinion ID
+            - total_chunks: Number of chunks created
+            - stored_chunks: Number of chunks successfully stored in ChromaDB
+            - chunk_types: List of opinion types found (majority, dissenting, etc.)
+            - case_name: Name of the case
+            - citation: Bluebook citation for the case
+            - success: Boolean indicating if processing succeeded
+            - error: Error message if processing failed (None if successful)
     """
     print(f"Processing Supreme Court opinion ID: {opinion_id}")
 
     # Step 1: Initialize the opinion processor
+    # What: Creates an instance of SCOTUSOpinionProcessor with default configuration
+    # Why: This processor contains all necessary clients (CourtListener API, ChromaDB,
+    #      Gemini AI, embeddings) and the chunking logic for processing opinions
+    # Output: Configured processor instance ready to fetch and process opinions
     print("1. Initializing SCOTUS opinion processor...")
     processor = SCOTUSOpinionProcessor()
 
-    # Step 2: Process the opinion into chunks with complete metadata
+    # Step 2: Process the opinion into chunks with complete metadata and store in ChromaDB
+    # What: Executes the complete processing pipeline using process_and_store method
+    # Why: This single method handles the entire workflow from fetching to storage,
+    #      ensuring all steps are properly coordinated and errors are handled consistently
+    # Output: Dict with success status, chunk counts, and any error messages
+    #
+    # The process_and_store method internally performs these operations:
+    #   a. Fetches opinion text and metadata from CourtListener API
+    #   b. Fetches cluster data for additional case information (case name, court, date)
+    #   c. Splits opinion into logical chunks based on opinion type (majority, dissenting, etc.)
+    #      and sections (I, II.A, etc.) while maintaining semantic coherence
+    #   d. Sends full opinion text to Gemini 2.5 Flash-Lite to extract legal metadata:
+    #      legal topics, key questions, constitutional provisions, statutes, and holdings
+    #   e. Constructs proper Bluebook citations from cluster metadata
+    #   f. Generates semantic embeddings for each chunk using Google's embedding model
+    #   g. Stores chunks with all metadata in ChromaDB collection for vector search
     print("2. Processing opinion through hierarchical chunking pipeline...")
     print("   - Fetching opinion data from CourtListener API")
     print("   - Fetching cluster data for case metadata")
@@ -47,7 +80,6 @@ def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
     print("   - Building bluebook citations")
     print("   - Generating embeddings for each chunk")
 
-    # Use the new integrated process_and_store method
     result = processor.process_and_store(
         document_id=str(opinion_id), collection_name="scotus_opinions"
     )
@@ -64,10 +96,18 @@ def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
 
     print(f"   ✅ Generated and stored {result['chunks_stored']} chunks")
 
-    # Step 3: Get processed chunks for display (without embeddings)
+    # Step 3: Get processed chunks for display and statistics
+    # What: Fetches the same chunks but without embeddings (for memory efficiency)
+    # Why: We need the chunk objects to display statistics and sample metadata to the user,
+    #      but don't need the large embedding vectors for display purposes
+    # Output: List of ProcessedOpinionChunk objects containing all metadata but no embeddings
     processed_chunks = processor.process_opinion(opinion_id)
 
-    # Show chunk breakdown
+    # Calculate chunk statistics for user feedback
+    # What: Aggregates chunks by opinion type and tracks authoring justices
+    # Why: Provides a quick overview of how the opinion was chunked, showing the
+    #      distribution of content across different opinion types and authors
+    # Output: Dictionary mapping opinion types to counts and justice names
     chunk_stats = {}
     for chunk in processed_chunks:
         opinion_type = chunk.opinion_type
@@ -84,7 +124,11 @@ def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
         )
         print(f"      - {opinion_type.title()}: {stats['count']} chunks{justice_info}")
 
-    # Step 4: Display sample metadata
+    # Step 4: Display sample metadata from the first chunk
+    # What: Shows a preview of the metadata extracted and stored for each chunk
+    # Why: Allows users to verify that metadata extraction worked correctly and
+    #      understand what information is available for retrieval
+    # Output: Console display of key metadata fields from the first chunk
     if processed_chunks:
         sample_chunk = processed_chunks[0]
         print("\n📋 Sample metadata from first chunk:")
@@ -99,7 +143,10 @@ def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
             f"   - Holding: {sample_chunk.holding[:100] if sample_chunk.holding else 'N/A'}..."
         )
 
-    # Return processing results
+    # Compile and return processing results
+    # What: Aggregates all processing statistics and metadata into a single dict
+    # Why: Provides a comprehensive summary for logging, error handling, and user feedback
+    # Output: Dictionary with success status, counts, and key metadata
     return {
         "opinion_id": opinion_id,
         "total_chunks": result["chunks_processed"],
