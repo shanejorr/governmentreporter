@@ -15,8 +15,13 @@ Pipeline Overview:
 6. Store all chunks with complete metadata in ChromaDB
 """
 
+import argparse
+import json
+import logging
 import os
 import sys
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List
 
 from dotenv import load_dotenv
@@ -29,11 +34,56 @@ load_dotenv()
 from governmentreporter.processors.scotus_opinion_chunker import SCOTUSOpinionProcessor
 
 
-def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
+def setup_verbose_logging(opinion_id: int) -> logging.Logger:
+    """Set up a logger for verbose output.
+    
+    Args:
+        opinion_id: The opinion ID being processed
+        
+    Returns:
+        Configured logger instance
+    """
+    # Create logs directory if it doesn't exist
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+    
+    # Create timestamp for unique log filename
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = log_dir / f"scotus_opinion_{opinion_id}_{timestamp}.log"
+    
+    # Configure logger
+    logger = logging.getLogger(f"scotus_processor_{opinion_id}")
+    logger.setLevel(logging.DEBUG)
+    
+    # File handler for detailed logs
+    file_handler = logging.FileHandler(log_file, mode='w')
+    file_handler.setLevel(logging.DEBUG)
+    file_formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    file_handler.setFormatter(file_formatter)
+    
+    # Console handler for summary info
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_formatter = logging.Formatter('%(levelname)s: %(message)s')
+    console_handler.setFormatter(console_formatter)
+    
+    # Add handlers to logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
+    logger.info(f"Verbose logging enabled. Log file: {log_file}")
+    
+    return logger
+
+
+def process_scotus_opinion(opinion_id: int, verbose: bool = False) -> Dict[str, Any]:
     """Process a Supreme Court opinion through the hierarchical chunking pipeline.
 
     Args:
         opinion_id: CourtListener opinion ID (unique identifier for the opinion)
+        verbose: If True, log detailed information about processing
 
     Returns:
         Dict containing processing results and statistics including:
@@ -47,6 +97,11 @@ def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
             - error: Error message if processing failed (None if successful)
     """
     print(f"Processing Supreme Court opinion ID: {opinion_id}")
+    
+    # Set up verbose logging if requested
+    logger = None
+    if verbose:
+        logger = setup_verbose_logging(opinion_id)
 
     # Step 1: Initialize the opinion processor
     # What: Creates an instance of SCOTUSOpinionProcessor with default configuration
@@ -54,7 +109,7 @@ def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
     #      Gemini AI, embeddings) and the chunking logic for processing opinions
     # Output: Configured processor instance ready to fetch and process opinions
     print("1. Initializing SCOTUS opinion processor...")
-    processor = SCOTUSOpinionProcessor()
+    processor = SCOTUSOpinionProcessor(logger=logger)
 
     # Step 2: Process the opinion into chunks with complete metadata and store in ChromaDB
     # What: Executes the complete processing pipeline using process_and_store method
@@ -160,19 +215,25 @@ def process_scotus_opinion(opinion_id: int) -> Dict[str, Any]:
 
 def main():
     """Main function to run the processing pipeline."""
-    if len(sys.argv) != 2:
-        print("Usage: python process_scotus_opinion.py <opinion_id>")
-        print("Example: python process_scotus_opinion.py 9973155")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Process a Supreme Court opinion through the hierarchical chunking pipeline."
+    )
+    parser.add_argument(
+        "opinion_id",
+        type=int,
+        help="CourtListener opinion ID (unique identifier for the opinion)"
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="Enable verbose logging to file with detailed processing information"
+    )
+    
+    args = parser.parse_args()
 
     try:
-        opinion_id = int(sys.argv[1])
-    except ValueError:
-        print("Error: opinion_id must be an integer")
-        sys.exit(1)
-
-    try:
-        result = process_scotus_opinion(opinion_id)
+        result = process_scotus_opinion(args.opinion_id, verbose=args.verbose)
         print(f"\n{'✅' if result['success'] else '❌'} Processing completed!")
         print(f"Opinion ID: {result['opinion_id']}")
 

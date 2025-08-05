@@ -1,5 +1,7 @@
 """Supreme Court Opinion Hierarchical Chunking and Metadata Extraction."""
 
+import json
+import logging
 import re
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -424,6 +426,7 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
         max_chunk_size: int = 800,
         embeddings_client: Optional[GoogleEmbeddingsClient] = None,
         db_client: Optional[ChromaDBClient] = None,
+        logger: Optional[logging.Logger] = None,
     ):
         """Initialize the processor with API clients.
 
@@ -434,8 +437,9 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
             max_chunk_size: Maximum allowed chunk size in tokens
             embeddings_client: Client for generating embeddings
             db_client: Database client for storage
+            logger: Logger for verbose output
         """
-        super().__init__(embeddings_client, db_client)
+        super().__init__(embeddings_client, db_client, logger)
         self.court_listener = CourtListenerClient(court_listener_token)
         self.gemini_generator = GeminiMetadataGenerator(gemini_api_key)
         self.chunker = SCOTUSOpinionChunker(target_chunk_size, max_chunk_size)
@@ -454,8 +458,19 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
 
         # Convert to ProcessedChunk with embeddings
         processed_chunks = []
+        
+        if self.logger:
+            self.logger.debug("=" * 80)
+            self.logger.debug("GENERATING EMBEDDINGS")
+            self.logger.debug("=" * 80)
+            
         for i, chunk in enumerate(opinion_chunks):
             embedding = self.embeddings_client.generate_embedding(chunk.text)
+            
+            if self.logger:
+                self.logger.debug(f"Generated embedding for chunk {i+1}/{len(opinion_chunks)}")
+                self.logger.debug(f"  Embedding dimensions: {len(embedding)}")
+                self.logger.debug(f"  First 10 values: {embedding[:10]}")
 
             # Convert chunk metadata to dict
             metadata = chunk.to_dict()
@@ -491,6 +506,13 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
         """
         # Step 1: Fetch opinion data
         opinion_data = self.court_listener.get_opinion(opinion_id)
+        
+        # Log raw API response from opinion endpoint
+        if self.logger:
+            self.logger.debug("=" * 80)
+            self.logger.debug("RAW API RESPONSE - OPINION ENDPOINT")
+            self.logger.debug("=" * 80)
+            self.logger.debug(json.dumps(opinion_data, indent=2, default=str))
 
         # Step 2: Fetch cluster data
         cluster_url = opinion_data.get("cluster")
@@ -499,6 +521,14 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
 
         try:
             cluster_data = self.court_listener.get_opinion_cluster(cluster_url)
+            
+            # Log raw API response from cluster endpoint
+            if self.logger:
+                self.logger.debug("=" * 80)
+                self.logger.debug("RAW API RESPONSE - CLUSTER ENDPOINT")
+                self.logger.debug("=" * 80)
+                self.logger.debug(json.dumps(cluster_data, indent=2, default=str))
+                
         except Exception as e:
             raise ValueError(
                 f"Failed to fetch cluster data for opinion {opinion_id}: {str(e)}"
@@ -508,18 +538,52 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
         plain_text = opinion_data.get("plain_text", "")
         if not plain_text:
             raise ValueError(f"No plain text found for opinion {opinion_id}")
+            
+        # Log text length info
+        if self.logger:
+            self.logger.info(f"Opinion text length: {len(plain_text)} characters")
 
         # Step 4: Chunk the text hierarchically
         chunks = self.chunker.chunk_opinion(plain_text)
+        
+        # Log chunk breakdown
+        if self.logger:
+            self.logger.debug("=" * 80)
+            self.logger.debug("TEXT CHUNKS BREAKDOWN")
+            self.logger.debug("=" * 80)
+            self.logger.info(f"Total chunks created: {len(chunks)}")
+            
+            for i, chunk in enumerate(chunks):
+                self.logger.debug(f"\n--- Chunk {i+1}/{len(chunks)} ---")
+                self.logger.debug(f"Opinion Type: {chunk.opinion_type}")
+                self.logger.debug(f"Justice: {chunk.justice or 'N/A'}")
+                self.logger.debug(f"Section: {chunk.section or 'N/A'}")
+                self.logger.debug(f"Chunk Index: {chunk.chunk_index}")
+                self.logger.debug(f"Text Length: {len(chunk.text)} characters")
+                self.logger.debug(f"Text Preview (first 200 chars):")
+                self.logger.debug(f"{chunk.text[:200]}...")
 
         # Step 5: Extract legal metadata (only once for the entire opinion)
         try:
             legal_metadata = self.gemini_generator.extract_legal_metadata(plain_text)
+            
+            # Log Gemini metadata extraction result
+            if self.logger:
+                self.logger.debug("=" * 80)
+                self.logger.debug("GEMINI METADATA EXTRACTION RESULT")
+                self.logger.debug("=" * 80)
+                self.logger.debug(json.dumps(legal_metadata, indent=2, default=str))
+                
         except Exception as e:
             # If Gemini extraction fails, use empty metadata
-            print(
-                f"Warning: Failed to extract legal metadata for opinion {opinion_id}: {str(e)}"
-            )
+            if self.logger:
+                self.logger.warning(
+                    f"Failed to extract legal metadata for opinion {opinion_id}: {str(e)}"
+                )
+            else:
+                print(
+                    f"Warning: Failed to extract legal metadata for opinion {opinion_id}: {str(e)}"
+                )
             legal_metadata = {
                 "legal_topics": [],
                 "key_legal_questions": [],
@@ -572,6 +636,25 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
             )
 
             processed_chunks.append(processed_chunk)
+            
+        # Log final processed chunks with metadata
+        if self.logger:
+            self.logger.debug("=" * 80)
+            self.logger.debug("FINAL PROCESSED CHUNKS FOR DATABASE")
+            self.logger.debug("=" * 80)
+            self.logger.info(f"Total processed chunks ready for storage: {len(processed_chunks)}")
+            
+            for i, chunk in enumerate(processed_chunks):
+                self.logger.debug(f"\n--- Processed Chunk {i+1}/{len(processed_chunks)} ---")
+                self.logger.debug(f"Database Fields:")
+                chunk_dict = chunk.to_dict()
+                for key, value in chunk_dict.items():
+                    if key == "text":
+                        self.logger.debug(f"  {key}: {len(value)} characters")
+                    elif isinstance(value, list) and len(str(value)) > 100:
+                        self.logger.debug(f"  {key}: {value[:100]}... (truncated)")
+                    else:
+                        self.logger.debug(f"  {key}: {value}")
 
         return processed_chunks
 
