@@ -13,7 +13,8 @@
       "WebFetch(domain:www.courtlistener.com)",
       "Bash(find:*)",
       "Bash(sed:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(uv sync:*)"
     ],
     "deny": []
   }
