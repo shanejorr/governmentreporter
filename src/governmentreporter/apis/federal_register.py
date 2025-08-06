@@ -17,7 +17,7 @@ class FederalRegisterClient(GovernmentAPIClient):
 
     def __init__(self):
         """Initialize the Federal Register client.
-        
+
         Note: Federal Register API doesn't require authentication.
         """
         super().__init__(api_key=None)
@@ -35,27 +35,29 @@ class FederalRegisterClient(GovernmentAPIClient):
 
     def _get_rate_limit_delay(self) -> float:
         """Return the rate limit delay in seconds between requests.
-        
+
         Federal Register API has a 60 requests/minute limit.
         """
         return 1.1  # Slightly over 1 second to stay well under 60/min
 
-    def _make_request_with_retry(self, url: str, params: Optional[Dict] = None) -> Response:
+    def _make_request_with_retry(
+        self, url: str, params: Optional[Dict] = None
+    ) -> Response:
         """Make an HTTP request with exponential backoff retry logic.
-        
+
         Args:
             url: The URL to request
             params: Optional query parameters
-            
+
         Returns:
             The HTTP response
-            
+
         Raises:
             httpx.HTTPError: If all retries are exhausted
         """
         retry_count = 0
         delay = self.retry_delay
-        
+
         while retry_count < self.max_retries:
             try:
                 with httpx.Client(timeout=30.0) as client:
@@ -85,24 +87,24 @@ class FederalRegisterClient(GovernmentAPIClient):
                     delay *= 2
                 else:
                     raise
-        
+
         raise httpx.HTTPError(f"Failed after {self.max_retries} retries")
 
     def get_executive_order_text(self, raw_text_url: str) -> str:
         """Fetch the raw text of an executive order from the provided URL.
-        
+
         Args:
             raw_text_url: The URL to the raw text of the executive order
-            
+
         Returns:
             The raw text content of the executive order
-            
+
         Raises:
             httpx.HTTPError: If the request fails
         """
         response = self._make_request_with_retry(raw_text_url)
         text = response.text
-        
+
         # Clean up HTML if present (the raw text often contains HTML markup)
         if text.startswith("<html>"):
             # Extract text between <pre> tags
@@ -113,26 +115,23 @@ class FederalRegisterClient(GovernmentAPIClient):
                 text = text.replace("&lt;", "<").replace("&gt;", ">")
                 text = text.replace("&amp;", "&").replace("&quot;", '"')
                 # Remove HTML anchor tags
-                text = re.sub(r'<a[^>]*>.*?</a>', '', text)
-        
+                text = re.sub(r"<a[^>]*>.*?</a>", "", text)
+
         return text.strip()
 
     def list_executive_orders(
-        self,
-        start_date: str,
-        end_date: str,
-        max_results: Optional[int] = None
+        self, start_date: str, end_date: str, max_results: Optional[int] = None
     ) -> Iterator[Dict[str, Any]]:
         """List executive orders between two dates.
-        
+
         Args:
             start_date: Start date in YYYY-MM-DD format
             end_date: End date in YYYY-MM-DD format
             max_results: Maximum number of results to return (None for all)
-            
+
         Yields:
             Dict containing executive order metadata
-            
+
         Raises:
             httpx.HTTPError: If an API request fails
         """
@@ -141,7 +140,7 @@ class FederalRegisterClient(GovernmentAPIClient):
             raise ValueError(f"Invalid start_date format: {start_date}. Use YYYY-MM-DD")
         if not self.validate_date_format(end_date):
             raise ValueError(f"Invalid end_date format: {end_date}. Use YYYY-MM-DD")
-        
+
         url = f"{self.base_url}/documents"
         params = {
             "conditions[type]": "PRESDOCU",
@@ -166,57 +165,57 @@ class FederalRegisterClient(GovernmentAPIClient):
             "per_page": 100,
             "page": 1,
         }
-        
+
         results_count = 0
-        
+
         while True:
             # Rate limiting
             time.sleep(self.rate_limit_delay)
-            
+
             self.logger.info(f"Fetching page {params['page']} of executive orders...")
             response = self._make_request_with_retry(url, params)
             data = response.json()
-            
+
             results = data.get("results", [])
-            
+
             if not results:
                 break
-            
+
             for order in results:
                 if max_results is not None and results_count >= max_results:
                     return
-                
+
                 yield order
                 results_count += 1
-            
+
             # Check if there are more pages
             total_pages = data.get("total_pages", 1)
             current_page = params["page"]
-            
+
             self.logger.info(
                 f"Processed page {current_page}/{total_pages}, "
                 f"total orders so far: {results_count}"
             )
-            
+
             if current_page >= total_pages:
                 break
-            
+
             params["page"] += 1
 
     def get_executive_order(self, document_number: str) -> Dict[str, Any]:
         """Fetch a specific executive order by document number.
-        
+
         Args:
             document_number: The Federal Register document number
-            
+
         Returns:
             Dict containing the executive order data
-            
+
         Raises:
             httpx.HTTPError: If the API request fails
         """
         url = f"{self.base_url}/documents/{document_number}"
-        
+
         response = self._make_request_with_retry(url)
         return response.json()
 
@@ -228,13 +227,13 @@ class FederalRegisterClient(GovernmentAPIClient):
         limit: int = 10,
     ) -> List[Document]:
         """Search for executive orders (minimal implementation).
-        
+
         Args:
             query: Search query string (not currently used)
             start_date: Optional start date filter (YYYY-MM-DD format)
             end_date: Optional end date filter (YYYY-MM-DD format)
             limit: Maximum number of results to return
-            
+
         Returns:
             List of Document objects
         """
@@ -244,22 +243,22 @@ class FederalRegisterClient(GovernmentAPIClient):
 
     def get_document(self, document_id: str) -> Document:
         """Retrieve a specific executive order by document number.
-        
+
         Args:
             document_id: Document number from Federal Register
-            
+
         Returns:
             Document object with full content
         """
         order_data = self.get_executive_order(document_id)
-        
+
         # Get the raw text
         raw_text_url = order_data.get("raw_text_url")
         if raw_text_url:
             content = self.get_executive_order_text(raw_text_url)
         else:
             content = order_data.get("abstract", "")
-        
+
         return Document(
             id=document_id,
             title=order_data.get("title", "Unknown Executive Order"),
@@ -273,16 +272,16 @@ class FederalRegisterClient(GovernmentAPIClient):
 
     def get_document_text(self, document_id: str) -> str:
         """Retrieve the plain text content of an executive order.
-        
+
         Args:
             document_id: Document number from Federal Register
-            
+
         Returns:
             Plain text content of the executive order
         """
         order_data = self.get_executive_order(document_id)
         raw_text_url = order_data.get("raw_text_url")
-        
+
         if raw_text_url:
             return self.get_executive_order_text(raw_text_url)
         else:
@@ -290,10 +289,10 @@ class FederalRegisterClient(GovernmentAPIClient):
 
     def extract_basic_metadata(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
         """Extract basic metadata from executive order data.
-        
+
         Args:
             order_data: Raw executive order data from API
-            
+
         Returns:
             Dict with extracted metadata
         """
@@ -304,14 +303,14 @@ class FederalRegisterClient(GovernmentAPIClient):
             formatted_date = signing_date.strftime("%Y-%m-%d")
         except (ValueError, AttributeError):
             formatted_date = signing_date_str
-        
+
         # Extract president info
         president_data = order_data.get("president", {})
         if isinstance(president_data, dict):
             president_name = president_data.get("name", "Unknown")
         else:
             president_name = str(president_data) if president_data else "Unknown"
-        
+
         return {
             "document_number": order_data.get("document_number"),
             "title": order_data.get("title", ""),
