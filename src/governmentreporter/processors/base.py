@@ -69,7 +69,7 @@ class BaseDocumentProcessor(ABC):
 
         # Get or create collection
         collection = self.db_client.get_or_create_collection(collection_name)
-        
+
         if self.logger:
             self.logger.debug("=" * 80)
             self.logger.debug("STORING CHUNKS IN CHROMADB")
@@ -95,15 +95,23 @@ class BaseDocumentProcessor(ABC):
             metadata["chunk_index"] = chunk.chunk_index
             metadata["source_document_id"] = document_id
             metadatas.append(metadata)
-            
+
             if self.logger:
                 self.logger.debug(f"\n--- ChromaDB Entry {i+1}/{len(chunks)} ---")
                 self.logger.debug(f"Chunk ID: {chunk_id}")
                 self.logger.debug(f"Text length: {len(chunk.text)} characters")
-                self.logger.debug(f"Embedding length: {len(chunk.embedding)} dimensions")
+                self.logger.debug(
+                    f"Embedding length: {len(chunk.embedding)} dimensions"
+                )
                 self.logger.debug(f"Metadata keys: {list(metadata.keys())}")
                 # Log a few metadata fields for inspection
-                for key in ["opinion_type", "justice", "section", "case_name", "legal_topics"]:
+                for key in [
+                    "opinion_type",
+                    "justice",
+                    "section",
+                    "case_name",
+                    "legal_topics",
+                ]:
                     if key in metadata:
                         self.logger.debug(f"  {key}: {metadata[key]}")
 
@@ -111,7 +119,7 @@ class BaseDocumentProcessor(ABC):
         collection.add(
             ids=ids, embeddings=embeddings, documents=documents, metadatas=metadatas
         )
-        
+
         if self.logger:
             self.logger.info(f"✅ Successfully stored {len(chunks)} chunks in ChromaDB")
 

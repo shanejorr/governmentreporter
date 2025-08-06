@@ -16,7 +16,13 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-from governmentreporter.processors import SCOTUSBulkProcessor
+# Add parent directory to path
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.governmentreporter.processors import SCOTUSBulkProcessor
 
 
 def main() -> None:

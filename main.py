@@ -38,22 +38,16 @@ def process_opinion(opinion_id: int):
 
     try:
         processor = SCOTUSOpinionProcessor()
-        chunks = processor.process_opinion(opinion_id)
+        result = processor.process_and_store(
+            document_id=str(opinion_id), collection_name="federal_court_scotus_opinions"
+        )
 
-        print(f"✅ Successfully processed {len(chunks)} chunks")
-
-        # Show summary
-        chunk_types = {}
-        for chunk in chunks:
-            chunk_types[chunk.opinion_type] = chunk_types.get(chunk.opinion_type, 0) + 1
-
-        print("📊 Chunk breakdown:")
-        for opinion_type, count in chunk_types.items():
-            print(f"  - {opinion_type.title()}: {count} chunks")
-
-        if chunks:
-            print(f"\n📋 Case: {chunks[0].case_name}")
-            print(f"📄 Citation: {chunks[0].citation}")
+        if result["success"]:
+            print(f"✅ Successfully processed {result['chunks_processed']} chunks")
+            print(f"📊 Stored {result['chunks_stored']} chunks in database")
+        else:
+            print(f"❌ Error: {result['error']}")
+            return False
 
     except Exception as e:
         print(f"❌ Error processing opinion: {e}")

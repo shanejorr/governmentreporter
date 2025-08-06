@@ -117,64 +117,19 @@ class SCOTUSBulkProcessor:
         print(f"Processing opinion {opinion_id}...")
 
         try:
-            # Step 1: Process opinion with hierarchical chunking
-            print("  Running hierarchical chunking pipeline...")
-            processed_chunks = self.opinion_processor.process_opinion(int(opinion_id))
+            # Process and store opinion using the processor's integrated method
+            print("  Processing opinion with hierarchical chunking...")
+            result = self.opinion_processor.process_and_store(
+                document_id=opinion_id, collection_name=self.collection_name
+            )
 
-            if not processed_chunks:
-                print(f"  Skipping opinion {opinion_id}: No chunks generated")
-                self.processed_ids.add(opinion_id)
-                return True
-
-            print(f"  Generated {len(processed_chunks)} chunks")
-
-            # Show chunk breakdown
-            chunk_stats: Dict[str, int] = {}
-            for chunk in processed_chunks:
-                opinion_type = chunk.opinion_type
-                chunk_stats[opinion_type] = chunk_stats.get(opinion_type, 0) + 1
-
-            chunk_info = ", ".join([f"{k}: {v}" for k, v in chunk_stats.items()])
-            print(f"    Breakdown: {chunk_info}")
-
-            # Step 2: Generate embeddings and store each chunk
-            print("  Generating embeddings and storing chunks...")
-            stored_count = 0
-
-            for i, chunk in enumerate(processed_chunks):
-                try:
-                    # Generate embedding for this chunk
-                    embedding = self.opinion_processor.embeddings_client.generate_embedding(chunk.text)
-
-                    # Create unique chunk ID
-                    chunk_id = f"{opinion_id}_chunk_{i}"
-
-                    # Prepare metadata (remove text to avoid duplication)
-                    chunk_metadata = chunk.to_dict()
-                    chunk_metadata.pop("text", None)
-
-                    # Store chunk in ChromaDB
-                    self.opinion_processor.db_client.store_scotus_opinion(
-                        opinion_id=chunk_id,
-                        plain_text=chunk.text,
-                        embedding=embedding,
-                        metadata=chunk_metadata,
-                    )
-
-                    stored_count += 1
-
-                except Exception as e:
-                    print(f"    ⚠️  Failed to store chunk {i}: {e}")
-                    continue
-
-            print(f"  ✅ Stored {stored_count}/{len(processed_chunks)} chunks")
-
-            # Mark as processed if we stored at least some chunks
-            if stored_count > 0:
+            if result["success"]:
+                print(f"  Generated {result['chunks_processed']} chunks")
+                print(f"  ✅ Stored {result['chunks_stored']} chunks in database")
                 self.processed_ids.add(opinion_id)
                 return True
             else:
-                raise Exception("No chunks were successfully stored")
+                raise Exception(result.get("error", "Unknown error during processing"))
 
         except Exception as e:
             error_msg = f"Failed to process opinion {opinion_id}: {str(e)}"

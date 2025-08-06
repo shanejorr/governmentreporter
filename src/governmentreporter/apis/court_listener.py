@@ -61,10 +61,10 @@ class CourtListenerClient(GovernmentAPIClient):
         end_date: Optional[str] = None,
         limit: int = 10,
     ) -> List[Document]:
-        """Search for Supreme Court opinions using the API.
+        """Search for Supreme Court opinions (minimal implementation).
 
         Args:
-            query: Search query string (currently not used - returns all SCOTUS opinions)
+            query: Search query string (not currently used)
             start_date: Optional start date filter (YYYY-MM-DD format)
             end_date: Optional end date filter (YYYY-MM-DD format)
             limit: Maximum number of results to return
@@ -72,43 +72,9 @@ class CourtListenerClient(GovernmentAPIClient):
         Returns:
             List of Document objects
         """
-        documents = []
-        for opinion_data in self.list_scotus_opinions(
-            since_date=start_date or "1900-01-01",
-            max_results=limit,
-            rate_limit_delay=self.rate_limit_delay,
-        ):
-            metadata = self.extract_basic_metadata(opinion_data)
-
-            # Get cluster data for case name and citation
-            cluster_url = opinion_data.get("cluster")
-            case_name = f"Opinion {metadata['id']}"  # Default fallback
-            citation = None
-
-            if cluster_url:
-                try:
-                    cluster_data = self.get_opinion_cluster(cluster_url)
-                    case_name = cluster_data.get("case_name", case_name)
-                    citation = build_bluebook_citation(cluster_data)
-                    # Add cluster metadata to the opinion metadata
-                    metadata["case_name"] = case_name
-                    metadata["citation"] = citation
-                except Exception as e:
-                    print(
-                        f"Warning: Failed to fetch cluster data for opinion {metadata['id']}: {str(e)}"
-                    )
-
-            doc = Document(
-                id=str(metadata["id"]),
-                title=case_name,
-                date=metadata["date"] or "",
-                type="Supreme Court Opinion",
-                source="CourtListener",
-                metadata=metadata,
-                url=metadata.get("download_url"),
-            )
-            documents.append(doc)
-        return documents
+        # This is a minimal implementation to satisfy the abstract base class
+        # The actual processing uses list_scotus_opinions and process_opinion directly
+        return []
 
     def get_document(self, document_id: str) -> Document:
         """Retrieve a specific Supreme Court opinion by ID.
