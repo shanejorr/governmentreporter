@@ -14,7 +14,8 @@
       "Bash(find:*)",
       "Bash(sed:*)",
       "Bash(rm:*)",
-      "Bash(uv sync:*)"
+      "Bash(uv sync:*)",
+      "Bash(git branch:*)"
     ],
     "deny": []
   }

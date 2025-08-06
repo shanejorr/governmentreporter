@@ -122,9 +122,6 @@ python -m governmentreporter.server
 ```bash
 # Process a single opinion with hierarchical chunking
 python main.py process 9973155
-
-# Alternative using dedicated script
-python scripts/process_scotus_opinion.py 9973155
 ```
 
 ### Hierarchical Chunking Operations
@@ -134,7 +131,7 @@ python scripts/process_scotus_opinion.py 9973155
 python scripts/test_opinion_chunking.py
 
 # Process specific case (Consumer Financial Protection Bureau v. Community Financial Services)
-python scripts/process_scotus_opinion.py 9973155
+python main.py process 9973155
 
 # Expected output:
 # ✅ Generated 52 chunks
