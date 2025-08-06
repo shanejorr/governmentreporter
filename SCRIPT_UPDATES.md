@@ -4,30 +4,7 @@ This document summarizes the updates made to the scripts in the `scripts/` folde
 
 ## Updated Scripts
 
-### 1. `scripts/process_scotus_opinion.py` ✅ UPDATED
-
-**Previous Behavior:**
-- Processed opinions as single documents
-- Used basic metadata extraction and simple AI metadata
-- Stored one document per opinion in ChromaDB
-
-**New Behavior:**
-- Uses the new `SCOTUSOpinionProcessor` for hierarchical chunking
-- Processes opinions into multiple chunks by opinion type and sections
-- Generates embeddings for each chunk individually
-- Stores each chunk with complete metadata in ChromaDB
-- Provides detailed chunk breakdown and statistics
-
-**Key Changes:**
-- Imports `SCOTUSOpinionProcessor` instead of individual components
-- Calls `processor.process_opinion()` to get processed chunks
-- Generates embeddings for each chunk separately
-- Stores chunks with unique IDs (`{opinion_id}_chunk_{i}`)
-- Returns comprehensive statistics about chunk processing
-
-**Usage:** `python scripts/process_scotus_opinion.py 9973155`
-
-### 2. `scripts/download_scotus_bulk.py` ✅ UPDATED
+### 1. `scripts/download_scotus_bulk.py` ✅ UPDATED
 
 **Previous Behavior:**
 - Processed each opinion as a single document
@@ -47,7 +24,7 @@ This document summarizes the updates made to the scripts in the `scripts/` folde
 
 **Usage:** `python scripts/download_scotus_bulk.py [options]`
 
-### 3. `src/governmentreporter/processors/scotus_bulk.py` ✅ UPDATED
+### 2. `src/governmentreporter/processors/scotus_bulk.py` ✅ UPDATED
 
 **Backend Changes:**
 - Updated `SCOTUSBulkProcessor` to use the new chunking system
@@ -57,7 +34,7 @@ This document summarizes the updates made to the scripts in the `scripts/` folde
 
 ## New Test Scripts
 
-### 4. `scripts/test_opinion_chunking.py` ✅ NEW
+### 3. `scripts/test_opinion_chunking.py` ✅ NEW
 
 **Purpose:**
 - Comprehensive testing of the hierarchical chunking system
@@ -70,17 +47,16 @@ This document summarizes the updates made to the scripts in the `scripts/` folde
 - Metadata extraction testing (simulated)
 - Complete pipeline testing
 
-### 5. `scripts/test_updated_process.py` ✅ NEW
+### 4. `scripts/test_updated_process.py` ✅ NEW
 
 **Purpose:**
-- Tests the updated `process_scotus_opinion.py` script
+- Tests the chunking system with mocked data
 - Uses mocking to simulate API calls and database operations
-- Verifies the script works correctly with the new chunking system
+- Verifies the chunking system works correctly
 
 ## Script Compatibility
 
 ### ✅ Fully Updated Scripts
-- `process_scotus_opinion.py` - Now uses hierarchical chunking
 - `download_scotus_bulk.py` - Now uses hierarchical chunking
 - `test_opinion_chunking.py` - New comprehensive test script
 - `test_updated_process.py` - New script validation test
@@ -89,19 +65,6 @@ This document summarizes the updates made to the scripts in the `scripts/` folde
 - `test_pipeline.py` - Original test script, still functional for basic testing
 
 ## Usage Examples
-
-### Single Opinion Processing
-```bash
-# Process a single opinion with hierarchical chunking
-python scripts/process_scotus_opinion.py 9973155
-
-# Expected output:
-# - Case name and citation
-# - Number of chunks generated
-# - Breakdown by opinion type (syllabus, majority, concurring, dissenting)
-# - Justice attribution for concurring/dissenting opinions
-# - Sample metadata from first chunk
-```
 
 ### Bulk Processing
 ```bash
