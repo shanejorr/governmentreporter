@@ -8,16 +8,16 @@ and stores them in ChromaDB.
 
 Usage:
     uv run python scripts/process_executive_orders.py 2024-01-01 2024-06-30
-    
+
     # Process all orders in 2024
     uv run python scripts/process_executive_orders.py 2024-01-01 2024-12-31
-    
+
     # Process with custom output directory
     uv run python scripts/process_executive_orders.py 2024-01-01 2024-06-30 --output-dir my_data
-    
+
     # Process only first 10 orders (for testing)
     uv run python scripts/process_executive_orders.py 2024-01-01 2024-12-31 --max-orders 10
-    
+
     # Show statistics without processing
     uv run python scripts/process_executive_orders.py 2024-01-01 2024-06-30 --stats
 
@@ -41,23 +41,21 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from src.governmentreporter.processors import ExecutiveOrderBulkProcessor
-from src.governmentreporter.utils import get_logger
+from governmentreporter.processors import ExecutiveOrderBulkProcessor
+from governmentreporter.utils import get_logger
 
 
 def validate_date_format(date_str: str) -> bool:
     """Validate date string is in YYYY-MM-DD format.
-    
+
     Args:
         date_str: Date string to validate
-        
+
     Returns:
         True if valid format, False otherwise
     """
     import re
+
     pattern = r"^\d{4}-\d{2}-\d{2}$"
     return bool(re.match(pattern, date_str))
 
@@ -69,7 +67,7 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    
+
     # Positional arguments
     parser.add_argument(
         "start_date",
@@ -81,7 +79,7 @@ def main() -> None:
         help="End date for executive order retrieval in YYYY-MM-DD format",
         type=str,
     )
-    
+
     # Optional arguments
     parser.add_argument(
         "--output-dir",
@@ -103,33 +101,39 @@ def main() -> None:
         action="store_true",
         help="Show current processing statistics without processing",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Initialize logger
     logger = get_logger(__name__)
-    
+
     # Validate date formats
     if not validate_date_format(args.start_date):
-        logger.error(f"Invalid start_date format: {args.start_date}. Use YYYY-MM-DD format.")
+        logger.error(
+            f"Invalid start_date format: {args.start_date}. Use YYYY-MM-DD format."
+        )
         sys.exit(1)
-    
+
     if not validate_date_format(args.end_date):
-        logger.error(f"Invalid end_date format: {args.end_date}. Use YYYY-MM-DD format.")
+        logger.error(
+            f"Invalid end_date format: {args.end_date}. Use YYYY-MM-DD format."
+        )
         sys.exit(1)
-    
+
     # Validate date range
     if args.start_date > args.end_date:
-        logger.error(f"Start date ({args.start_date}) must be before end date ({args.end_date})")
+        logger.error(
+            f"Start date ({args.start_date}) must be before end date ({args.end_date})"
+        )
         sys.exit(1)
-    
+
     try:
         # Initialize the bulk processor
         processor = ExecutiveOrderBulkProcessor(
             output_dir=args.output_dir,
             collection_name=args.collection_name,
         )
-        
+
         if args.stats:
             # Show statistics only
             stats = processor.get_processing_stats(args.start_date, args.end_date)
@@ -142,16 +146,18 @@ def main() -> None:
             print(f"  Collection: {stats['collection_name']}")
             print(f"  Output directory: {stats['output_dir']}")
             return
-        
+
         # Run the bulk processing
-        logger.info(f"Starting to process Executive Orders from {args.start_date} to {args.end_date}")
-        
+        logger.info(
+            f"Starting to process Executive Orders from {args.start_date} to {args.end_date}"
+        )
+
         results = processor.process_executive_orders(
             start_date=args.start_date,
             end_date=args.end_date,
-            max_orders=args.max_orders
+            max_orders=args.max_orders,
         )
-        
+
         # Print final results
         print(f"\n🎉 Executive Order processing completed!")
         print(f"Date range: {args.start_date} to {args.end_date}")
@@ -160,17 +166,18 @@ def main() -> None:
         print(f"Skipped (already in DB): {results['skipped_count']:,} orders")
         print(f"Success rate: {results['success_rate']:.1%}")
         print(f"Total time: {results['elapsed_time']/60:.1f} minutes")
-        
+
         # Exit with appropriate code
-        if results['failed_count'] > 0:
+        if results["failed_count"] > 0:
             sys.exit(1)  # Exit with error if any failures
-        
+
     except KeyboardInterrupt:
         logger.warning("\n⚠️  Processing interrupted by user")
         sys.exit(130)  # Standard exit code for Ctrl+C
     except Exception as e:
         logger.error(f"❌ Script failed: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

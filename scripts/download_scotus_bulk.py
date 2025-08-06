@@ -9,20 +9,13 @@ and stores them in ChromaDB.
 
 import argparse
 import sys
-from pathlib import Path
 
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Add parent directory to path
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from src.governmentreporter.processors import SCOTUSBulkProcessor
+from governmentreporter.processors import SCOTUSBulkProcessor
 
 
 def main() -> None:
