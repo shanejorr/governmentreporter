@@ -184,7 +184,7 @@ def get_opinion_full_text(case_name: str, citation: str) -> Dict[str, Any]:
 def process_new_opinion(opinion_id: int) -> Dict[str, Any]:
     """Process a new Supreme Court opinion through the hierarchical chunking pipeline.
 
-    DEPRECATED: Use the bulk processor or process_scotus_opinion.py script instead.
+    DEPRECATED: Use the bulk processor (download_scotus_bulk.py) instead.
     This function duplicates functionality now in SCOTUSOpinionProcessor.process_and_store().
 
     Args:

@@ -30,9 +30,6 @@ def show_usage():
     print("  python main.py process 9973155")
     print("\nFor bulk operations, use:")
     print("  python scripts/download_scotus_bulk.py")
-    print("  python scripts/process_scotus_opinion.py <opinion_id>")
-    print("\nFor testing:")
-    print("  python scripts/test_opinion_chunking.py")
 
 
 def process_opinion(opinion_id: int):
