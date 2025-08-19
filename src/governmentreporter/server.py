@@ -21,8 +21,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.models import InitializationOptions
-from mcp.types import (EmbeddedResource, ImageContent, Resource, TextContent,
-                       Tool)
+from mcp.types import EmbeddedResource, ImageContent, Resource, TextContent, Tool
 
 from .database import ChromaDBClient
 from .processors import SCOTUSOpinionProcessor
@@ -180,51 +179,6 @@ def get_opinion_full_text(case_name: str, citation: str) -> Dict[str, Any]:
         return {"error": str(e)}
 
 
-@mcp.tool()
-def process_new_opinion(opinion_id: int) -> Dict[str, Any]:
-    """Process a new Supreme Court opinion through the hierarchical chunking pipeline.
-
-    DEPRECATED: Use the bulk processor (download_scotus_bulk.py) instead.
-    This function duplicates functionality now in SCOTUSOpinionProcessor.process_and_store().
-
-    Args:
-        opinion_id: CourtListener opinion ID
-
-    Returns:
-        Processing results and statistics
-    """
-    try:
-        # Use the integrated process_and_store method
-        result = opinion_processor.process_and_store(
-            document_id=str(opinion_id), collection_name="federal_court_scotus_opinions"
-        )
-
-        if not result["success"]:
-            return {"error": result.get("error", "Processing failed")}
-
-        # Get chunks for metadata (without embeddings)
-        chunks = opinion_processor.process_opinion(opinion_id)
-
-        # Generate statistics
-        chunk_stats: Dict[str, int] = {}
-        for chunk in chunks:
-            opinion_type = chunk.opinion_type
-            chunk_stats[opinion_type] = chunk_stats.get(opinion_type, 0) + 1
-
-        return {
-            "opinion_id": opinion_id,
-            "case_name": chunks[0].case_name if chunks else "Unknown",
-            "citation": chunks[0].citation if chunks else "Unknown",
-            "total_chunks": result["chunks_processed"],
-            "stored_chunks": result["chunks_stored"],
-            "chunk_breakdown": chunk_stats,
-            "success": result["success"],
-        }
-
-    except Exception as e:
-        logger.error(f"Error processing new opinion: {e}")
-        return {"error": str(e)}
-
 
 @mcp.tool()
 def get_legal_topics(limit: int = 100) -> List[str]:
@@ -269,22 +223,22 @@ async def scotus_search_resource(uri: str) -> str:
     """Resource for SCOTUS opinion search functionality."""
     return """
     Supreme Court Opinion Search Resource
-    
+
     This resource provides access to hierarchically chunked Supreme Court opinions
     with semantic search capabilities. Each opinion is broken down into:
-    
+
     - Syllabus: Court's summary of the case and holding
-    - Majority Opinion: Main opinion of the court  
+    - Majority Opinion: Main opinion of the court
     - Concurring Opinions: Additional opinions agreeing with the result
     - Dissenting Opinions: Opinions disagreeing with the majority
-    
+
     Each chunk includes rich metadata:
     - Legal topics and key questions
     - Constitutional provisions cited
     - Statutes interpreted (in bluebook format)
     - Case citations and court holdings
     - Justice attribution for concurring/dissenting opinions
-    
+
     Use the search_scotus_opinions tool to find relevant cases.
     """
 
@@ -295,7 +249,7 @@ async def main():
 
     logger.info("Starting GovernmentReporter MCP Server...")
     logger.info(
-        "Available tools: search_scotus_opinions, get_opinion_full_text, process_new_opinion, get_legal_topics"
+        "Available tools: search_scotus_opinions, get_opinion_full_text, get_legal_topics"
     )
 
     async with stdio_server() as (read_stream, write_stream):
