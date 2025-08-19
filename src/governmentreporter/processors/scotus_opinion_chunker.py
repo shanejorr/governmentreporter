@@ -96,7 +96,12 @@ class ProcessedOpinionChunk:
 class SCOTUSOpinionChunker:
     """Hierarchical chunker for Supreme Court opinions."""
 
-    def __init__(self, target_chunk_size: int = 600, max_chunk_size: int = 800, api_key: Optional[str] = None):
+    def __init__(
+        self,
+        target_chunk_size: int = 600,
+        max_chunk_size: int = 800,
+        api_key: Optional[str] = None,
+    ):
         """Initialize the chunker.
 
         Args:
@@ -107,7 +112,7 @@ class SCOTUSOpinionChunker:
         self.target_chunk_size = target_chunk_size
         self.max_chunk_size = max_chunk_size
         self._token_cache: Dict[str, int] = {}  # Limited cache for token counts
-        
+
         # Initialize Google API for token counting
         self.api_key = api_key
         self.model_name = "gemini-2.0-flash-001"  # Model for token counting
@@ -459,7 +464,9 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
         super().__init__(embeddings_client, db_client, logger)
         self.court_listener = CourtListenerClient(court_listener_token)
         self.gemini_generator = GeminiMetadataGenerator(gemini_api_key)
-        self.chunker = SCOTUSOpinionChunker(target_chunk_size, max_chunk_size, gemini_api_key)
+        self.chunker = SCOTUSOpinionChunker(
+            target_chunk_size, max_chunk_size, gemini_api_key
+        )
 
     def process_document(self, document_id: str) -> List[ProcessedChunk]:
         """Process a Supreme Court opinion into chunks with embeddings.

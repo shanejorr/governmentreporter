@@ -161,13 +161,15 @@ class CourtListenerClient(GovernmentAPIClient):
     def list_scotus_opinions(
         self,
         since_date: str = "1900-01-01",
+        until_date: Optional[str] = None,
         max_results: Optional[int] = None,
         rate_limit_delay: float = 0.1,
     ) -> Iterator[Dict[str, Any]]:
-        """Iterate through all Supreme Court opinions since a given date.
+        """Iterate through all Supreme Court opinions within a date range.
 
         Args:
             since_date: Start date in YYYY-MM-DD format (default: 1900-01-01)
+            until_date: End date in YYYY-MM-DD format (optional)
             max_results: Maximum number of results to return (None for all)
             rate_limit_delay: Delay between requests in seconds
 
@@ -183,6 +185,10 @@ class CourtListenerClient(GovernmentAPIClient):
             "date_created__gte": since_date,
             "order_by": "date_created",
         }
+        
+        # Add end date filter if provided
+        if until_date:
+            params["date_created__lte"] = until_date
 
         results_count = 0
 
@@ -213,11 +219,12 @@ class CourtListenerClient(GovernmentAPIClient):
 
                 print(f"Progress: Processed {results_count} opinions")
 
-    def get_scotus_opinion_count(self, since_date: str = "1900-01-01") -> int:
-        """Get the total count of Supreme Court opinions since a given date.
+    def get_scotus_opinion_count(self, since_date: str = "1900-01-01", until_date: Optional[str] = None) -> int:
+        """Get the total count of Supreme Court opinions within a date range.
 
         Args:
             since_date: Start date in YYYY-MM-DD format
+            until_date: End date in YYYY-MM-DD format (optional)
 
         Returns:
             Total number of opinions matching the criteria
@@ -231,6 +238,10 @@ class CourtListenerClient(GovernmentAPIClient):
             "date_created__gte": since_date,
             "count": "on",
         }
+        
+        # Add end date filter if provided
+        if until_date:
+            params["date_created__lte"] = until_date
 
         with httpx.Client(timeout=30.0) as client:
             response = client.get(url, headers=self.headers, params=params)

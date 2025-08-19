@@ -94,7 +94,12 @@ class ProcessedExecutiveOrderChunk:
 class ExecutiveOrderChunker:
     """Hierarchical chunker for Executive Orders."""
 
-    def __init__(self, target_chunk_size: int = 300, max_chunk_size: int = 400, api_key: Optional[str] = None):
+    def __init__(
+        self,
+        target_chunk_size: int = 300,
+        max_chunk_size: int = 400,
+        api_key: Optional[str] = None,
+    ):
         """Initialize the chunker.
 
         Args:
@@ -106,7 +111,7 @@ class ExecutiveOrderChunker:
         self.max_chunk_size = max_chunk_size
         self.logger = get_logger(__name__)
         self._token_cache: Dict[str, int] = {}
-        
+
         # Initialize Google API for token counting
         self.api_key = api_key
         self.model_name = "gemini-2.0-flash-001"  # Model for token counting
@@ -154,7 +159,9 @@ class ExecutiveOrderChunker:
                     self._token_cache[cache_key] = len(text) // 4
             except Exception as e:
                 # Fallback to rough estimation (4 chars per token)
-                self.logger.warning(f"Failed to count tokens using Google API: {e}. Using fallback estimation.")
+                self.logger.warning(
+                    f"Failed to count tokens using Google API: {e}. Using fallback estimation."
+                )
                 self._token_cache[cache_key] = len(text) // 4
 
             # Limit cache size to prevent memory issues
@@ -635,7 +642,9 @@ class ExecutiveOrderProcessor(BaseDocumentProcessor):
         super().__init__(embeddings_client, db_client, logger)
         self.federal_register = FederalRegisterClient()
         self.metadata_generator = ExecutiveOrderMetadataGenerator(gemini_api_key)
-        self.chunker = ExecutiveOrderChunker(target_chunk_size, max_chunk_size, gemini_api_key)
+        self.chunker = ExecutiveOrderChunker(
+            target_chunk_size, max_chunk_size, gemini_api_key
+        )
         self.logger = logger or get_logger(__name__)
 
     def process_document(self, document_id: str) -> List[ProcessedChunk]:
