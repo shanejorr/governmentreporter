@@ -1,16 +1,13 @@
 """Bulk processor for Supreme Court opinions from CourtListener API."""
 
-import json
-import time
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, Optional
 
 from ..apis import CourtListenerClient
 from .scotus_opinion_chunker import SCOTUSOpinionProcessor
+from .base_bulk import BaseBulkProcessor
 
 
-class SCOTUSBulkProcessor:
+class SCOTUSBulkProcessor(BaseBulkProcessor):
     """Processes all SCOTUS opinions through the complete hierarchical chunking pipeline.
 
     This class handles the systematic processing of Supreme Court opinions
@@ -26,6 +23,7 @@ class SCOTUSBulkProcessor:
         self,
         output_dir: str = "raw-data/scotus_data",
         since_date: str = "1900-01-01",
+        until_date: Optional[str] = None,
         rate_limit_delay: float = 0.75,
         max_retries: int = 3,
         collection_name: str = "federal_court_scotus_opinions",
@@ -35,72 +33,34 @@ class SCOTUSBulkProcessor:
         Args:
             output_dir: Directory to store progress and error logs
             since_date: Start date for opinion retrieval (YYYY-MM-DD)
+            until_date: End date for opinion retrieval (YYYY-MM-DD, optional)
             rate_limit_delay: Delay between API requests in seconds
             max_retries: Maximum number of retries for failed requests
             collection_name: ChromaDB collection name for storage
         """
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        # Initialize base class
+        super().__init__(output_dir, collection_name, rate_limit_delay)
 
         self.since_date = since_date
-        self.rate_limit_delay = rate_limit_delay
+        self.until_date = until_date
         self.max_retries = max_retries
-        self.collection_name = collection_name
 
         # Initialize clients
         self.court_client = CourtListenerClient()
         self.opinion_processor = SCOTUSOpinionProcessor()
 
-        # Progress tracking
-        self.progress_file = self.output_dir / "processing_progress.json"
-        self.error_log_file = self.output_dir / "error_log.jsonl"
-        self.processed_ids: Set[str] = set()
-
-        # Load existing progress
-        self._load_progress()
-
-    def _load_progress(self) -> None:
-        """Load previously processed opinion IDs from progress file."""
-        if self.progress_file.exists():
-            try:
-                with open(self.progress_file, "r") as f:
-                    progress_data = json.load(f)
-                    self.processed_ids = set(progress_data.get("processed_ids", []))
-                    print(
-                        f"Loaded progress: {len(self.processed_ids)} opinions already processed"
-                    )
-            except Exception as e:
-                print(f"Warning: Could not load progress file: {e}")
-                self.processed_ids = set()
-
-    def _save_progress(self) -> None:
-        """Save current progress to file."""
-        progress_data = {
-            "processed_ids": list(self.processed_ids),
-            "last_updated": datetime.now().isoformat(),
-            "total_processed": len(self.processed_ids),
+    def _get_additional_progress_data(self) -> Dict[str, Any]:
+        """Get additional data to save in progress file."""
+        return {
             "since_date": self.since_date,
-            "collection_name": self.collection_name,
+            "until_date": self.until_date,
         }
 
-        with open(self.progress_file, "w") as f:
-            json.dump(progress_data, f, indent=2)
+    def _extract_document_id(self, document_summary: Dict[str, Any]) -> str:
+        """Extract the document ID from an opinion summary."""
+        return str(document_summary.get("id"))
 
-    def _log_error(
-        self, opinion_id: str, error: str, opinion_data: Optional[Dict] = None
-    ) -> None:
-        """Log errors to error log file."""
-        error_entry = {
-            "timestamp": datetime.now().isoformat(),
-            "opinion_id": opinion_id,
-            "error": error,
-            "opinion_data": opinion_data,
-        }
-
-        with open(self.error_log_file, "a") as f:
-            f.write(json.dumps(error_entry) + "\n")
-
-    def _process_single_opinion(self, opinion_summary: Dict[str, Any]) -> bool:
+    def _process_single_document(self, opinion_summary: Dict[str, Any]) -> bool:
         """Process a single opinion through the hierarchical chunking pipeline.
 
         Args:
@@ -109,11 +69,7 @@ class SCOTUSBulkProcessor:
         Returns:
             True if successful, False otherwise
         """
-        opinion_id = str(opinion_summary.get("id"))
-
-        if opinion_id in self.processed_ids:
-            return True  # Already processed
-
+        opinion_id = self._extract_document_id(opinion_summary)
         print(f"Processing opinion {opinion_id}...")
 
         try:
@@ -126,7 +82,6 @@ class SCOTUSBulkProcessor:
             if result["success"]:
                 print(f"  Generated {result['chunks_processed']} chunks")
                 print(f"  ✅ Stored {result['chunks_stored']} chunks in database")
-                self.processed_ids.add(opinion_id)
                 return True
             else:
                 raise Exception(result.get("error", "Unknown error during processing"))
@@ -137,7 +92,7 @@ class SCOTUSBulkProcessor:
             self._log_error(opinion_id, error_msg, opinion_summary)
             return False
 
-    def get_total_count(self) -> int:
+    def get_total_count(self, **kwargs) -> int:
         """Get total count of SCOTUS opinions to process.
 
         Returns:
@@ -145,16 +100,33 @@ class SCOTUSBulkProcessor:
         """
         try:
             return self.court_client.get_scotus_opinion_count(
-                since_date=self.since_date
+                since_date=self.since_date, until_date=self.until_date
             )
         except Exception as e:
             print(f"Warning: Could not get total count: {e}")
             return 0
 
+    def get_documents_iterator(self, max_results=None, **kwargs):
+        """Return an iterator over SCOTUS opinions.
+
+        Args:
+            max_results: Maximum number of results
+            **kwargs: Additional arguments
+
+        Yields:
+            Opinion summaries
+        """
+        return self.court_client.list_scotus_opinions(
+            since_date=self.since_date,
+            until_date=self.until_date,
+            max_results=max_results,
+            rate_limit_delay=self.rate_limit_delay,
+        )
+
     def process_all_opinions(
         self, max_opinions: Optional[int] = None
     ) -> Dict[str, Any]:
-        """Process all SCOTUS opinions since the specified date.
+        """Process all SCOTUS opinions within the specified date range.
 
         Args:
             max_opinions: Maximum number of opinions to process (None for all)
@@ -162,87 +134,14 @@ class SCOTUSBulkProcessor:
         Returns:
             Dictionary with processing statistics
         """
-        print(f"Starting SCOTUS opinion processing since {self.since_date}")
-        print(f"Output directory: {self.output_dir}")
-        print(f"Rate limit delay: {self.rate_limit_delay}s")
-        print(f"Collection: {self.collection_name}")
+        date_range = f"since {self.since_date}"
+        if self.until_date:
+            date_range = f"from {self.since_date} to {self.until_date}"
 
-        # Get total count
-        total_count = self.get_total_count()
-        if total_count > 0:
-            print(f"Total opinions available: {total_count:,}")
-            remaining = total_count - len(self.processed_ids)
-            print(f"Remaining to process: {remaining:,}")
+        print(f"Starting SCOTUS opinion processing {date_range}")
 
-        start_time = time.time()
-        processed_count = 0
-        failed_count = 0
-
-        try:
-            # Iterate through all opinions
-            for opinion_summary in self.court_client.list_scotus_opinions(
-                since_date=self.since_date,
-                max_results=max_opinions,
-                rate_limit_delay=self.rate_limit_delay,
-            ):
-                success = self._process_single_opinion(opinion_summary)
-
-                if success:
-                    processed_count += 1
-                else:
-                    failed_count += 1
-
-                # Save progress every 10 opinions
-                if (processed_count + failed_count) % 10 == 0:
-                    self._save_progress()
-
-                # Show progress
-                elapsed = time.time() - start_time
-                if elapsed > 0:
-                    rate = processed_count / elapsed
-                    print(
-                        f"Progress: {processed_count} processed, {failed_count} failed, "
-                        f"{rate:.2f} opinions/sec"
-                    )
-
-                # Respect rate limits
-                time.sleep(self.rate_limit_delay)
-
-        except KeyboardInterrupt:
-            print("\n⚠️  Processing interrupted by user")
-        except Exception as e:
-            print(f"\n❌ Processing failed with error: {e}")
-        finally:
-            # Save final progress
-            self._save_progress()
-
-            # Print summary
-            elapsed = time.time() - start_time
-            print(f"\n{'='*60}")
-            print(f"Processing Summary:")
-            print(f"  Total processed: {processed_count}")
-            print(f"  Total failed: {failed_count}")
-            print(f"  Time elapsed: {elapsed/60:.1f} minutes")
-            print(
-                f"  Average rate: {processed_count/elapsed:.2f} opinions/sec"
-                if elapsed > 0
-                else ""
-            )
-            print(f"  Progress saved to: {self.progress_file}")
-            if failed_count > 0:
-                print(f"  Error log: {self.error_log_file}")
-
-        return {
-            "processed_count": processed_count,
-            "failed_count": failed_count,
-            "elapsed_time": elapsed,
-            "total_available": total_count,
-            "success_rate": (
-                processed_count / (processed_count + failed_count)
-                if (processed_count + failed_count) > 0
-                else 0
-            ),
-        }
+        # Use the base class method
+        return self.process_documents(max_documents=max_opinions)
 
     def get_processing_stats(self) -> Dict[str, Any]:
         """Get current processing statistics.
@@ -260,6 +159,7 @@ class SCOTUSBulkProcessor:
                 (len(self.processed_ids) / total_count * 100) if total_count > 0 else 0
             ),
             "since_date": self.since_date,
+            "until_date": self.until_date,
             "collection_name": self.collection_name,
             "output_dir": str(self.output_dir),
         }

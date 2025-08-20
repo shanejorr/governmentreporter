@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
-import tiktoken
+import google.generativeai as genai
 
 from ..apis.court_listener import CourtListenerClient
 from ..database.chroma_client import ChromaDBClient
@@ -96,17 +96,30 @@ class ProcessedOpinionChunk:
 class SCOTUSOpinionChunker:
     """Hierarchical chunker for Supreme Court opinions."""
 
-    def __init__(self, target_chunk_size: int = 600, max_chunk_size: int = 800):
+    def __init__(
+        self,
+        target_chunk_size: int = 600,
+        max_chunk_size: int = 800,
+        api_key: Optional[str] = None,
+    ):
         """Initialize the chunker.
 
         Args:
             target_chunk_size: Target size for chunks in tokens
             max_chunk_size: Maximum allowed chunk size in tokens
+            api_key: Google Gemini API key for token counting
         """
         self.target_chunk_size = target_chunk_size
         self.max_chunk_size = max_chunk_size
-        self.tokenizer = tiktoken.get_encoding("cl100k_base")
         self._token_cache: Dict[str, int] = {}  # Limited cache for token counts
+
+        # Initialize Google API for token counting
+        self.api_key = api_key
+        self.model_name = "gemini-2.0-flash-001"  # Model for token counting
+        self.model = None
+        if api_key:
+            genai.configure(api_key=api_key)
+            self.model = genai.GenerativeModel(self.model_name)
 
         # Regex patterns for opinion detection
         self.majority_pattern = re.compile(
@@ -125,7 +138,7 @@ class SCOTUSOpinionChunker:
         self.subsection_pattern = re.compile(r"^\s*[A-Z]\.?\s*$", re.MULTILINE)
 
     def count_tokens(self, text: str) -> int:
-        """Count tokens in text using tiktoken with limited caching.
+        """Count tokens in text using Google's tokenization with limited caching.
 
         Args:
             text: Text to count tokens for
@@ -137,7 +150,16 @@ class SCOTUSOpinionChunker:
         cache_key = str(hash(text))
 
         if cache_key not in self._token_cache:
-            self._token_cache[cache_key] = len(self.tokenizer.encode(text))
+            try:
+                if self.model:
+                    response = self.model.count_tokens(text)
+                    self._token_cache[cache_key] = response.total_tokens
+                else:
+                    # Fallback to rough estimation (4 chars per token)
+                    self._token_cache[cache_key] = len(text) // 4
+            except Exception:
+                # Fallback to rough estimation (4 chars per token)
+                self._token_cache[cache_key] = len(text) // 4
 
             # Limit cache size to prevent memory issues
             if len(self._token_cache) > 500:
@@ -442,7 +464,9 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
         super().__init__(embeddings_client, db_client, logger)
         self.court_listener = CourtListenerClient(court_listener_token)
         self.gemini_generator = GeminiMetadataGenerator(gemini_api_key)
-        self.chunker = SCOTUSOpinionChunker(target_chunk_size, max_chunk_size)
+        self.chunker = SCOTUSOpinionChunker(
+            target_chunk_size, max_chunk_size, gemini_api_key
+        )
 
     def process_document(self, document_id: str) -> List[ProcessedChunk]:
         """Process a Supreme Court opinion into chunks with embeddings.

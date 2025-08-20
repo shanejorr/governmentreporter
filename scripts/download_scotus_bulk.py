@@ -9,20 +9,13 @@ and stores them in ChromaDB.
 
 import argparse
 import sys
-from pathlib import Path
 
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Add parent directory to path
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from src.governmentreporter.processors import SCOTUSBulkProcessor
+from governmentreporter.processors import SCOTUSBulkProcessor
 
 
 def main() -> None:
@@ -39,6 +32,11 @@ def main() -> None:
         "--since-date",
         default="1900-01-01",
         help="Start date for opinion retrieval in YYYY-MM-DD format (default: 1900-01-01)",
+    )
+    parser.add_argument(
+        "--until-date",
+        default=None,
+        help="End date for opinion retrieval in YYYY-MM-DD format (optional)",
     )
     parser.add_argument(
         "--max-opinions",
@@ -73,13 +71,17 @@ def main() -> None:
         processor = SCOTUSBulkProcessor(
             output_dir=args.output_dir,
             since_date=args.since_date,
+            until_date=args.until_date,
             rate_limit_delay=args.rate_limit_delay,
             collection_name=args.collection_name,
         )
 
         if args.count_only:
             count = processor.get_total_count()
-            print(f"Total SCOTUS opinions since {args.since_date}: {count:,}")
+            date_range = f"since {args.since_date}"
+            if args.until_date:
+                date_range = f"from {args.since_date} to {args.until_date}"
+            print(f"Total SCOTUS opinions {date_range}: {count:,}")
             return
 
         if args.stats:
@@ -90,6 +92,8 @@ def main() -> None:
             print(f"  Remaining: {stats['remaining_count']:,}")
             print(f"  Progress: {stats['progress_percentage']:.1f}%")
             print(f"  Since date: {stats['since_date']}")
+            if stats['until_date']:
+                print(f"  Until date: {stats['until_date']}")
             print(f"  Collection: {stats['collection_name']}")
             print(f"  Output directory: {stats['output_dir']}")
             return
