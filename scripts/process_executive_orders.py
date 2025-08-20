@@ -1,35 +1,66 @@
 #!/usr/bin/env python3
 """
-Script to process US Executive Orders from the Federal Register API.
+Bulk Processing Script for US Executive Orders from the Federal Register API.
 
-This script fetches executive orders within a specified date range,
-processes each one through the complete pipeline (chunking, metadata generation, embeddings),
-and stores them in ChromaDB.
+This script serves as the command-line interface for downloading and processing Executive Orders
+in bulk from the Federal Register API. It orchestrates the complete document processing pipeline
+for presidential executive orders, implementing hierarchical chunking, AI-powered metadata
+extraction, embedding generation, and storage in ChromaDB.
 
-Usage:
-    uv run python scripts/process_executive_orders.py 2024-01-01 2024-06-30
+Key Features:
+    - Fetches Executive Orders from Federal Register API by date range
+    - Implements hierarchical chunking (header, sections, subsections, tail)
+    - Extracts rich policy metadata using Google Gemini 2.5 Flash-Lite AI
+    - Generates semantic embeddings for intelligent search
+    - Stores processed chunks in ChromaDB vector database
+    - Provides resumable operations with progress tracking
+    - Detects and skips duplicate documents already in database
+    - Handles errors gracefully with detailed logging
 
-    # Process all orders in 2024
+The script works in conjunction with:
+    - ExecutiveOrderBulkProcessor: Manages bulk processing workflow (src/governmentreporter/processors/executive_order_bulk.py)
+    - ExecutiveOrderProcessor: Processes individual orders (src/governmentreporter/processors/executive_order_chunker.py)
+    - FederalRegisterClient: Interfaces with Federal Register API (src/governmentreporter/apis/federal_register.py)
+    - ChromaDBClient: Manages vector database storage (src/governmentreporter/database/chroma_client.py)
+
+Usage Examples:
+    # Process all Executive Orders from 2024
     uv run python scripts/process_executive_orders.py 2024-01-01 2024-12-31
 
-    # Process with custom output directory
+    # Process orders from first half of 2024
+    uv run python scripts/process_executive_orders.py 2024-01-01 2024-06-30
+
+    # Process with custom output directory for logs
     uv run python scripts/process_executive_orders.py 2024-01-01 2024-06-30 --output-dir my_data
 
-    # Process only first 10 orders (for testing)
+    # Process only first 10 orders (useful for testing)
     uv run python scripts/process_executive_orders.py 2024-01-01 2024-12-31 --max-orders 10
 
     # Show statistics without processing
     uv run python scripts/process_executive_orders.py 2024-01-01 2024-06-30 --stats
 
 Arguments:
-    start_date: Start date in YYYY-MM-DD format
-    end_date: End date in YYYY-MM-DD format
+    start_date: Start date in YYYY-MM-DD format (required)
+    end_date: End date in YYYY-MM-DD format (required)
 
 Options:
     --output-dir: Output directory for progress and error logs (default: raw-data/executive_orders_data)
     --max-orders: Maximum number of orders to process (default: all)
     --collection-name: ChromaDB collection name (default: federal-executive-orders)
     --stats: Show current processing statistics without processing
+
+Environment Requirements:
+    - GOOGLE_GEMINI_API_KEY: Required for metadata generation
+    - Python 3.11+ with uv package manager
+    - No API key required for Federal Register API (public access)
+
+Python Learning Notes:
+    - argparse: Standard library for parsing command-line arguments
+    - pathlib.Path: Modern object-oriented filesystem path handling
+    - re.match(): Regular expression pattern matching for date validation
+    - sys.exit(): Provides proper exit codes (0=success, 1=error, 130=Ctrl+C)
+    - try/except blocks: Comprehensive error handling with specific exceptions
+    - Type hints: Improves code clarity and enables better IDE support
 """
 
 import argparse
@@ -46,13 +77,41 @@ from governmentreporter.utils import get_logger
 
 
 def validate_date_format(date_str: str) -> bool:
-    """Validate date string is in YYYY-MM-DD format.
-
+    """
+    Validate that a date string follows the YYYY-MM-DD format.
+    
+    This function uses regular expressions to check if the provided date string
+    matches the exact pattern required by the Federal Register API. It only validates
+    the format, not whether the date is actually valid (e.g., it would accept 2024-13-45).
+    
     Args:
-        date_str: Date string to validate
-
+        date_str (str): Date string to validate. Should be in YYYY-MM-DD format.
+                       Examples: "2024-01-01", "2024-12-31"
+    
     Returns:
-        True if valid format, False otherwise
+        bool: True if the string matches YYYY-MM-DD format, False otherwise.
+              Returns False for None, empty strings, or incorrectly formatted dates.
+    
+    Examples:
+        >>> validate_date_format("2024-01-15")
+        True
+        >>> validate_date_format("01/15/2024")
+        False
+        >>> validate_date_format("2024-1-15")  # Missing leading zeros
+        False
+    
+    Integration Notes:
+        - Used by main() to validate command-line arguments before processing
+        - Ensures API compatibility with Federal Register date requirements
+        - Works in conjunction with date range validation in main()
+    
+    Python Learning Notes:
+        - Regular expressions (re module): Pattern matching for string validation
+        - r"" prefix: Raw string literal, treats backslashes literally
+        - \d{4}: Matches exactly 4 digits (the year)
+        - \d{2}: Matches exactly 2 digits (month and day)
+        - ^ and $: Anchors ensuring the entire string matches (not just part)
+        - bool(): Explicitly converts match object to boolean
     """
     import re
 
@@ -61,7 +120,54 @@ def validate_date_format(date_str: str) -> bool:
 
 
 def main() -> None:
-    """Main entry point for the script."""
+    """
+    Main entry point for the Executive Orders bulk processing script.
+    
+    This function orchestrates the entire bulk processing workflow for Executive Orders.
+    It handles command-line argument parsing, validates input parameters, initializes
+    the bulk processor, and executes the requested operation (stats or full processing).
+    
+    The function follows this workflow:
+        1. Parse command-line arguments using argparse
+        2. Validate date format and date range logic
+        3. Initialize ExecutiveOrderBulkProcessor with configuration
+        4. Execute requested operation (stats display or full processing)
+        5. Display results and handle various error conditions
+    
+    Command-line Arguments:
+        start_date: Start date for order retrieval (YYYY-MM-DD format, required)
+        end_date: End date for order retrieval (YYYY-MM-DD format, required)
+        --output-dir: Directory for storing progress files and error logs
+        --max-orders: Limit on number of orders to process (for testing)
+        --collection-name: Name of ChromaDB collection for storage
+        --stats: Flag to display current processing statistics only
+    
+    Exit Codes:
+        0: Successful completion
+        1: Error during processing or validation
+        130: User interrupted with Ctrl+C (SIGINT)
+    
+    Error Handling:
+        - Validates date formats before processing
+        - Ensures start_date is before end_date
+        - Catches KeyboardInterrupt for graceful shutdown
+        - Logs all errors with full traceback for debugging
+    
+    Integration Points:
+        - Uses ExecutiveOrderBulkProcessor from processors module
+        - Relies on environment variables loaded via dotenv
+        - Uses centralized logging from utils module
+        - Outputs progress to specified directory for resumable operations
+    
+    Python Learning Notes:
+        - argparse.RawDescriptionHelpFormatter: Preserves formatting in help text
+        - epilog=__doc__: Uses module docstring as additional help text
+        - KeyboardInterrupt: Special exception raised when user presses Ctrl+C
+        - traceback.print_exc(): Prints full exception traceback for debugging
+        - Multiple exit codes: Different codes indicate different failure modes
+        - f-strings with formatting: {value:,} adds thousand separators
+        - Conditional logic: Validates inputs before expensive operations
+    """
     parser = argparse.ArgumentParser(
         description="Process Executive Orders from Federal Register API using hierarchical chunking",
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -1,4 +1,37 @@
-"""Base bulk processor for shared functionality across document types."""
+"""
+Base Bulk Processing Framework for Large-Scale Document Processing
+
+This module provides the foundational infrastructure for processing thousands of
+government documents in batch operations. It implements a robust framework for
+handling large-scale document processing with progress tracking, error recovery,
+and performance monitoring.
+
+Core Features:
+    - Progress persistence across interruptions and restarts
+    - Comprehensive error logging with document-specific details
+    - Performance metrics and rate limiting
+    - Automatic resume capability for long-running operations
+    - Memory-efficient processing with configurable batch sizes
+
+Design Patterns:
+    - Abstract Base Class: Defines common bulk processing interface
+    - Template Method: Provides processing workflow framework
+    - Strategy Pattern: Allows different document processing strategies
+    - Observer Pattern: Progress tracking and reporting system
+
+Key Components:
+    - BaseBulkProcessor: Abstract base class for all bulk processors
+    - Progress tracking: JSON-based persistence for resume capability
+    - Error logging: JSONL format for structured error analysis
+    - Rate limiting: Configurable delays to respect API limits
+
+Python Learning Notes:
+    - ABC (Abstract Base Class) enforces implementation of required methods
+    - Set data structure provides O(1) lookup for processed document tracking
+    - Path class from pathlib provides modern file system operations
+    - Context managers (with statements) ensure proper file handling
+    - Exception handling prevents single failures from stopping entire process
+"""
 
 import json
 import time
