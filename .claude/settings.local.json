@@ -15,7 +15,8 @@
       "Bash(sed:*)",
       "Bash(rm:*)",
       "Bash(uv sync:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "Bash(git merge:*)"
     ],
     "deny": []
   }
