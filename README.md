@@ -1,6 +1,6 @@
 # GovernmentReporter
 
-An MCP (Model Context Protocol) server that provides LLMs with access to US federal government publications through retrieval augmented generation (RAG) using **hierarchical document chunking**.
+A Python library for retrieving, processing, and storing US federal government publications in a ChromaDB vector database for retrieval augmented generation (RAG) using **hierarchical document chunking**.
 
 ## Overview
 
@@ -43,7 +43,7 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
 - **Fresh Data Guarantee**: Retrieves latest document text on-demand from government APIs
 - **Semantic Search**: Vector database enables intelligent document discovery at chunk level
 - **Cost-Effective Storage**: Stores only embeddings and metadata, not full text
-- **MCP Integration**: Compatible with LLMs that support the Model Context Protocol
+- **API-First Design**: Reusable library components for custom workflows
 - **Bulk Processing**: Automated pipeline for processing large datasets (10,000+ Supreme Court opinions)
 - **Resumable Operations**: Progress tracking and error recovery for long-running processes
 - **Duplicate Detection**: Smart checking to avoid reprocessing existing documents
@@ -61,7 +61,7 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
   - CourtListener API (Supreme Court opinions)
   - Federal Register API (Executive Orders)
 - **Development**: VS Code with Claude Code support
-- **Protocol**: Model Context Protocol (MCP)
+- **Storage**: ChromaDB vector database
 
 ## Data Flow
 
@@ -131,17 +131,11 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
 
 ## Usage
 
-### Starting the MCP Server
-
-```bash
-uv run python -m governmentreporter.server
-```
-
 ### Quick Start - Process Documents
 
 ```bash
-# Process a few SCOTUS opinions for testing
-uv run python scripts/download_scotus_bulk.py --max-opinions 5
+# Process SCOTUS opinions for testing (with date range support)
+uv run python scripts/download_scotus_bulk.py --since-date 2024-01-01 --until-date 2024-12-31 --max-opinions 5
 
 # Process Executive Orders from 2024
 uv run python scripts/process_executive_orders.py 2024-01-01 2024-12-31 --max-orders 10
@@ -186,8 +180,11 @@ uv run python scripts/process_executive_orders.py 2024-01-01 2024-12-31
 # Download and process all Supreme Court opinions since 1900
 uv run python scripts/download_scotus_bulk.py
 
-# Check total available opinions
-uv run python scripts/download_scotus_bulk.py --count-only
+# Process opinions within a specific date range
+uv run python scripts/download_scotus_bulk.py --since-date 2020-01-01 --until-date 2024-12-31
+
+# Check total available opinions in date range
+uv run python scripts/download_scotus_bulk.py --since-date 2024-01-01 --until-date 2024-12-31 --count-only
 
 # Process limited number for testing
 uv run python scripts/download_scotus_bulk.py --max-opinions 10
@@ -196,7 +193,7 @@ uv run python scripts/download_scotus_bulk.py --max-opinions 10
 uv run python scripts/download_scotus_bulk.py --stats
 
 # Custom date range and collection
-uv run python scripts/download_scotus_bulk.py --since-date 2020-01-01 --collection-name recent_scotus
+uv run python scripts/download_scotus_bulk.py --since-date 2020-01-01 --until-date 2022-12-31 --collection-name recent_scotus
 ```
 
 **Executive Orders:**
@@ -237,8 +234,11 @@ result = eo_processor.process_and_store(
 )
 print(f"Generated {result['chunks_processed']} chunks")
 
-# Bulk processing
-scotus_bulk = SCOTUSBulkProcessor(since_date="2020-01-01")
+# Bulk processing with date range support
+scotus_bulk = SCOTUSBulkProcessor(
+    since_date="2020-01-01",
+    until_date="2024-12-31"  # Optional end date
+)
 stats = scotus_bulk.get_processing_stats()
 print(f"SCOTUS Progress: {stats['progress_percentage']:.1f}%")
 
@@ -275,10 +275,10 @@ The system follows a structured processing pipeline:
    - Store chunk embeddings + metadata in ChromaDB
    - No full text storage (metadata-only approach)
 
-6. **Search & Retrieval** (via MCP Server):
+6. **Search & Retrieval**:
    - User query converted to embedding
    - ChromaDB returns similar chunk metadata
-   - Fresh content retrieved on-demand from government APIs
+   - Fresh content can be retrieved on-demand from government APIs
 
 ### Example Query Flows
 

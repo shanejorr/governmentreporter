@@ -14,20 +14,22 @@ This document provides a comprehensive overview of every file in the GovernmentR
 
 ## Project Structure
 
-GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs with access to US federal government publications through RAG (Retrieval-Augmented Generation). The system stores semantic embeddings and metadata in ChromaDB and retrieves current document text on-demand from government APIs.
+GovernmentReporter is a Python library for retrieving, processing, and storing US federal government publications in a ChromaDB vector database for retrieval augmented generation (RAG). The system uses hierarchical document chunking to break down complex legal documents, stores semantic embeddings and metadata in ChromaDB, and can retrieve current document text on-demand from government APIs.
 
 ```
 src/governmentreporter/
 ├── __init__.py                      # Package initialization
-├── server.py                        # MCP server entry point
 ├── apis/                           # Government API clients
 ├── database/                       # Database integration
 ├── metadata/                       # AI-powered metadata generation
 ├── processors/                     # Document processing pipeline
+│   ├── base_bulk.py               # Base class for bulk processors
+│   ├── scotus_bulk.py             # SCOTUS bulk processor
+│   └── executive_order_bulk.py    # Executive Order bulk processor
 └── utils/                          # Shared utilities
 
 scripts/
-├── download_scotus_bulk.py         # SCOTUS opinion bulk processor
+├── download_scotus_bulk.py         # SCOTUS opinion bulk processor (with date range support)
 └── process_executive_orders.py     # Executive order bulk processor
 ```
 
@@ -42,18 +44,7 @@ scripts/
 - **Contents**: Defines `__version__ = "0.1.0"` and package docstring
 - **Role**: Entry point for the GovernmentReporter package
 
-#### `src/governmentreporter/server.py`
-- **Purpose**: Main MCP server implementation
-- **Key Features**:
-  - FastMCP server setup with 4 main tools:
-    - `search_scotus_opinions()`: Semantic search for Supreme Court opinions
-    - `get_opinion_full_text()`: Retrieve complete case text
-    - `process_new_opinion()`: Process single opinion through pipeline (deprecated)
-    - `get_legal_topics()`: Extract legal topics from database
-  - Resource endpoint for SCOTUS search functionality
-  - Integration of all core components (database, embeddings, processors)
-- **Dependencies**: ChromaDBClient, GoogleEmbeddingsClient, SCOTUSOpinionProcessor
-- **Port**: Serves as the main entry point for MCP clients
+[REMOVED - MCP server no longer part of project]
 
 ### API Clients (`src/governmentreporter/apis/`)
 
@@ -72,11 +63,11 @@ scripts/
 - **Purpose**: CourtListener API integration for Supreme Court opinions
 - **Key Methods**:
   - `get_opinion(opinion_id)`: Fetch specific opinion
-  - `list_scotus_opinions()`: Paginate through all SCOTUS opinions
-  - `get_scotus_opinion_count()`: Count available opinions
+  - `list_scotus_opinions(since_date, until_date)`: Paginate through SCOTUS opinions with date range support
+  - `get_scotus_opinion_count(since_date, until_date)`: Count opinions in date range
   - `get_opinion_cluster()`: Fetch case metadata
   - `extract_basic_metadata()`: Parse opinion metadata
-- **Features**: Rate limiting (0.1s delay), bluebook citation building
+- **Features**: Rate limiting (0.1s delay), bluebook citation building, date range filtering
 - **Data Source**: https://www.courtlistener.com/api/rest/v4
 
 #### `src/governmentreporter/apis/federal_register.py`
@@ -137,17 +128,30 @@ scripts/
   - `process_and_store()`: Complete processing pipeline
 - **Features**: Integrated embedding generation, error handling, progress tracking
 
+#### `src/governmentreporter/processors/base_bulk.py`
+- **Purpose**: Abstract base class for bulk processors (NEW)
+- **Key Components**:
+  - `BaseBulkProcessor` abstract class: Shared functionality for bulk processing
+- **Key Methods**:
+  - `process_documents()`: Main processing loop with progress tracking
+  - `_save_progress()`, `_load_progress()`: Progress persistence
+  - `_log_error()`: Error logging
+  - Abstract methods: `_process_single_document()`, `get_documents_iterator()`, `get_total_count()`
+- **Features**: Resumable operations, progress tracking, error recovery, rate limiting
+
 #### `src/governmentreporter/processors/scotus_bulk.py`
-- **Purpose**: Bulk processing system for all SCOTUS opinions
+- **Purpose**: Bulk processing system for all SCOTUS opinions (inherits from BaseBulkProcessor)
 - **Key Features**:
+  - Date range support (since_date and until_date parameters)
   - Progress tracking with resumable operations
   - Error logging and retry mechanisms
   - Rate limiting and API pagination
   - Statistics reporting
 - **Key Methods**:
-  - `process_all_opinions()`: Process all opinions since specified date
-  - `get_total_count()`: Get opinion count
+  - `process_all_opinions()`: Process opinions within date range
+  - `get_total_count()`: Get opinion count for date range
   - `get_processing_stats()`: Progress statistics
+  - Implements abstract methods from BaseBulkProcessor
 - **Data Storage**: Progress files, error logs in configurable output directory
 
 #### `src/governmentreporter/processors/scotus_opinion_chunker.py`
@@ -165,9 +169,9 @@ scripts/
 - **Features**: Google token counting, justice attribution, section detection, integrated metadata
 
 #### `src/governmentreporter/processors/executive_order_bulk.py`
-- **Purpose**: Bulk processing system for Executive Orders
+- **Purpose**: Bulk processing system for Executive Orders (inherits from BaseBulkProcessor)
 - **Key Features**:
-  - Date range processing
+  - Date range processing (required start_date and end_date)
   - Duplicate detection (both progress file and database)
   - Progress tracking and error logging
   - Statistics reporting
@@ -175,6 +179,8 @@ scripts/
   - `process_executive_orders()`: Process orders in date range
   - `get_processing_stats()`: Progress statistics
   - `_check_if_exists_in_db()`: Duplicate detection
+  - Implements abstract methods from BaseBulkProcessor
+- **Differences from SCOTUS**: Smaller save interval (5 vs 10), database duplicate checking
 
 #### `src/governmentreporter/processors/executive_order_chunker.py`
 - **Purpose**: Hierarchical chunking and metadata processing for Executive Orders
@@ -232,17 +238,19 @@ scripts/
 - **Key Features**:
   - Command-line argument parsing
   - Integration with SCOTUSBulkProcessor
+  - Date range support (NEW: --until-date parameter)
   - Statistics and count-only modes
   - Progress tracking and error handling
 - **Arguments**:
   - `--output-dir`: Progress/error log directory
-  - `--since-date`: Start date for processing
+  - `--since-date`: Start date for processing (default: 1900-01-01)
+  - `--until-date`: End date for processing (optional, NEW)
   - `--max-opinions`: Limit processing count
   - `--rate-limit-delay`: API rate limiting
   - `--collection-name`: ChromaDB collection
   - `--count-only`: Show count without processing
   - `--stats`: Show current statistics
-- **Usage**: `uv run python scripts/download_scotus_bulk.py --since-date 2020-01-01`
+- **Usage**: `uv run python scripts/download_scotus_bulk.py --since-date 2020-01-01 --until-date 2024-12-31`
 
 ### `scripts/process_executive_orders.py`
 - **Purpose**: Command-line script for Executive Order processing
@@ -294,15 +302,7 @@ src/governmentreporter/processors/executive_order_chunker.py (ExecutiveOrderProc
     └── src/governmentreporter/database/chroma_client.py (ChromaDBClient)
 ```
 
-### 2. MCP Server Integration Flow
-
-```
-src/governmentreporter/server.py (MCP Server)
-    ↓ imports and uses for search operations
-    ├── src/governmentreporter/database/chroma_client.py (ChromaDBClient)
-    ├── src/governmentreporter/utils/embeddings.py (GoogleEmbeddingsClient)
-    └── src/governmentreporter/processors/scotus_opinion_chunker.py (SCOTUSOpinionProcessor)
-```
+[REMOVED - MCP server integration no longer part of project]
 
 ### 3. Configuration and Utilities Flow
 
@@ -327,7 +327,7 @@ src/governmentreporter/utils/__init__.py
 3. **Metadata**: GeminiMetadataGenerator extracts legal metadata using AI
 4. **Embed**: GoogleEmbeddingsClient generates semantic embeddings
 5. **Store**: ChromaDBClient stores chunks with embeddings and metadata
-6. **Search**: MCP server provides semantic search capabilities
+6. **Search**: Applications can query ChromaDB for semantic search
 
 #### For Executive Orders:
 1. **Fetch**: FederalRegisterClient retrieves order data and raw text
@@ -360,11 +360,12 @@ src/governmentreporter/utils/__init__.py
 #### Base Class Dependencies:
 - **All API clients** inherit from `apis/base.py`
 - **All document processors** inherit from `processors/base.py`
+- **Bulk processors** inherit from `processors/base_bulk.py` (NEW)
 
 ### Database Dependencies:
 - **All processors** store data via `database/chroma_client.py`
-- **MCP server** queries data via `database/chroma_client.py`
 - **ChromaDB** provides persistent vector storage for embeddings and metadata
+- **Applications** can query ChromaDB directly for semantic search
 
 This architecture enables a modular, scalable system where each component has clear responsibilities and well-defined interfaces, allowing for easy extension to additional government data sources while maintaining consistency in processing and storage.
 
