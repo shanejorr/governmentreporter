@@ -32,9 +32,11 @@ Python Learning Notes:
     - Type hints specify that embeddings are List[float] for clarity
 """
 
-from typing import List
+from typing import ClassVar, List
 
 import google.generativeai as genai
+
+from .config import get_google_gemini_api_key
 
 
 class GoogleEmbeddingsClient:
@@ -50,6 +52,8 @@ class GoogleEmbeddingsClient:
 
     Key Features:
     - Automatic API key management through environment variables
+    - Lazy configuration - only configures Google AI when first needed
+    - Thread-safe singleton pattern for configuration management
     - Text truncation to handle Google's token limits
     - Optimized parameters for legal document retrieval
     - Consistent error handling and logging
@@ -69,16 +73,20 @@ class GoogleEmbeddingsClient:
     Python Learning Notes:
         - __init__ is the constructor method that runs when creating an instance
         - self refers to the current instance of the class
-        - The 'or' operator provides default values (api_key or get_default)
-        - Instance variables (self.api_key) store state for the object
+        - ClassVar indicates a class-level variable shared by all instances
+        - The lazy initialization pattern ensures configuration happens only once
     """
+
+    # Class variable to track if Google AI has been configured
+    # This is shared across all instances of the class
+    _configured: ClassVar[bool] = False
 
     def __init__(self):
         """Initialize the Google embeddings client.
 
         Sets up the client with the specific model for text embeddings.
-        The Google Generative AI library must be configured globally with
-        an API key before using this client.
+        Configures the Google Generative AI library with API key on first use
+        (lazy initialization pattern).
 
         Model Selection:
             The client uses "models/text-embedding-004" which is Google's latest
@@ -89,17 +97,24 @@ class GoogleEmbeddingsClient:
 
         Python Learning Notes:
             - self.model_name stores the model identifier for later use
-            - The global genai configuration is expected to be set at application startup
+            - Class variable _configured ensures configuration happens only once
+            - Lazy initialization delays configuration until actually needed
 
         Example Usage:
             ```python
-            # Assumes genai.configure() has been called at application startup
+            # No need to configure genai beforehand - happens automatically
             client = GoogleEmbeddingsClient()
 
-            # Generate embedding
+            # Generate embedding (configuration happens on first call)
             embedding = client.generate_embedding("Supreme Court case text")
             ```
         """
+        # Configure Google AI on first instantiation (lazy singleton pattern)
+        # This ensures configuration happens once, regardless of entry point
+        if not GoogleEmbeddingsClient._configured:
+            genai.configure(api_key=get_google_gemini_api_key())
+            GoogleEmbeddingsClient._configured = True
+
         # Set the specific model for text embeddings
         # text-embedding-004 is Google's latest embedding model
         self.model_name = "models/text-embedding-004"
@@ -205,6 +220,6 @@ class GoogleEmbeddingsClient:
             return result["embedding"]
 
         except Exception as e:
-            # Wrap any API errors in a more descriptive exception
-            # This preserves the original error while providing context
-            raise Exception(f"Failed to generate embedding: {str(e)}")
+            # Re-raise with context while preserving the original exception chain
+            # Using 'from e' maintains the full stack trace for debugging
+            raise RuntimeError(f"Failed to generate embedding: {str(e)}") from e
