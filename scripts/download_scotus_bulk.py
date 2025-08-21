@@ -26,13 +26,13 @@ The script works in conjunction with:
 Example Usage:
     # Process recent opinions (last 5 years)
     python scripts/download_scotus_bulk.py --since-date 2020-01-01 --max-opinions 100
-    
+
     # Process specific date range
     python scripts/download_scotus_bulk.py --since-date 2023-01-01 --until-date 2024-12-31
-    
+
     # Check available opinions without processing
     python scripts/download_scotus_bulk.py --count-only --since-date 2024-01-01
-    
+
     # View current processing statistics
     python scripts/download_scotus_bulk.py --stats
 
@@ -64,17 +64,17 @@ from governmentreporter.processors import SCOTUSBulkProcessor
 def main() -> None:
     """
     Main entry point for the SCOTUS bulk download script.
-    
+
     This function orchestrates the entire bulk processing workflow for Supreme Court opinions.
     It handles command-line argument parsing, initializes the bulk processor with appropriate
     settings, and executes the requested operation (count, stats, or full processing).
-    
+
     The function follows this workflow:
         1. Parse command-line arguments using argparse
         2. Initialize SCOTUSBulkProcessor with provided parameters
         3. Execute requested operation (count-only, stats, or full processing)
         4. Display results and handle errors appropriately
-    
+
     Command-line Arguments:
         --output-dir: Directory for storing progress files and error logs
         --since-date: Start date for opinion retrieval (YYYY-MM-DD format)
@@ -84,18 +84,18 @@ def main() -> None:
         --collection-name: Name of ChromaDB collection for storage
         --count-only: Flag to only display count without processing
         --stats: Flag to display current processing statistics
-    
+
     Returns:
         None: Function exits with appropriate status code (0 for success, 1 for error)
-    
+
     Raises:
         Exception: Any unhandled exceptions are caught and displayed with error message
-    
+
     Integration Points:
         - Uses SCOTUSBulkProcessor from processors module for bulk operations
         - Relies on environment variables loaded via dotenv for API credentials
         - Outputs progress to specified directory for resumable operations
-    
+
     Python Learning Notes:
         - argparse.ArgumentParser: Creates a parser object for command-line arguments
         - parser.add_argument(): Defines each command-line option with type and help text
@@ -175,7 +175,7 @@ def main() -> None:
             print(f"  Remaining: {stats['remaining_count']:,}")
             print(f"  Progress: {stats['progress_percentage']:.1f}%")
             print(f"  Since date: {stats['since_date']}")
-            if stats['until_date']:
+            if stats["until_date"]:
                 print(f"  Until date: {stats['until_date']}")
             print(f"  Collection: {stats['collection_name']}")
             print(f"  Output directory: {stats['output_dir']}")

@@ -21,7 +21,7 @@ Vector Embeddings Explained:
     An embedding is a list of numbers (typically 768 or 1024 dimensions) that
     represents the semantic meaning of text. Similar concepts have similar
     vector representations, allowing mathematical operations for similarity.
-    
+
     Example: "Supreme Court decision" and "SCOTUS ruling" would have similar
     embeddings even though they share no common words.
 
@@ -41,33 +41,33 @@ from .config import get_google_gemini_api_key
 
 class GoogleEmbeddingsClient:
     """Client for generating text embeddings using Google's AI models.
-    
+
     This class provides a simple interface to Google's text-embedding-004 model,
     specifically configured for document retrieval tasks. It handles API authentication,
     request formatting, and error handling for embedding generation.
-    
+
     The client is designed for the GovernmentReporter use case of processing
     legal documents and enabling semantic search capabilities. It includes
     optimizations for legal text and integration with the broader system.
-    
+
     Key Features:
     - Automatic API key management through environment variables
     - Text truncation to handle Google's token limits
     - Optimized parameters for legal document retrieval
     - Consistent error handling and logging
-    
+
     Integration Points:
         - Used by document indexing processes to create searchable vectors
         - Called during query processing for semantic search
         - Integrated with ChromaDB for vector storage and retrieval
         - Part of the metadata generation pipeline
-    
+
     Model Details:
         - Uses Google's text-embedding-004 model
         - Optimized for retrieval tasks (vs. similarity or clustering)
         - Produces 768-dimensional vectors
         - Handles multiple languages but optimized for English
-    
+
     Python Learning Notes:
         - __init__ is the constructor method that runs when creating an instance
         - self refers to the current instance of the class
@@ -81,26 +81,26 @@ class GoogleEmbeddingsClient:
         Sets up the client with proper API credentials and configures the
         Google Generative AI library for embedding generation. The client
         uses sensible defaults while allowing customization when needed.
-        
+
         The initialization process:
         1. Retrieves API key from parameter or environment variables
         2. Configures the Google AI library with authentication
         3. Sets the specific model for text embeddings
         4. Prepares the client for embedding generation requests
-        
+
         API Key Management:
             The client supports flexible API key management:
             - If api_key is provided, uses that key directly
             - If api_key is None, automatically retrieves from environment variables
             - This allows both explicit configuration and automatic setup
-        
+
         Model Selection:
             The client uses "models/text-embedding-004" which is Google's latest
             text embedding model optimized for:
             - Document retrieval and search applications
             - High-quality semantic understanding
             - Efficient processing of large text collections
-        
+
         Python Learning Notes:
             - Optional[str] means the parameter can be a string or None
             - The 'or' operator returns the first truthy value
@@ -113,19 +113,19 @@ class GoogleEmbeddingsClient:
                 environment variables using get_google_gemini_api_key().
                 Providing an explicit key is useful for testing or when using
                 multiple API keys in the same application.
-                
+
         Raises:
             ValueError: If no API key is available (either provided or in environment).
                 This ensures the client cannot be created without proper authentication.
-            
+
         Example Usage:
             ```python
             # Using environment variable (recommended)
             client = GoogleEmbeddingsClient()
-            
+
             # Using explicit API key (for testing/special cases)
             client = GoogleEmbeddingsClient(api_key="your-key-here")
-            
+
             # Generate embedding
             embedding = client.generate_embedding("Supreme Court case text")
             ```
@@ -133,7 +133,7 @@ class GoogleEmbeddingsClient:
         # Get API key from parameter or environment variables
         # The 'or' operator returns the first truthy value
         self.api_key = api_key or get_google_gemini_api_key()
-        
+
         # Configure the Google AI library with our API key
         # This is a global configuration that affects all genai calls
         genai.configure(api_key=self.api_key)
@@ -148,36 +148,36 @@ class GoogleEmbeddingsClient:
         This method converts input text into a numerical vector representation
         that captures semantic meaning. The resulting embedding can be used for
         similarity comparisons, clustering, and vector database operations.
-        
+
         The embedding generation process:
         1. Validates and truncates input text if necessary
         2. Calls Google's embedding API with optimized parameters
         3. Extracts the embedding vector from the response
         4. Returns the vector as a list of floating-point numbers
-        
+
         Text Processing:
             - Input text is truncated to 10,000 characters to respect API limits
             - The truncation preserves the beginning of the text (most important)
             - Google's tokenizer may further limit text, but this provides safety
-        
+
         API Parameters:
             - model: Uses text-embedding-004 for high-quality embeddings
             - task_type: "retrieval_document" optimizes for search applications
             - title: "Legal Document" provides context to improve embedding quality
-        
+
         Integration with GovernmentReporter:
             This method is called by:
             - Document indexing processes to create searchable vectors
             - Query processing to convert user searches into comparable vectors
             - ChromaDB integration for vector storage and similarity search
             - Metadata generation pipelines for content analysis
-        
+
         Vector Properties:
             - Dimensionality: 768 floating-point numbers
             - Range: Typically between -1.0 and 1.0
             - Similarity: Computed using cosine similarity or dot product
             - Persistence: Vectors remain stable across API calls for same text
-        
+
         Python Learning Notes:
             - List[float] type hint indicates return type is a list of floats
             - try/except blocks handle potential API errors gracefully
@@ -206,18 +206,18 @@ class GoogleEmbeddingsClient:
                 - Malformed text input
                 - Service temporarily unavailable
                 The original error details are preserved in the exception message.
-                
+
         Example Usage:
             ```python
             client = GoogleEmbeddingsClient()
-            
+
             # Generate embedding for a legal document
             case_text = "The Supreme Court held that..."
             embedding = client.generate_embedding(case_text)
-            
+
             print(f"Generated {len(embedding)}-dimensional vector")
             print(f"First few values: {embedding[:5]}")
-            
+
             # Use embedding for similarity search
             # (Compare with other embeddings using cosine similarity)
             ```

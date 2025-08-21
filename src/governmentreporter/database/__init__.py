@@ -14,7 +14,7 @@ Architecture Overview:
     1. Document embeddings are stored for semantic search
     2. Metadata is stored for filtering and context
     3. Full document text is retrieved on-demand from government APIs
-    
+
     This approach ensures:
     - Fresh, up-to-date document content
     - Efficient storage usage
@@ -25,7 +25,7 @@ Integration Points:
     - APIs Module: Provides fresh document content during retrieval
     - Metadata Module: Generates rich metadata using Gemini 2.5 Flash-Lite
     - Utils Module: Shared utilities for data processing
-    
+
 Python Learning Notes:
     - __init__.py files make directories into Python packages
     - The __all__ list controls what gets imported with "from package import *"
@@ -35,10 +35,10 @@ Python Learning Notes:
 
 Example Usage:
     from governmentreporter.database import ChromaDBClient
-    
+
     # Create database client
     db = ChromaDBClient(db_path="./my_chroma_db")
-    
+
     # Store a document with embeddings
     db.store_scotus_opinion(
         opinion_id="scotus_2024_001",

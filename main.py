@@ -16,6 +16,7 @@ import sys
 from dotenv import load_dotenv
 
 from src.governmentreporter.processors import SCOTUSOpinionProcessor
+from src.governmentreporter.utils import get_logger, setup_logging
 
 
 def show_usage():
@@ -34,6 +35,8 @@ def show_usage():
 
 def process_opinion(opinion_id: int):
     """Process a single Supreme Court opinion."""
+    logger = get_logger(__name__)
+    logger.info(f"Processing SCOTUS opinion {opinion_id} with hierarchical chunking...")
     print(f"Processing SCOTUS opinion {opinion_id} with hierarchical chunking...")
 
     try:
@@ -43,13 +46,19 @@ def process_opinion(opinion_id: int):
         )
 
         if result["success"]:
+            logger.info(
+                f"Successfully processed {result['chunks_processed']} chunks for opinion {opinion_id}"
+            )
+            logger.info(f"Stored {result['chunks_stored']} chunks in database")
             print(f"✅ Successfully processed {result['chunks_processed']} chunks")
             print(f"📊 Stored {result['chunks_stored']} chunks in database")
         else:
+            logger.error(f"Failed to process opinion {opinion_id}: {result['error']}")
             print(f"❌ Error: {result['error']}")
             return False
 
     except Exception as e:
+        logger.error(f"Exception while processing opinion {opinion_id}: {e}")
         print(f"❌ Error processing opinion: {e}")
         return False
 
@@ -58,6 +67,10 @@ def process_opinion(opinion_id: int):
 
 def main():
     load_dotenv()
+
+    # Initialize logging configuration
+    setup_logging()
+    logger = get_logger(__name__)
 
     if len(sys.argv) < 2:
         show_usage()
@@ -75,10 +88,19 @@ def main():
 
         try:
             opinion_id = int(sys.argv[2])
-            process_opinion(opinion_id)
+            logger.info(f"Starting processing for opinion ID: {opinion_id}")
+            success = process_opinion(opinion_id)
+            if success:
+                logger.info(
+                    f"Successfully completed processing for opinion ID: {opinion_id}"
+                )
+            else:
+                logger.error(f"Failed to process opinion ID: {opinion_id}")
         except ValueError:
+            logger.error(f"Invalid opinion_id provided: {sys.argv[2]}")
             print("❌ Error: opinion_id must be an integer")
     else:
+        logger.warning(f"Unknown command received: {command}")
         print(f"❌ Unknown command: {command}")
         show_usage()
 

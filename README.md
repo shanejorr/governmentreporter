@@ -4,7 +4,7 @@ A Python library for retrieving, processing, and storing US federal government p
 
 ## Overview
 
-GovernmentReporter creates a ChromaDB vector database storing semantic embeddings and rich metadata for hierarchically chunked US federal Supreme Court opinions and Executive Orders. The system uses **intelligent chunking** to break down documents by their natural structure - Supreme Court opinions by opinion type (syllabus, majority, concurring, dissenting) and sections, Executive Orders by header/sections/subsections/tail - enabling precise legal research and retrieval. Rather than storing full document text, the system uses metadata-only storage with on-demand API retrieval to access current documents from authoritative government sources.
+GovernmentReporter creates a ChromaDB vector database storing semantic embeddings and rich metadata for hierarchically chunked US federal Supreme Court opinions and Executive Orders. The system uses **intelligent chunking** to break down documents by their natural structure - Supreme Court opinions by opinion type (syllabus, majority, concurring, dissenting) and sections, Executive Orders by header/sections/subsections/tail - enabling precise legal research and retrieval.
 
 ## Features
 
@@ -42,7 +42,6 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
 - **Comprehensive Government Data**: Indexes US Supreme Court opinions and Executive Orders
 - **Fresh Data Guarantee**: Retrieves latest document text on-demand from government APIs
 - **Semantic Search**: Vector database enables intelligent document discovery at chunk level
-- **Cost-Effective Storage**: Stores only embeddings and metadata, not full text
 - **API-First Design**: Reusable library components for custom workflows
 - **Bulk Processing**: Automated pipeline for processing large datasets (10,000+ Supreme Court opinions)
 - **Resumable Operations**: Progress tracking and error recovery for long-running processes
@@ -54,10 +53,10 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
 - **Language**: Python 3.11+
 - **Package Manager**: uv (modern Python package manager)
 - **Vector Database**: ChromaDB (embeddings + metadata only)
-- **AI Services**: 
+- **AI Services**:
   - Google Gemini 2.5 Flash-Lite API for metadata generation
   - Google text-embedding-004 for semantic embeddings
-- **Government APIs**: 
+- **Government APIs**:
   - CourtListener API (Supreme Court opinions)
   - Federal Register API (Executive Orders)
 - **Development**: VS Code with Claude Code support
@@ -67,7 +66,7 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
 
 ### 1. **Hierarchical Document Processing**:
    - Fetch documents from government APIs (CourtListener, Federal Register)
-   - **Intelligent Chunking**: 
+   - **Intelligent Chunking**:
      - **SCOTUS Opinions**: Break down by opinion type (syllabus, majority, concurring, dissenting), legal sections (I, II, III) and subsections (A, B, C), justice attribution
      - **Executive Orders**: Break down by header, sections (Sec. 1, Sec. 2), subsections, and signature blocks
    - **Rich Metadata Extraction**: Use Gemini 2.5 Flash-Lite to extract:
@@ -81,7 +80,6 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
    - Convert user query to embedding
    - Search ChromaDB for semantically similar **chunks**
    - Retrieve chunk metadata with opinion type, justice, section info
-   - Make API calls to fetch current full text from authoritative sources
    - Return contextually relevant legal content to LLM
 
 ### 3. **Chunk-Aware Query Results**:
@@ -95,8 +93,6 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
 - uv package manager
 - Google Gemini API key
 - CourtListener API token (free registration required)
-- macOS (tested on Apple M2 Pro) - 16GB+ RAM recommended
-- Internet connection for API access
 
 ## Installation
 
@@ -151,7 +147,7 @@ uv run python scripts/download_scotus_bulk.py --since-date 2020-01-01 --max-opin
 # Expected output for a typical case:
 # ✅ Generated 25 chunks
 # 📊 Chunk breakdown:
-#    - Syllabus: 2 chunks  
+#    - Syllabus: 2 chunks
 #    - Majority: 15 chunks
 #    - Concurring: 8 chunks (by Barrett, Jackson)
 # 📋 Case: Consumer Financial Protection Bureau v. Community Financial Services Assn.
@@ -221,7 +217,7 @@ from governmentreporter.processors import (
 # Process single SCOTUS opinion
 scotus_processor = SCOTUSOpinionProcessor()
 result = scotus_processor.process_and_store(
-    document_id="9973155", 
+    document_id="9973155",
     collection_name="federal_court_scotus_opinions"
 )
 print(f"Generated {result['chunks_processed']} chunks")
@@ -229,7 +225,7 @@ print(f"Generated {result['chunks_processed']} chunks")
 # Process single Executive Order
 eo_processor = ExecutiveOrderProcessor()
 result = eo_processor.process_and_store(
-    document_id="2024-05678", 
+    document_id="2024-05678",
     collection_name="federal-executive-orders"
 )
 print(f"Generated {result['chunks_processed']} chunks")
@@ -244,8 +240,8 @@ print(f"SCOTUS Progress: {stats['progress_percentage']:.1f}%")
 
 eo_bulk = ExecutiveOrderBulkProcessor()
 results = eo_bulk.process_executive_orders(
-    start_date="2024-01-01", 
-    end_date="2024-12-31", 
+    start_date="2024-01-01",
+    end_date="2024-12-31",
     max_orders=10
 )
 print(f"EO Success rate: {results['success_rate']:.1%}")
@@ -255,7 +251,7 @@ print(f"EO Success rate: {results['success_rate']:.1%}")
 
 The system follows a structured processing pipeline:
 
-1. **Document Fetching**: 
+1. **Document Fetching**:
    - SCOTUS: CourtListener API for opinion and cluster data
    - Executive Orders: Federal Register API for order data and raw text
 
@@ -263,7 +259,7 @@ The system follows a structured processing pipeline:
    - SCOTUS: Split by opinion type → sections → paragraphs (600/800 tokens)
    - Executive Orders: Split by header → sections → subsections → tail (300/400 tokens)
 
-3. **Metadata Extraction**: 
+3. **Metadata Extraction**:
    - Use Gemini 2.5 Flash-Lite to extract rich legal/policy metadata
    - Generate bluebook citations and structured metadata
 
@@ -273,7 +269,6 @@ The system follows a structured processing pipeline:
 
 5. **Storage**:
    - Store chunk embeddings + metadata in ChromaDB
-   - No full text storage (metadata-only approach)
 
 6. **Search & Retrieval**:
    - User query converted to embedding
@@ -292,8 +287,7 @@ User: "Find recent Supreme Court decisions about environmental regulation"
    - Opinion type (syllabus, majority, concurring, dissenting)
    - Justice attribution and section references
    - Legal topics: ["Environmental Law", "Administrative Law", "Commerce Clause"]
-3. Full text retrieved from CourtListener API for top matches
-4. Contextually relevant Supreme Court content provided to LLM
+3. Contextually relevant Supreme Court content provided to LLM
 ```
 
 #### Executive Order Policy Research
@@ -306,8 +300,7 @@ User: "Find Executive Orders about aviation regulatory reform"
    - Policy topics: ["aviation", "regulatory reform", "transportation"]
    - Impacted agencies: ["FAA", "DOT"]
    - Section and subsection references
-3. Full text retrieved from Federal Register API
-4. Relevant policy content provided to LLM
+3. Relevant policy content provided to LLM
 ```
 
 #### Cross-Document Legal Analysis
@@ -345,7 +338,7 @@ GovernmentReporter automatically identifies and chunks Supreme Court opinions us
   "text": "The actual chunk content...",
   "opinion_type": "majority",
   "justice": "Thomas",
-  "section": "II.A", 
+  "section": "II.A",
   "chunk_index": 3,
   "case_name": "Consumer Financial Protection Bureau v. Community Financial Services Assn.",
   "citation": "601 U.S. 416 (2024)",
@@ -520,4 +513,4 @@ For issues and questions:
 
 ---
 
-**Note**: This project is designed for research and educational purposes. The metadata-only storage approach ensures access to the most current government publications while maintaining cost-effective operation.
+**Note**: This project is designed for research and educational purposes.

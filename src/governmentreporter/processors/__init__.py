@@ -7,17 +7,17 @@ generation for RAG (Retrieval-Augmented Generation) applications.
 
 Core Architecture:
     The processors module implements a three-layer architecture:
-    
+
     1. **Base Layer** (base.py, base_bulk.py):
        - Abstract base classes defining common interfaces
        - Shared functionality for document processing and bulk operations
        - Progress tracking, error handling, and database integration
-    
+
     2. **Document-Specific Chunkers** (scotus_opinion_chunker.py, executive_order_chunker.py):
        - Specialized hierarchical chunking algorithms for each document type
        - Metadata extraction using Gemini AI
        - Integration with government APIs for data retrieval
-    
+
     3. **Bulk Processing Layer** (scotus_bulk.py, executive_order_bulk.py):
        - Large-scale document processing workflows
        - Rate limiting and API management
@@ -50,11 +50,11 @@ Python Learning Notes:
 Example Usage:
     ```python
     from governmentreporter.processors import SCOTUSOpinionProcessor
-    
+
     # Process a single Supreme Court opinion
     processor = SCOTUSOpinionProcessor()
     result = processor.process_and_store(
-        document_id="123456", 
+        document_id="123456",
         collection_name="scotus_opinions"
     )
     print(f"Created {result['chunks_processed']} chunks")
@@ -75,7 +75,7 @@ from .scotus_opinion_chunker import SCOTUSOpinionProcessor
 
 __all__ = [
     "SCOTUSBulkProcessor",
-    "SCOTUSOpinionProcessor", 
+    "SCOTUSOpinionProcessor",
     "ExecutiveOrderBulkProcessor",
     "ExecutiveOrderProcessor",
 ]

@@ -3,8 +3,8 @@
 from typing import Any, Dict, Optional
 
 from ..apis import CourtListenerClient
-from .scotus_opinion_chunker import SCOTUSOpinionProcessor
 from .base_bulk import BaseBulkProcessor
+from .scotus_opinion_chunker import SCOTUSOpinionProcessor
 
 
 class SCOTUSBulkProcessor(BaseBulkProcessor):

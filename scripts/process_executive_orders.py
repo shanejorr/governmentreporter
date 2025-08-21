@@ -73,25 +73,25 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from governmentreporter.processors import ExecutiveOrderBulkProcessor
-from governmentreporter.utils import get_logger
+from governmentreporter.utils import get_logger, setup_logging
 
 
 def validate_date_format(date_str: str) -> bool:
     """
     Validate that a date string follows the YYYY-MM-DD format.
-    
+
     This function uses regular expressions to check if the provided date string
     matches the exact pattern required by the Federal Register API. It only validates
     the format, not whether the date is actually valid (e.g., it would accept 2024-13-45).
-    
+
     Args:
         date_str (str): Date string to validate. Should be in YYYY-MM-DD format.
                        Examples: "2024-01-01", "2024-12-31"
-    
+
     Returns:
         bool: True if the string matches YYYY-MM-DD format, False otherwise.
               Returns False for None, empty strings, or incorrectly formatted dates.
-    
+
     Examples:
         >>> validate_date_format("2024-01-15")
         True
@@ -99,12 +99,12 @@ def validate_date_format(date_str: str) -> bool:
         False
         >>> validate_date_format("2024-1-15")  # Missing leading zeros
         False
-    
+
     Integration Notes:
         - Used by main() to validate command-line arguments before processing
         - Ensures API compatibility with Federal Register date requirements
         - Works in conjunction with date range validation in main()
-    
+
     Python Learning Notes:
         - Regular expressions (re module): Pattern matching for string validation
         - r"" prefix: Raw string literal, treats backslashes literally
@@ -122,18 +122,18 @@ def validate_date_format(date_str: str) -> bool:
 def main() -> None:
     """
     Main entry point for the Executive Orders bulk processing script.
-    
+
     This function orchestrates the entire bulk processing workflow for Executive Orders.
     It handles command-line argument parsing, validates input parameters, initializes
     the bulk processor, and executes the requested operation (stats or full processing).
-    
+
     The function follows this workflow:
         1. Parse command-line arguments using argparse
         2. Validate date format and date range logic
         3. Initialize ExecutiveOrderBulkProcessor with configuration
         4. Execute requested operation (stats display or full processing)
         5. Display results and handle various error conditions
-    
+
     Command-line Arguments:
         start_date: Start date for order retrieval (YYYY-MM-DD format, required)
         end_date: End date for order retrieval (YYYY-MM-DD format, required)
@@ -141,24 +141,24 @@ def main() -> None:
         --max-orders: Limit on number of orders to process (for testing)
         --collection-name: Name of ChromaDB collection for storage
         --stats: Flag to display current processing statistics only
-    
+
     Exit Codes:
         0: Successful completion
         1: Error during processing or validation
         130: User interrupted with Ctrl+C (SIGINT)
-    
+
     Error Handling:
         - Validates date formats before processing
         - Ensures start_date is before end_date
         - Catches KeyboardInterrupt for graceful shutdown
         - Logs all errors with full traceback for debugging
-    
+
     Integration Points:
         - Uses ExecutiveOrderBulkProcessor from processors module
         - Relies on environment variables loaded via dotenv
         - Uses centralized logging from utils module
         - Outputs progress to specified directory for resumable operations
-    
+
     Python Learning Notes:
         - argparse.RawDescriptionHelpFormatter: Preserves formatting in help text
         - epilog=__doc__: Uses module docstring as additional help text
@@ -209,6 +209,9 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    # Initialize logging configuration
+    setup_logging()
 
     # Initialize logger
     logger = get_logger(__name__)

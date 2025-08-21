@@ -27,7 +27,7 @@ Integration Points:
 
 Example Usage:
     from governmentreporter.metadata import GeminiMetadataGenerator
-    
+
     generator = GeminiMetadataGenerator()
     metadata = generator.extract_legal_metadata(document_text)
 """

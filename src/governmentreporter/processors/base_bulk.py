@@ -35,10 +35,10 @@ Python Learning Notes:
 
 import json
 import time
+from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Set
-from abc import ABC, abstractmethod
 
 
 class BaseBulkProcessor(ABC):

@@ -38,16 +38,16 @@ from ..utils.embeddings import GoogleEmbeddingsClient
 class ProcessedChunk:
     """
     Represents a processed document chunk ready for database storage.
-    
+
     This data class encapsulates all information needed to store a document chunk
     in the vector database, including the text content, its vector embedding,
     associated metadata, and position information.
-    
+
     The @dataclass decorator automatically generates several methods:
     - __init__(): Constructor that accepts all fields as parameters
     - __repr__(): String representation for debugging
     - __eq__(): Equality comparison based on all fields
-    
+
     Attributes:
         text (str): The actual text content of the chunk. This is the searchable
                    content that users will see in query results.
@@ -61,13 +61,13 @@ class ProcessedChunk:
         chunk_index (int): Zero-based position of this chunk within the source
                           document. Defaults to 0. Used for maintaining document
                           order and creating unique chunk identifiers.
-    
+
     Python Learning Notes:
         - The = 0 syntax provides a default value for chunk_index
         - Type hints (str, List[float], etc.) help with code documentation and IDE support
         - Dict[str, Any] means a dictionary with string keys and values of any type
         - @dataclass reduces boilerplate code compared to manual class definition
-    
+
     Example:
         ```python
         chunk = ProcessedChunk(
@@ -92,28 +92,28 @@ class ProcessedChunk:
 class BaseDocumentProcessor(ABC):
     """
     Abstract base class defining the interface for all document processors.
-    
+
     This class implements the Template Method design pattern, providing a common
     framework for document processing while allowing subclasses to customize
     specific steps. It handles the integration with embedding services and
     database storage, while leaving document-specific processing logic to
     concrete implementations.
-    
+
     The ABC (Abstract Base Class) ensures that all document processors implement
     the required methods, providing consistency across different document types
     like Supreme Court opinions and Executive Orders.
-    
+
     Key Responsibilities:
         1. Manage connections to embedding and database services
         2. Provide template methods for common processing workflows
         3. Handle chunk storage with proper metadata formatting
         4. Ensure consistent error handling and logging
-    
+
     Design Pattern: Template Method
         - process_and_store(): Template method defining the overall workflow
         - process_document(): Abstract method for document-specific processing
         - store_chunks(): Concrete method for database storage
-    
+
     Python Learning Notes:
         - Inheriting from ABC makes this an abstract base class
         - @abstractmethod decorator forces subclasses to implement specific methods
@@ -130,11 +130,11 @@ class BaseDocumentProcessor(ABC):
     ):
         """
         Initialize the document processor with required service clients.
-        
+
         This constructor demonstrates the Dependency Injection pattern, allowing
         callers to provide their own configured clients or fall back to default
         instances. This approach improves testability and flexibility.
-        
+
         Args:
             embeddings_client (Optional[GoogleEmbeddingsClient]): Client for generating
                 vector embeddings from text. If None, creates a new instance with
@@ -146,23 +146,23 @@ class BaseDocumentProcessor(ABC):
             logger (Optional[logging.Logger]): Logger instance for debug and info
                 output. If None, no logging will be performed. Useful for tracking
                 processing progress and debugging issues.
-        
+
         Python Learning Notes:
             - Optional[Type] is equivalent to Union[Type, None]
             - The 'or' operator returns the first truthy value or the last value
             - self.attribute = param or DefaultClass() creates instance if param is None
             - This pattern allows for flexible initialization with sensible defaults
-        
+
         Example:
             ```python
             # Use default clients
             processor = MyProcessor()
-            
+
             # Use custom logger
             import logging
             logger = logging.getLogger(__name__)
             processor = MyProcessor(logger=logger)
-            
+
             # Use all custom clients
             processor = MyProcessor(
                 embeddings_client=custom_embeddings,
@@ -179,13 +179,13 @@ class BaseDocumentProcessor(ABC):
     def process_document(self, document_id: str) -> List[ProcessedChunk]:
         """
         Process a single document into semantically meaningful chunks.
-        
+
         This abstract method must be implemented by each document type processor
         to handle the specific structure and requirements of that document type.
         For example, Supreme Court opinions are chunked by opinion type (majority,
         dissenting, concurring) and sections, while Executive Orders are chunked
         by regulatory sections.
-        
+
         The method should:
         1. Retrieve the document using the document_id
         2. Parse and understand the document structure
@@ -193,43 +193,43 @@ class BaseDocumentProcessor(ABC):
         4. Extract and attach relevant metadata to each chunk
         5. Generate embeddings for each chunk
         6. Return ProcessedChunk objects ready for storage
-        
+
         Args:
             document_id (str): Unique identifier for the document. Format varies
                              by document type:
                              - SCOTUS opinions: CourtListener opinion ID (e.g., "12345")
                              - Executive Orders: Federal Register document number
-        
+
         Returns:
             List[ProcessedChunk]: List of processed chunks, each containing:
                 - text: The chunk content
                 - embedding: Vector representation of the text
                 - metadata: Document and chunk-specific metadata
                 - chunk_index: Position within the document
-        
+
         Raises:
             ValueError: If document_id is invalid or document cannot be found
             APIError: If external API calls fail
             ProcessingError: If document parsing or chunking fails
-        
+
         Python Learning Notes:
             - @abstractmethod decorator forces subclasses to implement this method
             - -> List[ProcessedChunk] is a return type hint
             - Abstract methods have no implementation (just 'pass' in base class)
             - Subclasses must provide concrete implementation or they can't be instantiated
-        
+
         Example Implementation Pattern:
             ```python
             def process_document(self, document_id: str) -> List[ProcessedChunk]:
                 # Step 1: Fetch document
                 doc_data = self.api_client.get_document(document_id)
-                
+
                 # Step 2: Chunk hierarchically
                 chunks = self.chunker.chunk_document(doc_data['text'])
-                
+
                 # Step 3: Extract metadata
                 metadata = self.extract_metadata(doc_data)
-                
+
                 # Step 4: Generate embeddings and create ProcessedChunks
                 processed_chunks = []
                 for i, chunk in enumerate(chunks):
@@ -240,7 +240,7 @@ class BaseDocumentProcessor(ABC):
                         metadata={**metadata, **chunk.metadata},
                         chunk_index=i
                     ))
-                
+
                 return processed_chunks
             ```
         """
@@ -251,11 +251,11 @@ class BaseDocumentProcessor(ABC):
     ) -> int:
         """
         Store processed document chunks in the ChromaDB vector database.
-        
+
         This method handles the technical details of storing chunks in ChromaDB,
         including ID generation, metadata formatting, and batch insertion. It
         provides comprehensive logging for debugging and monitoring.
-        
+
         The storage process:
         1. Creates or retrieves the specified ChromaDB collection
         2. Generates unique IDs for each chunk (document_id + chunk_index)
@@ -263,7 +263,7 @@ class BaseDocumentProcessor(ABC):
         4. Adds source document ID and chunk index to metadata
         5. Performs batch insertion to ChromaDB
         6. Logs detailed information about the storage process
-        
+
         Args:
             chunks (List[ProcessedChunk]): List of processed chunks to store.
                 Each chunk must have text, embedding, metadata, and chunk_index.
@@ -272,24 +272,24 @@ class BaseDocumentProcessor(ABC):
                 "scotus_opinions", "executive_orders").
             document_id (str): Unique identifier of the source document. Used
                 to generate unique chunk IDs and track document provenance.
-        
+
         Returns:
             int: Number of chunks successfully stored in the database. Should
                 equal len(chunks) if all chunks were stored successfully.
-        
+
         Python Learning Notes:
             - Early return pattern: 'if not chunks: return 0' handles edge cases
             - List comprehension: [expression for item in iterable] creates lists efficiently
             - .copy() method creates shallow copy of dictionaries to avoid modifying originals
             - f-strings: f"{variable}_chunk_{index}" for string formatting
             - Batch operations are more efficient than individual insertions
-        
+
         ChromaDB Storage Format:
             - IDs: "document_id_chunk_0", "document_id_chunk_1", etc.
             - Embeddings: List of floats representing text vectors
             - Documents: The actual text content for each chunk
             - Metadata: Dictionary containing all chunk and document metadata
-        
+
         Example:
             ```python
             processor = SCOTUSOpinionProcessor()
@@ -368,20 +368,20 @@ class BaseDocumentProcessor(ABC):
     ) -> Dict[str, Any]:
         """
         Complete processing pipeline: document retrieval, chunking, and storage.
-        
+
         This is the main template method that coordinates the entire document
         processing workflow. It demonstrates the Template Method design pattern
         by defining the overall algorithm while delegating specific steps to
         abstract or concrete methods.
-        
+
         Processing Steps:
         1. Call process_document() to handle document-specific processing
         2. Call store_chunks() to save results to the database
         3. Handle errors and return comprehensive results
-        
+
         This method provides a consistent interface across all document types
         while allowing each processor to implement its own chunking logic.
-        
+
         Args:
             document_id (str): Unique identifier for the document to process.
                 Format depends on document type (CourtListener ID, Federal
@@ -389,7 +389,7 @@ class BaseDocumentProcessor(ABC):
             collection_name (str): Name of the ChromaDB collection for storage.
                 Should be consistent for each document type to enable effective
                 searching and organization.
-        
+
         Returns:
             Dict[str, Any]: Comprehensive processing results containing:
                 - success (bool): Whether processing completed without errors
@@ -397,13 +397,13 @@ class BaseDocumentProcessor(ABC):
                 - chunks_processed (int): Number of chunks created from document
                 - chunks_stored (int): Number of chunks successfully saved to database
                 - error (str|None): Error message if processing failed, None if successful
-        
+
         Python Learning Notes:
             - Template Method pattern: defines algorithm structure, subclasses fill in details
             - try/except blocks handle errors gracefully and return structured results
             - Dictionary return values provide flexible, self-documenting results
             - Exception handling converts errors to user-friendly return format
-        
+
         Example Usage:
             ```python
             processor = SCOTUSOpinionProcessor()
@@ -411,13 +411,13 @@ class BaseDocumentProcessor(ABC):
                 document_id="123456",
                 collection_name="scotus_opinions"
             )
-            
+
             if result["success"]:
                 print(f"Successfully processed {result['chunks_processed']} chunks")
             else:
                 print(f"Processing failed: {result['error']}")
             ```
-        
+
         Error Handling:
             This method catches all exceptions and returns them as structured
             error information rather than letting them propagate. This makes

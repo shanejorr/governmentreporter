@@ -9,12 +9,13 @@ Usage:
     python fetch_executive_orders.py --start-date 2020-01-01
 """
 
+import argparse
 import json
 import time
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import Dict, List, Optional
-import argparse
 from urllib.parse import urlencode
+
 import requests
 
 

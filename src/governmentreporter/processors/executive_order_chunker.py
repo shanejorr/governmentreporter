@@ -15,17 +15,17 @@ Core Components:
 Hierarchical Chunking Strategy:
     Executive Orders follow a standardized regulatory document structure that
     enables sophisticated semantic chunking:
-    
+
     1. **Document Level Structure**:
        - Header Block: Title, EO number, date, president, legal authority
        - Main Content: Policy sections with numbered directives
        - Tail Block: Signature, filing information, billing codes
-    
+
     2. **Section Level Structure**:
        - Major sections (Section 1., Sec. 2., etc.)
        - Subsections with letter designations (a), (b), (c)
        - Numbered items within subsections (1), (2), (3)
-    
+
     3. **Chunk Level Processing**:
        - Paragraph-based chunking within sections
        - Token-aware splitting (target ~300 tokens per chunk)
@@ -75,7 +75,7 @@ Example Usage:
         document_id="2024-12345",  # Federal Register document number
         collection_name="executive_orders_2024"
     )
-    
+
     print(f"Created {result['chunks_processed']} chunks")
     print(f"Stored {result['chunks_stored']} chunks in database")
     ```
@@ -111,51 +111,51 @@ from .base import BaseDocumentProcessor, ProcessedChunk
 class ExecutiveOrderChunk:
     """
     Represents a semantically coherent chunk of Executive Order text with regulatory structure.
-    
+
     This data class captures a single chunk of regulatory text along with its
     structural position within the Executive Order document. The metadata preserves
     the hierarchical structure that is essential for regulatory analysis, compliance
     tracking, and legal citation.
-    
+
     Executive Orders have a more standardized structure than court opinions,
     following federal regulatory document conventions with numbered sections,
     lettered subsections, and standardized header/tail blocks.
-    
+
     Attributes:
         text (str): The actual text content of the chunk. Typically includes
                    complete regulatory directives, policy statements, or
                    administrative instructions. Usually 200-600 words
                    (300-900 tokens) depending on section complexity.
-                   
+
         chunk_type (str): The type of content this chunk represents:
                          - 'header': Title, EO number, authority statement, preamble
                          - 'section': Main policy directive or administrative section
                          - 'tail': Signature block, filing info, billing codes
-                         
+
         section_title (Optional[str]): Full section heading including number and title.
                                       Examples:
                                       - 'Sec. 1. Policy'
                                       - 'Section 3. Agency Coordination'
                                       - 'Sec. 4. Implementation Timeline'
                                       None for header and tail chunks.
-                                      
+
         subsection (Optional[str]): Subsection identifier within major sections.
                                    Examples: '(a)', '(b)', '(i)', '(1)'
                                    Follows federal regulatory citation format.
                                    None if chunk spans multiple subsections.
-                                   
+
         chunk_index (int): Zero-based position of this chunk within the entire
                           Executive Order. Used for maintaining document order
                           and creating unique identifiers. Essential for proper
                           document reconstruction and regulatory citation.
-    
+
     Python Learning Notes:
         - @dataclass automatically generates __init__, __repr__, __eq__ methods
         - Type hints improve code clarity and enable IDE assistance
         - Optional[str] indicates the field can be None for some chunk types
         - Multi-line string in section_title comment shows example formatting
         - Dataclass fields are ordered and used for string representation
-    
+
     Example:
         ```python
         chunk = ExecutiveOrderChunk(
@@ -165,11 +165,11 @@ class ExecutiveOrderChunk:
             subsection="(a)",
             chunk_index=3
         )
-        
+
         print(f"Chunk {chunk.chunk_index}: {chunk.section_title}")
         print(f"Type: {chunk.chunk_type}, Subsection: {chunk.subsection}")
         ```
-    
+
     Regulatory Structure Context:
         Executive Orders follow standard federal document conventions:
         - Header: Authority statement, background, policy declaration
@@ -192,20 +192,20 @@ class ExecutiveOrderChunk:
 class ProcessedExecutiveOrderChunk:
     """
     Complete processed Executive Order chunk ready for database storage with full metadata.
-    
+
     This comprehensive data class combines the chunk content with all available
     metadata from multiple sources: the chunk's regulatory structure, the Federal
     Register API data, and AI-extracted policy metadata from Gemini analysis.
-    
+
     The class represents the final form of a processed chunk before database
     storage, containing everything needed for policy search, regulatory analysis,
     and document reconstruction.
-    
+
     Data Sources:
     1. **Chunk Structure**: From hierarchical chunking of regulatory text
     2. **Federal Register API**: Official government metadata and document info
     3. **AI Policy Analysis**: Policy metadata extracted by Gemini 2.5 Flash-Lite
-    
+
     Attributes:
         # === Chunk Content and Regulatory Structure ===
         text (str): The actual chunk text content
@@ -213,7 +213,7 @@ class ProcessedExecutiveOrderChunk:
         section_title (Optional[str]): Full section heading with number
         subsection (Optional[str]): Subsection identifier ((a), (b), etc.)
         chunk_index (int): Position of chunk within the document
-        
+
         # === Federal Register API Metadata ===
         document_number (str): Federal Register document number (e.g., "2024-12345")
         title (str): Full title of the Executive Order
@@ -223,7 +223,7 @@ class ProcessedExecutiveOrderChunk:
         citation (str): Federal Register citation (e.g., "89 FR 12345")
         html_url (str): URL to HTML version on Federal Register
         raw_text_url (str): URL to plain text version
-        
+
         # === Gemini AI Extracted Policy Metadata ===
         summary (str): AI-generated executive summary of the order
         policy_topics (List[str]): Policy areas and subject matter tags
@@ -233,18 +233,18 @@ class ProcessedExecutiveOrderChunk:
         executive_orders_revoked (List[str]): EOs explicitly revoked by this order
         executive_orders_amended (List[str]): EOs explicitly amended by this order
         economic_sectors (List[str]): Economic/societal sectors impacted
-    
+
     Python Learning Notes:
         - Comprehensive dataclass with 16+ fields from multiple data sources
         - Mix of primitive types (str, int) and collections (List[str])
         - Optional types handle cases where regulatory structure varies
         - Comments organize fields by data source for code clarity
         - @dataclass handles complex constructor and representation automatically
-    
+
     Database Storage:
         The to_dict() method converts this structure for ChromaDB storage,
         handling JSON serialization of list fields and None value conversion.
-    
+
     Policy Analysis Applications:
         The rich metadata enables sophisticated policy analysis:
         - Track which agencies are mentioned across presidencies
@@ -252,7 +252,7 @@ class ProcessedExecutiveOrderChunk:
         - Analyze EO cross-references and revocation patterns
         - Search by policy topics and economic sectors
         - Monitor implementation timelines and requirements
-    
+
     Example Usage:
         ```python
         processed_chunk = ProcessedExecutiveOrderChunk(
@@ -269,11 +269,11 @@ class ProcessedExecutiveOrderChunk:
             impacted_agencies=["DOE", "EPA"],
             # ... other fields
         )
-        
+
         # Convert for database storage
         db_data = processed_chunk.to_dict()
         ```
-    
+
     Regulatory Compliance:
         The comprehensive metadata supports regulatory compliance analysis:
         - Track implementation deadlines and requirements

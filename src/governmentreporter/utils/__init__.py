@@ -25,91 +25,138 @@ Python Learning Notes:
 """
 
 import logging
+import logging.config
+import os
+from pathlib import Path
 from typing import Optional
+
+import yaml
 
 from .citations import build_bluebook_citation
 from .config import (get_congress_gov_token, get_court_listener_token,
                      get_federal_register_token, get_google_gemini_api_key)
 from .embeddings import GoogleEmbeddingsClient
 
+# Global flag to track if logging has been configured
+_logging_configured = False
+
+
+def setup_logging(config_path: Optional[Path] = None) -> None:
+    """Set up logging configuration from YAML file.
+
+    This function configures the entire logging system using a YAML configuration
+    file. It should be called once at application startup, typically in main.py
+    or server.py before any other modules request loggers.
+
+    The logging configuration includes:
+    - Multiple handlers for different log levels and destinations
+    - Rotating file handlers to prevent log files from growing too large
+    - Separate handlers for console output (stdout/stderr)
+    - Module-specific logging levels and formatting
+
+    Integration with GovernmentReporter:
+        This centralized logging setup ensures:
+        - Consistent log formatting across all modules
+        - Proper log rotation to manage disk usage
+        - Separate error and debug log files for easier troubleshooting
+        - Production-ready logging with audit trails
+
+    Python Learning Notes:
+        - logging.config.dictConfig() applies a complete logging configuration
+        - YAML files provide a clean way to define complex logging setups
+        - Global configuration means all subsequent getLogger() calls use this setup
+        - The logs directory is created automatically if it doesn't exist
+
+    Args:
+        config_path (Optional[Path]): Path to the logging configuration YAML file.
+            If None, defaults to 'logging_config.yaml' in the project root.
+
+    Raises:
+        FileNotFoundError: If the logging configuration file is not found.
+        yaml.YAMLError: If the YAML configuration file is malformed.
+
+    Example Usage:
+        ```python
+        # In main.py or server.py
+        from governmentreporter.utils import setup_logging
+
+        setup_logging()  # Uses default config
+        # Now all modules can use: logger = logging.getLogger(__name__)
+        ```
+    """
+    global _logging_configured
+
+    if _logging_configured:
+        return
+
+    if config_path is None:
+        # Default to logging_config.yaml in project root
+        project_root = Path(__file__).parent.parent.parent
+        config_path = project_root / "logging_config.yaml"
+
+    if not config_path.exists():
+        raise FileNotFoundError(f"Logging config file not found: {config_path}")
+
+    # Ensure logs directory exists
+    logs_dir = Path("logs")
+    if not logs_dir.exists():
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
+    # Load and apply YAML configuration
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+
+    logging.config.dictConfig(config)
+    _logging_configured = True
+
 
 def get_logger(name: Optional[str] = None) -> logging.Logger:
-    """Get a logger instance with consistent configuration across the application.
-    
-    This function provides a standardized logging setup that ensures all modules
-    in the GovernmentReporter system use consistent log formatting and output.
-    It prevents duplicate handler creation and sets sensible defaults.
-    
-    The logging configuration includes:
-    - Timestamp for when the log entry was created
-    - Logger name (usually the module name) for source identification
-    - Log level (INFO, ERROR, DEBUG, etc.) for message categorization
-    - The actual log message
-    
+    """Get a logger instance using the centralized logging configuration.
+
+    This function returns a logger that uses the configuration set up by
+    setup_logging(). If setup_logging() hasn't been called yet, it will
+    be called automatically with default settings.
+
+    The logger will automatically use the appropriate handlers, formatters,
+    and log levels based on the module name and the YAML configuration.
+
     Integration with GovernmentReporter:
-        This logger is used throughout the system for:
-        - API request/response logging in the APIs modules
-        - Database operation logging in ChromaDB interactions
-        - Error tracking during document processing
-        - Debug information during development
-    
+        Different modules get different logging configurations:
+        - API modules: DEBUG level with detailed logging
+        - Database modules: INFO level with standard logging
+        - Processors: DEBUG level for complex operation tracking
+        - Utils: INFO level for general purpose logging
+
     Python Learning Notes:
-        - logging.getLogger() creates or retrieves a logger by name
-        - The 'name or __name__' pattern uses Python's truthiness:
-          if name is provided, use it; otherwise use the current module's name
-        - logger.handlers is a list of output destinations (console, file, etc.)
-        - The formatter defines how log messages appear in output
-        - Setting the log level to INFO means DEBUG messages won't be shown
-    
+        - logging.getLogger() with YAML config automatically applies the right setup
+        - Module names (like 'governmentreporter.apis.federal_register') are matched
+          against logger patterns in the YAML config
+        - No manual handler setup needed - everything comes from the config file
+
     Args:
-        name (Optional[str]): Logger name to use. If None, uses the calling
-            module's __name__ attribute. This helps identify which module
-            generated each log message.
-        
+        name (Optional[str]): Logger name to use. If None, defaults to the utils
+            module's __name__. For module-specific logging, pass __name__ explicitly.
+
     Returns:
-        logging.Logger: A configured logger instance ready for use. The logger
-            will output to the console with formatted timestamps and level info.
-            
+        logging.Logger: A configured logger instance ready for use with handlers,
+            formatters, and log levels set according to the YAML configuration.
+
     Example Usage:
         ```python
         # In any module
         from governmentreporter.utils import get_logger
-        
+
         logger = get_logger(__name__)
-        logger.info("Starting document processing")
-        logger.error("Failed to connect to API")
+        logger.debug("Detailed debug information")  # May or may not show
+        logger.info("General information")          # Usually shows
+        logger.error("Error occurred")              # Always shows
         ```
     """
-    # Get or create a logger with the specified name
-    # If name is None, __name__ will be the current module's name
-    logger = logging.getLogger(name or __name__)
-    
-    # Only configure the logger if it doesn't already have handlers
-    # This prevents duplicate log messages when the function is called multiple times
-    if not logger.handlers:
-        # Create a handler that outputs to the console (stdout/stderr)
-        handler = logging.StreamHandler()
-        
-        # Define the format for log messages
-        # %(asctime)s - timestamp when the log was created
-        # %(name)s - the logger's name (usually the module name)
-        # %(levelname)s - the log level (INFO, ERROR, etc.)
-        # %(message)s - the actual log message
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        
-        # Apply the formatter to the handler
-        handler.setFormatter(formatter)
-        
-        # Add the handler to the logger
-        logger.addHandler(handler)
-        
-        # Set the minimum log level to INFO
-        # This means DEBUG messages won't be shown unless the level is changed
-        logger.setLevel(logging.INFO)
-    
-    return logger
+    # Ensure logging is configured before returning any logger
+    if not _logging_configured:
+        setup_logging()
+
+    return logging.getLogger(name or __name__)
 
 
 __all__ = [
@@ -119,5 +166,6 @@ __all__ = [
     "get_google_gemini_api_key",
     "GoogleEmbeddingsClient",
     "build_bluebook_citation",
+    "setup_logging",
     "get_logger",
 ]

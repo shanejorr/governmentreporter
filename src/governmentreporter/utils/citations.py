@@ -21,7 +21,7 @@ Bluebook Citation Explained:
     - Reporter: The abbreviated name of the publication (e.g., "U.S." for United States Reports)
     - Page: The page number where the case begins
     - Year: The year the case was decided (in parentheses)
-    
+
     Example: "410 U.S. 113 (1973)" refers to a case in volume 410 of United States
     Reports, starting on page 113, decided in 1973.
 
@@ -42,32 +42,32 @@ def build_bluebook_citation(cluster_data: Dict[str, Any]) -> Optional[str]:
     into a proper Bluebook citation. The Court Listener API provides case information
     in a structured format, and this function extracts and formats the necessary
     components for academic and professional legal citations.
-    
+
     The function handles the complexity of Court Listener's data structure, which
     may include multiple citations for the same case (parallel citations) and
     different citation types. It prioritizes the primary citation and falls back
     to alternatives when necessary.
-    
+
     Citation Selection Logic:
         1. Searches for citations marked as "type 1" (primary citations)
         2. If no primary citation is found, uses the first available citation
         3. Validates that all required components are present
         4. Formats according to standard Bluebook style
-    
+
     Integration with GovernmentReporter:
         This function is used throughout the system for:
         - Displaying properly formatted citations in search results
         - Generating bibliographic information for legal research
         - Creating consistent citation strings for document metadata
         - Supporting academic and professional legal writing workflows
-    
+
     Data Validation:
         The function performs several validation steps:
         - Ensures citation data and filing date are available
         - Verifies that volume, reporter, and page information exist
         - Validates date format and extracts year information
         - Returns None if any required component is missing
-    
+
     Python Learning Notes:
         - .get() method safely accesses dictionary keys, returning None if not found
         - The 'for' loop with 'break' finds the first matching item efficiently
@@ -85,7 +85,7 @@ def build_bluebook_citation(cluster_data: Dict[str, Any]) -> Optional[str]:
                 - "reporter": Abbreviated reporter name (e.g., "U.S.")
                 - "page": Starting page number
             - "date_filed": Date string in "YYYY-MM-DD" format
-            
+
             Example structure:
             ```python
             {
@@ -105,17 +105,17 @@ def build_bluebook_citation(cluster_data: Dict[str, Any]) -> Optional[str]:
         Optional[str]: A properly formatted Bluebook citation string in the format
             "Volume Reporter Page (Year)" (e.g., "601 U.S. 416 (2024)"), or None
             if any required components are missing or invalid.
-            
+
             Returns None in these cases:
             - No citations are provided in the input data
             - No filing date is available
             - Required citation components (volume, reporter, page) are missing
             - Date format is invalid or unparseable
-            
+
     Example Usage:
         ```python
         from governmentreporter.utils.citations import build_bluebook_citation
-        
+
         # Example Court Listener data
         case_data = {
             "citations": [
@@ -128,10 +128,10 @@ def build_bluebook_citation(cluster_data: Dict[str, Any]) -> Optional[str]:
             ],
             "date_filed": "1973-01-22"
         }
-        
+
         citation = build_bluebook_citation(case_data)
         print(citation)  # Output: "410 U.S. 113 (1973)"
-        
+
         # Handle missing data gracefully
         incomplete_data = {"citations": []}
         citation = build_bluebook_citation(incomplete_data)

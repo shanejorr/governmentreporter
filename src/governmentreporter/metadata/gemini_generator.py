@@ -35,38 +35,39 @@ from typing import Any, Dict, List, Optional
 
 import google.generativeai as genai
 
+from ..utils import get_logger
 from ..utils.config import get_google_gemini_api_key
 
 
 class GeminiMetadataGenerator:
     """Generate metadata for legal documents using Google's Gemini 2.5 Flash-Lite.
-    
+
     This class provides AI-powered analysis of legal documents to extract structured
     metadata that enhances search and categorization capabilities. It specifically
     targets Supreme Court opinions but could be extended to other legal document types.
-    
+
     The class handles the complete workflow from API initialization to metadata
     validation, with robust error handling for production use.
-    
+
     Python Learning Notes:
     - This is a service class that encapsulates AI functionality
     - Uses dependency injection for the API key (can be provided or auto-detected)
     - Implements the single responsibility principle (only handles metadata extraction)
     - Shows how to integrate with external AI APIs safely
-    
+
     Attributes:
         api_key (str): Google Gemini API key for authentication
         model (genai.GenerativeModel): Configured Gemini model instance
-        
+
     Example Usage:
         # Basic usage with auto-detected API key
         generator = GeminiMetadataGenerator()
         metadata = generator.extract_legal_metadata(opinion_text)
-        
+
         # Usage with explicit API key
         generator = GeminiMetadataGenerator(api_key="your-key-here")
         metadata = generator.extract_legal_metadata(opinion_text)
-        
+
     Integration Points:
         - Uses utils.config.get_google_gemini_api_key() for API key management
         - Returns metadata compatible with ChromaDB storage format
@@ -75,27 +76,27 @@ class GeminiMetadataGenerator:
 
     def __init__(self, api_key: Optional[str] = None):
         """Initialize the Gemini metadata generator.
-        
+
         Sets up the connection to Google's Gemini API and configures the model
         for legal document analysis. The initialization includes API key
         management and model selection.
-        
+
         Python Learning Notes:
         - Uses Optional[str] type hint to indicate api_key can be None
         - Demonstrates the "or" operator for default value assignment
         - Shows how to configure external APIs in Python classes
         - The genai.configure() call sets up global API authentication
-        
+
         Args:
             api_key (Optional[str]): Google Gemini API key for authentication.
                 If None, the key will be automatically retrieved from the
                 environment using the config utility. This allows for flexible
                 deployment where keys can be injected or detected.
-                
+
         Raises:
             ValueError: If no API key is found in either parameter or environment
             AuthenticationError: If the provided API key is invalid
-            
+
         Note:
             The Gemini 2.5 Flash-Lite model is specifically chosen for its
             balance of performance and cost-effectiveness for metadata extraction
@@ -103,38 +104,43 @@ class GeminiMetadataGenerator:
             while being more economical than larger models.
         """
         self.api_key = api_key or get_google_gemini_api_key()
+        self.logger = get_logger(__name__)
+
         genai.configure(api_key=self.api_key)
 
         # Use Gemini 2.5 Flash-Lite as specified
         self.model = genai.GenerativeModel("gemini-2.5-flash-lite")
+        self.logger.info(
+            "GeminiMetadataGenerator initialized with gemini-2.5-flash-lite model"
+        )
 
     def extract_legal_metadata(self, plain_text: str) -> Dict[str, Any]:
         """Extract comprehensive legal metadata for Supreme Court opinion chunking.
-        
+
         This method performs intelligent analysis of legal text to extract structured
         metadata that enhances document searchability and categorization. It uses
         advanced prompt engineering to guide the AI model in identifying specific
         legal concepts and information.
-        
+
         The extraction process follows these steps:
         1. Create a specialized prompt for legal analysis
         2. Send the text to Gemini 2.5 Flash-Lite for processing
         3. Parse and validate the JSON response
         4. Return structured metadata or fallback values on error
-        
+
         Python Learning Notes:
         - Demonstrates exception handling with try/except blocks
         - Shows JSON parsing and validation patterns
         - Uses string manipulation to clean API responses
         - Implements graceful degradation (returns partial data on failure)
         - Type hints show the method contract clearly
-        
+
         Args:
             plain_text (str): The complete text of the Supreme Court opinion
                 to analyze. Should include the full opinion text for best
                 results, though the method will truncate very long texts
                 to stay within API limits.
-                
+
         Returns:
             Dict[str, Any]: A dictionary containing structured legal metadata
                 with the following guaranteed keys:
@@ -146,16 +152,16 @@ class GeminiMetadataGenerator:
                 - 'procedural_outcome' (Optional[str]): How the case was resolved
                 - 'vote_breakdown' (Optional[str]): Justice voting pattern
                 - 'extraction_error' (Optional[str]): Error message if parsing failed
-                
+
         Raises:
             ValueError: If plain_text is empty or None
             APIError: If the Gemini API returns an error (rare, handled internally)
-            
+
         Example:
             generator = GeminiMetadataGenerator()
             text = "In the matter of Brown v. Board of Education..."
             metadata = generator.extract_legal_metadata(text)
-            
+
             # metadata will contain:
             # {
             #     'legal_topics': ['Constitutional Law', 'Civil Rights'],
@@ -166,7 +172,7 @@ class GeminiMetadataGenerator:
             #     'procedural_outcome': 'Reversed',
             #     'vote_breakdown': '9-0'
             # }
-            
+
         Integration Notes:
             The returned metadata is designed to integrate seamlessly with:
             - ChromaDB storage for vector database persistence
@@ -205,30 +211,30 @@ class GeminiMetadataGenerator:
 
     def _create_legal_metadata_prompt(self, plain_text: str) -> str:
         """Create a specialized prompt for extracting legal metadata from Supreme Court opinions.
-        
+
         This method constructs a detailed prompt that guides the AI model to extract
         specific legal information in a structured format. The prompt uses advanced
         prompt engineering techniques to ensure consistent, high-quality extraction.
-        
+
         Key prompt engineering strategies used:
         1. Role specification: Establishes the AI as a "legal expert"
         2. Structured output: Requires specific JSON format with exact field names
         3. Example guidance: Provides format examples for complex citations
         4. Constraint specification: Defines what to include/exclude
         5. Error handling: Specifies fallback values for missing information
-        
+
         Python Learning Notes:
         - Uses f-string formatting to inject variables into multiline strings
         - Demonstrates string slicing with plain_text[:20000] to limit length
         - Shows how to structure prompts for consistent AI responses
         - Triple-quoted strings (''') allow for multiline text blocks
-        
+
         Args:
             plain_text (str): The Supreme Court opinion text to analyze.
                 The method automatically truncates to 20,000 characters
                 to stay within API token limits while preserving the most
                 important content (usually at the beginning of opinions).
-                
+
         Returns:
             str: A comprehensive prompt string formatted for optimal AI
                 extraction of legal metadata. The prompt includes:
@@ -236,14 +242,14 @@ class GeminiMetadataGenerator:
                 - Specific JSON schema requirements
                 - Examples of proper legal citation formats
                 - Guidelines for handling ambiguous or missing information
-                
+
         Design Notes:
             The 20,000 character limit is chosen to:
             - Stay well within Gemini API token limits
             - Capture the most important parts of legal opinions (intro, holding)
             - Balance thoroughness with API cost considerations
             - Ensure consistent processing times
-            
+
         Prompt Structure:
             1. Role and context setting
             2. Specific field definitions with examples
@@ -283,47 +289,47 @@ Return the JSON object:
 
     def _validate_legal_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and clean the extracted legal metadata from AI response.
-        
+
         This method ensures that the AI-generated metadata conforms to expected
         formats and contains clean, usable data. It performs comprehensive validation
         and sanitization to prevent downstream processing errors.
-        
+
         The validation process includes:
         1. Ensuring all required fields are present with correct types
         2. Converting non-list fields to empty lists where appropriate
         3. Cleaning string data (trimming whitespace, removing empty strings)
         4. Standardizing null/None values for consistency
-        
+
         Python Learning Notes:
         - Demonstrates the dict.get() method with default values
         - Uses isinstance() for runtime type checking
         - Shows list comprehension with conditional filtering
         - Illustrates defensive programming practices
         - Uses loops to apply similar operations to multiple fields
-        
+
         Args:
             metadata (Dict[str, Any]): Raw metadata dictionary returned from
                 the AI model. May contain inconsistent types, extra fields,
                 or missing required fields due to AI response variability.
-                
+
         Returns:
             Dict[str, Any]: Cleaned and validated metadata dictionary with:
                 - All required fields present and correctly typed
                 - List fields guaranteed to contain only non-empty strings
                 - String fields properly trimmed or set to None
                 - Consistent structure for downstream processing
-                
+
         Validation Rules:
             Array Fields (legal_topics, key_legal_questions, etc.):
             - Must be lists; converted to empty list if not
             - Items must be non-empty strings after trimming
             - Empty or whitespace-only strings are removed
-            
+
             String Fields (holding, procedural_outcome, vote_breakdown):
             - Must be strings or None
             - Whitespace is trimmed from valid strings
             - Empty strings after trimming become None
-            
+
         Example:
             # Input from AI (potentially messy)
             raw_metadata = {
@@ -331,7 +337,7 @@ Return the JSON object:
                 'holding': '   The court decided...   ',
                 'extra_field': 'ignored'
             }
-            
+
             # Output after validation
             clean_metadata = {
                 'legal_topics': ['Contract Law', 'Torts'],  # cleaned strings
@@ -342,7 +348,7 @@ Return the JSON object:
                 'procedural_outcome': None,  # missing field becomes None
                 'vote_breakdown': None
             }
-            
+
         Error Handling:
             This method is designed to never raise exceptions. Even severely
             malformed input will result in a valid metadata structure with

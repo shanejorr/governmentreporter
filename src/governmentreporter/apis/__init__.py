@@ -19,13 +19,13 @@ Available API Clients:
 
 Usage Example:
     from governmentreporter.apis import CourtListenerClient
-    
+
     # Initialize client with API token
     client = CourtListenerClient()
-    
+
     # Fetch a specific Supreme Court opinion
     opinion = client.get_opinion("123456")
-    
+
     # Search for opinions in date range
     opinions = client.list_scotus_opinions(
         since_date="2024-01-01",

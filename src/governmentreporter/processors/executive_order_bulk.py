@@ -4,8 +4,8 @@ from typing import Any, Dict, Optional
 
 from ..apis.federal_register import FederalRegisterClient
 from ..utils import get_logger
-from .executive_order_chunker import ExecutiveOrderProcessor
 from .base_bulk import BaseBulkProcessor
+from .executive_order_chunker import ExecutiveOrderProcessor
 
 
 class ExecutiveOrderBulkProcessor(BaseBulkProcessor):
