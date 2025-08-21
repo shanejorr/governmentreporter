@@ -13,10 +13,12 @@ For more specific operations, use the scripts in the scripts/ directory.
 
 import sys
 
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 from src.governmentreporter.processors import SCOTUSOpinionProcessor
 from src.governmentreporter.utils import get_logger, setup_logging
+from src.governmentreporter.utils.config import get_google_gemini_api_key
 
 
 def show_usage():
@@ -67,6 +69,9 @@ def process_opinion(opinion_id: int):
 
 def main():
     load_dotenv()
+
+    # Configure Google Generative AI globally
+    genai.configure(api_key=get_google_gemini_api_key())
 
     # Initialize logging configuration
     setup_logging()

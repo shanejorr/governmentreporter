@@ -32,11 +32,9 @@ Python Learning Notes:
     - Type hints specify that embeddings are List[float] for clarity
 """
 
-from typing import List, Optional
+from typing import List
 
 import google.generativeai as genai
-
-from .config import get_google_gemini_api_key
 
 
 class GoogleEmbeddingsClient:
@@ -75,24 +73,12 @@ class GoogleEmbeddingsClient:
         - Instance variables (self.api_key) store state for the object
     """
 
-    def __init__(self, api_key: Optional[str] = None):
-        """Initialize the Google embeddings client with API authentication.
+    def __init__(self):
+        """Initialize the Google embeddings client.
 
-        Sets up the client with proper API credentials and configures the
-        Google Generative AI library for embedding generation. The client
-        uses sensible defaults while allowing customization when needed.
-
-        The initialization process:
-        1. Retrieves API key from parameter or environment variables
-        2. Configures the Google AI library with authentication
-        3. Sets the specific model for text embeddings
-        4. Prepares the client for embedding generation requests
-
-        API Key Management:
-            The client supports flexible API key management:
-            - If api_key is provided, uses that key directly
-            - If api_key is None, automatically retrieves from environment variables
-            - This allows both explicit configuration and automatic setup
+        Sets up the client with the specific model for text embeddings.
+        The Google Generative AI library must be configured globally with
+        an API key before using this client.
 
         Model Selection:
             The client uses "models/text-embedding-004" which is Google's latest
@@ -102,42 +88,18 @@ class GoogleEmbeddingsClient:
             - Efficient processing of large text collections
 
         Python Learning Notes:
-            - Optional[str] means the parameter can be a string or None
-            - The 'or' operator returns the first truthy value
-            - genai.configure() is a global configuration for the Google AI library
             - self.model_name stores the model identifier for later use
-
-        Args:
-            api_key (Optional[str]): Google Gemini API key for authentication.
-                If None (default), the key will be automatically retrieved from
-                environment variables using get_google_gemini_api_key().
-                Providing an explicit key is useful for testing or when using
-                multiple API keys in the same application.
-
-        Raises:
-            ValueError: If no API key is available (either provided or in environment).
-                This ensures the client cannot be created without proper authentication.
+            - The global genai configuration is expected to be set at application startup
 
         Example Usage:
             ```python
-            # Using environment variable (recommended)
+            # Assumes genai.configure() has been called at application startup
             client = GoogleEmbeddingsClient()
-
-            # Using explicit API key (for testing/special cases)
-            client = GoogleEmbeddingsClient(api_key="your-key-here")
 
             # Generate embedding
             embedding = client.generate_embedding("Supreme Court case text")
             ```
         """
-        # Get API key from parameter or environment variables
-        # The 'or' operator returns the first truthy value
-        self.api_key = api_key or get_google_gemini_api_key()
-
-        # Configure the Google AI library with our API key
-        # This is a global configuration that affects all genai calls
-        genai.configure(api_key=self.api_key)
-
         # Set the specific model for text embeddings
         # text-embedding-004 is Google's latest embedding model
         self.model_name = "models/text-embedding-004"
