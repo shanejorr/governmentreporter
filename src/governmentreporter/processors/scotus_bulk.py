@@ -107,13 +107,11 @@ class SCOTUSBulkProcessor(BaseBulkProcessor):
         Returns:
             Total number of opinions matching the criteria
         """
-        try:
-            return self.court_client.get_scotus_opinion_count(
-                since_date=self.since_date, until_date=self.until_date
-            )
-        except Exception as e:
-            self.logger.warning(f"Could not get total count: {e}")
-            return 0
+        # Since the API doesn't provide a separate count endpoint,
+        # we return 0 to indicate unknown count
+        # The progress will still work based on processed documents
+        self.logger.info("Total count not available, progress will be tracked by documents processed")
+        return 0
 
     def get_documents_iterator(self, max_results=None, **kwargs):
         """Return an iterator over SCOTUS opinions.
@@ -125,12 +123,22 @@ class SCOTUSBulkProcessor(BaseBulkProcessor):
         Yields:
             Opinion summaries
         """
-        return self.court_client.list_scotus_opinions(
-            since_date=self.since_date,
-            until_date=self.until_date,
-            max_results=max_results,
-            rate_limit_delay=self.rate_limit_delay,
+        # Fetch documents using search_documents
+        # We use a large limit if max_results is None
+        limit = max_results if max_results is not None else 10000
+        
+        documents = self.court_client.search_documents(
+            query="",  # Empty query to get all documents
+            start_date=self.since_date,
+            end_date=self.until_date,
+            limit=limit
         )
+        
+        # Convert Document objects to opinion summaries for compatibility
+        # The bulk processor only needs the ID from each document
+        for doc in documents:
+            # Create a minimal opinion summary with just the ID
+            yield {"id": int(doc.id)}
 
     def process_all_opinions(
         self, max_opinions: Optional[int] = None

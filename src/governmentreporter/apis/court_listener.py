@@ -48,7 +48,7 @@ Python Learning Notes:
 
 import time
 from datetime import datetime
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 
@@ -344,66 +344,148 @@ class CourtListenerClient(GovernmentAPIClient):
         limit: int = 10,
     ) -> List[Document]:
         """
-        Search for Supreme Court opinions (minimal implementation).
+        Search for Supreme Court opinions using Court Listener's API.
 
-        This method provides a placeholder implementation of the abstract
-        search_documents method required by GovernmentAPIClient. The current
-        implementation returns an empty list as the primary document processing
-        workflow uses the more specialized list_scotus_opinions method directly.
+        This method implements comprehensive search functionality for Supreme Court
+        opinions, combining text search, date filtering, and full document retrieval.
+        It handles pagination internally and returns fully populated Document objects
+        suitable for processing and storage.
 
-        Design Decision:
-            Rather than duplicating the complex Supreme Court-specific logic,
-            this client separates concerns by providing:
-            1. This minimal search implementation for interface compliance
-            2. Specialized list_scotus_opinions() for actual data processing
-            3. Direct get_document() calls for specific opinion retrieval
-
-        Future Enhancement:
-            This could be expanded to use Court Listener's search API:
-            - Text-based search across opinion content
-            - Advanced filtering by court, judge, date ranges
-            - Relevance ranking of search results
-            - Full Document object construction from search results
+        Search Process:
+            1. Build search parameters with filters
+            2. Execute paginated API requests
+            3. For each opinion result, fetch full data
+            4. Retrieve cluster information for case names
+            5. Build Document objects with complete metadata
+            6. Return list of Documents up to limit
 
         Args:
             query (str): Search query string for full-text search.
-                        Currently not used in implementation.
-                        Could support case names, legal concepts, citations.
+                        Searches across opinion content and metadata.
+                        Can include case names, legal concepts, citations.
+                        Pass empty string "" to retrieve all opinions within date range.
 
             start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
-                                       Currently not used in implementation.
-                                       Would limit results to opinions after this date.
+                                       Limits results to opinions after this date.
+                                       Defaults to "1900-01-01" if not provided.
 
             end_date (Optional[str]): End date filter in YYYY-MM-DD format.
-                                     Currently not used in implementation.
-                                     Would limit results to opinions before this date.
+                                     Limits results to opinions before this date.
+                                     If not provided, includes all opinions up to present.
 
             limit (int): Maximum number of results to return.
-                        Currently not used in implementation.
                         Default of 10 prevents overwhelming responses.
+                        Set higher for bulk processing operations.
 
         Returns:
-            List[Document]: Empty list in current minimal implementation.
-                           Future implementation would return list of matching
-                           Document objects with populated content and metadata.
+            List[Document]: List of Document objects with populated content and metadata.
+                           Each Document contains:
+                           - Full opinion text
+                           - Case name from cluster data
+                           - Bluebook citation
+                           - Complete metadata
+                           Returns empty list if no matches found.
 
-        Alternative Usage:
-            For actual Supreme Court opinion processing, use:
+        Raises:
+            httpx.HTTPError: For API request failures (auth, rate limit, server errors)
+            httpx.RequestError: For network-related failures
+
+        Example Usage:
             >>> client = CourtListenerClient()
-            >>> for opinion_data in client.list_scotus_opinions(since_date="2024-01-01"):
-            ...     document = client.get_document(str(opinion_data['id']))
-            ...     # Process document...
+            >>> 
+            >>> # Search for specific topic
+            >>> docs = client.search_documents("freedom of speech", limit=5)
+            >>> for doc in docs:
+            ...     print(f"{doc.title}: {doc.metadata.get('citation')}")
+            >>> 
+            >>> # Get all opinions in date range
+            >>> docs = client.search_documents("", start_date="2024-01-01", end_date="2024-12-31")
+            >>> 
+            >>> # Search with all filters
+            >>> docs = client.search_documents(
+            ...     query="constitutional",
+            ...     start_date="2020-01-01",
+            ...     limit=20
+            ... )
+
+        Performance Notes:
+            - Makes multiple API requests (1 per page + 1-2 per opinion)
+            - Full text retrieval can be slow for large result sets
+            - Consider smaller limits for interactive use
+            - Rate limiting applies between requests
 
         Python Learning Notes:
-            - Abstract method implementation: Required by parent class interface
-            - Minimal implementation: Satisfies contract without full functionality
-            - Empty return: return [] creates empty list
-            - Docstring documentation: Explains design decisions
-            - Future-proofing: Documents intended expansion plans
+            - Complex parameter handling with defaults
+            - Pagination with while loops
+            - List comprehension could optimize but less readable
+            - Exception handling for graceful degradation
+            - Building objects from multiple API calls
         """
-        # This is a minimal implementation to satisfy the abstract base class
-        # The actual processing uses list_scotus_opinions and process_opinion directly
-        return []
+        # Build API parameters
+        url = f"{self.base_url}/opinions/"
+        params = {
+            "cluster__docket__court": "scotus",  # Supreme Court only
+            "order_by": "date_created",
+        }
+        
+        # Add search query if provided
+        if query:
+            params["search"] = query
+        
+        # Add date filters
+        if start_date:
+            params["date_created__gte"] = start_date
+        else:
+            params["date_created__gte"] = "1900-01-01"
+        
+        if end_date:
+            params["date_created__lte"] = end_date
+        
+        documents = []
+        
+        with httpx.Client(timeout=30.0) as client:
+            while url and len(documents) < limit:
+                # Rate limiting
+                time.sleep(self._get_rate_limit_delay())
+                
+                self.logger.debug(f"Fetching: {url}")
+                response = client.get(url, headers=self.headers, params=params)
+                response.raise_for_status()
+                
+                data = response.json()
+                
+                # Process each opinion in the current page
+                for opinion_summary in data.get("results", []):
+                    if len(documents) >= limit:
+                        break
+                    
+                    try:
+                        # Fetch full opinion data
+                        opinion_id = opinion_summary.get("id")
+                        if not opinion_id:
+                            continue
+                        
+                        self.logger.debug(f"Fetching full data for opinion {opinion_id}")
+                        
+                        # Use get_document to build complete Document object
+                        # This handles cluster data, citations, and full text
+                        document = self.get_document(str(opinion_id))
+                        documents.append(document)
+                        
+                    except Exception as e:
+                        self.logger.warning(
+                            f"Failed to process opinion {opinion_id}: {str(e)}"
+                        )
+                        continue
+                
+                # Get next page URL
+                url = data.get("next")
+                # Clear params for subsequent requests (they're included in the next URL)
+                params = {}
+                
+                self.logger.info(f"Search progress: Retrieved {len(documents)} documents")
+        
+        return documents
 
     def get_document(self, document_id: str) -> Document:
         """
@@ -551,99 +633,6 @@ class CourtListenerClient(GovernmentAPIClient):
             "download_url": opinion_data.get("download_url"),
         }
 
-    def list_scotus_opinions(
-        self,
-        since_date: str = "1900-01-01",
-        until_date: Optional[str] = None,
-        max_results: Optional[int] = None,
-        rate_limit_delay: float = 0.1,
-    ) -> Iterator[Dict[str, Any]]:
-        """Iterate through all Supreme Court opinions within a date range.
-
-        Args:
-            since_date: Start date in YYYY-MM-DD format (default: 1900-01-01)
-            until_date: End date in YYYY-MM-DD format (optional)
-            max_results: Maximum number of results to return (None for all)
-            rate_limit_delay: Delay between requests in seconds
-
-        Yields:
-            Dict containing opinion metadata (without full text)
-
-        Raises:
-            httpx.HTTPError: If an API request fails
-        """
-        url = f"{self.base_url}/opinions/"
-        params = {
-            "cluster__docket__court": "scotus",
-            "date_created__gte": since_date,
-            "order_by": "date_created",
-        }
-
-        # Add end date filter if provided
-        if until_date:
-            params["date_created__lte"] = until_date
-
-        results_count = 0
-
-        with httpx.Client(timeout=30.0) as client:
-            while url and (max_results is None or results_count < max_results):
-                # Add rate limiting
-                if rate_limit_delay > 0:
-                    time.sleep(rate_limit_delay)
-
-                self.logger.debug(f"Fetching: {url}")
-                response = client.get(url, headers=self.headers, params=params)
-                response.raise_for_status()
-
-                data = response.json()
-
-                # Yield each opinion in the current page
-                for opinion in data.get("results", []):
-                    if max_results is not None and results_count >= max_results:
-                        return
-
-                    yield opinion
-                    results_count += 1
-
-                # Get next page URL
-                url = data.get("next")
-                # Clear params for subsequent requests (they're included in the next URL)
-                params = {}
-
-                self.logger.info(f"Progress: Processed {results_count} opinions")
-
-    def get_scotus_opinion_count(
-        self, since_date: str = "1900-01-01", until_date: Optional[str] = None
-    ) -> int:
-        """Get the total count of Supreme Court opinions within a date range.
-
-        Args:
-            since_date: Start date in YYYY-MM-DD format
-            until_date: End date in YYYY-MM-DD format (optional)
-
-        Returns:
-            Total number of opinions matching the criteria
-
-        Raises:
-            httpx.HTTPError: If the API request fails
-        """
-        url = f"{self.base_url}/opinions/"
-        params = {
-            "cluster__docket__court": "scotus",
-            "date_created__gte": since_date,
-            "count": "on",
-        }
-
-        # Add end date filter if provided
-        if until_date:
-            params["date_created__lte"] = until_date
-
-        with httpx.Client(timeout=30.0) as client:
-            response = client.get(url, headers=self.headers, params=params)
-            response.raise_for_status()
-
-            data = response.json()
-            return data.get("count", 0)
 
     def get_opinion_cluster(self, cluster_url: str) -> Dict[str, Any]:
         """

@@ -24,12 +24,14 @@ Usage Example:
     client = CourtListenerClient()
 
     # Fetch a specific Supreme Court opinion
-    opinion = client.get_opinion("123456")
+    opinion = client.get_document("123456")
 
     # Search for opinions in date range
-    opinions = client.list_scotus_opinions(
-        since_date="2024-01-01",
-        until_date="2024-12-31"
+    opinions = client.search_documents(
+        query="",
+        start_date="2024-01-01",
+        end_date="2024-12-31",
+        limit=100
     )
 
 Integration Points:
