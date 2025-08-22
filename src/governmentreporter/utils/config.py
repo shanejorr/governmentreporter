@@ -35,6 +35,7 @@ Python Learning Notes:
 
 import os
 from typing import Optional
+import logging
 
 
 def get_court_listener_token() -> str:
@@ -82,7 +83,8 @@ def get_court_listener_token() -> str:
             headers = {"Authorization": f"Token {token}"}
             # Use headers in API requests
         except ValueError as e:
-            print(f"Configuration error: {e}")
+            logger = logging.getLogger(__name__)
+            logger.error(f"Configuration error: {e}")
         ```
     """
     # Attempt to read the token from environment variables
@@ -157,7 +159,8 @@ def get_google_gemini_api_key() -> str:
             genai.configure(api_key=api_key)
             # Now you can use Google's AI services
         except ValueError as e:
-            print(f"Google API configuration error: {e}")
+            logger = logging.getLogger(__name__)
+            logger.error(f"Google API configuration error: {e}")
         ```
     """
     # Attempt to read the API key from environment variables

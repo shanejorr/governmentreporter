@@ -34,6 +34,8 @@ Python Learning Notes:
 
 from typing import ClassVar, List
 
+import logging
+
 import google.generativeai as genai
 
 from .config import get_google_gemini_api_key
@@ -109,6 +111,8 @@ class GoogleEmbeddingsClient:
             embedding = client.generate_embedding("Supreme Court case text")
             ```
         """
+        self.logger = logging.getLogger(__name__)
+        
         # Configure Google AI on first instantiation (lazy singleton pattern)
         # This ensures configuration happens once, regardless of entry point
         if not GoogleEmbeddingsClient._configured:
@@ -118,6 +122,8 @@ class GoogleEmbeddingsClient:
         # Set the specific model for text embeddings
         # text-embedding-004 is Google's latest embedding model
         self.model_name = "models/text-embedding-004"
+        
+        self.logger.info(f"GoogleEmbeddingsClient initialized with model {self.model_name}")
 
     def generate_embedding(self, text: str) -> List[float]:
         """Generate a high-dimensional vector embedding for the given text.

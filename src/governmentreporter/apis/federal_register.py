@@ -188,6 +188,7 @@ class FederalRegisterClient(GovernmentAPIClient):
         }
         self.max_retries = 5
         self.retry_delay = 1.0  # Initial delay for exponential backoff
+        self.logger.info("FederalRegisterClient initialized successfully")
 
     def _get_base_url(self) -> str:
         """

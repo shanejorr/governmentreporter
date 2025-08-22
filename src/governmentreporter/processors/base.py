@@ -31,6 +31,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from ..database.chroma_client import ChromaDBClient
+from ..utils import get_logger
 from ..utils.embeddings import GoogleEmbeddingsClient
 
 
@@ -173,7 +174,7 @@ class BaseDocumentProcessor(ABC):
         """
         self.embeddings_client = embeddings_client or GoogleEmbeddingsClient()
         self.db_client = db_client or ChromaDBClient()
-        self.logger = logger
+        self.logger = logger or get_logger(__name__)
 
     @abstractmethod
     def process_document(self, document_id: str) -> List[ProcessedChunk]:
@@ -299,7 +300,7 @@ class BaseDocumentProcessor(ABC):
                 collection_name="scotus_opinions",
                 document_id="12345"
             )
-            print(f"Stored {stored_count} chunks")
+            self.logger.info(f"Stored {stored_count} chunks")
             ```
         """
         if not chunks:
@@ -413,9 +414,9 @@ class BaseDocumentProcessor(ABC):
             )
 
             if result["success"]:
-                print(f"Successfully processed {result['chunks_processed']} chunks")
+                self.logger.info(f"Successfully processed {result['chunks_processed']} chunks")
             else:
-                print(f"Processing failed: {result['error']}")
+                self.logger.error(f"Processing failed: {result['error']}")
             ```
 
         Error Handling:

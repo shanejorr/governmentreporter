@@ -89,14 +89,8 @@ loggers:
     level: INFO
     handlers: [console, info_file, error_file]
     propagate: false
-
-# Root logger - catches everything not handled by specific loggers
-root:
-  level: WARNING
-  handlers: [console_error, error_file]
-
-# Third-party library logging levels
-loggers:
+  
+  # Third-party library logging levels
   urllib3:
     level: WARNING
   requests:
@@ -107,3 +101,8 @@ loggers:
     level: INFO
   ollama:
     level: INFO
+
+# Root logger - catches everything not handled by specific loggers
+root:
+  level: INFO
+  handlers: [console, info_file, error_file]

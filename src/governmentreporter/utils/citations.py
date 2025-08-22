@@ -130,12 +130,12 @@ def build_bluebook_citation(cluster_data: Dict[str, Any]) -> Optional[str]:
         }
 
         citation = build_bluebook_citation(case_data)
-        print(citation)  # Output: "410 U.S. 113 (1973)"
+        print(f"Citation: {citation}")  # Output: "410 U.S. 113 (1973)"
 
         # Handle missing data gracefully
         incomplete_data = {"citations": []}
         citation = build_bluebook_citation(incomplete_data)
-        print(citation)  # Output: None
+        print(f"Citation: {citation}")  # Output: None
         ```
     """
     # Extract citations list and filing date from the cluster data

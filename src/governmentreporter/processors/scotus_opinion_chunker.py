@@ -66,8 +66,9 @@ Example Usage:
         collection_name="scotus_opinions"
     )
 
-    print(f"Created {result['chunks_processed']} chunks")
-    print(f"Stored {result['chunks_stored']} chunks in database")
+    logger = get_logger(__name__)
+    logger.info(f"Created {result['chunks_processed']} chunks")
+    logger.info(f"Stored {result['chunks_stored']} chunks in database")
     ```
 
 Key Features:
@@ -91,6 +92,7 @@ import google.generativeai as genai
 from ..apis.court_listener import CourtListenerClient
 from ..database.chroma_client import ChromaDBClient
 from ..metadata.gemini_generator import GeminiMetadataGenerator
+from ..utils import get_logger
 from ..utils.citations import build_bluebook_citation
 from ..utils.embeddings import GoogleEmbeddingsClient
 from .base import BaseDocumentProcessor, ProcessedChunk
@@ -153,8 +155,8 @@ class OpinionChunk:
             chunk_index=3
         )
 
-        print(chunk.opinion_type)  # "majority"
-        print(f"Chunk {chunk.chunk_index} in section {chunk.section}")
+        logger.info(f"Opinion type: {chunk.opinion_type}")  # "majority"
+        logger.info(f"Chunk {chunk.chunk_index} in section {chunk.section}")
         ```
 
     Legal Structure Context:
@@ -818,8 +820,8 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
                     f"Failed to extract legal metadata for opinion {opinion_id}: {str(e)}"
                 )
             else:
-                print(
-                    f"Warning: Failed to extract legal metadata for opinion {opinion_id}: {str(e)}"
+                self.logger.warning(
+                    f"Failed to extract legal metadata for opinion {opinion_id}: {str(e)}"
                 )
             legal_metadata = {
                 "legal_topics": [],

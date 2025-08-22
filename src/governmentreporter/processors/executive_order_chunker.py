@@ -76,8 +76,9 @@ Example Usage:
         collection_name="executive_orders_2024"
     )
 
-    print(f"Created {result['chunks_processed']} chunks")
-    print(f"Stored {result['chunks_stored']} chunks in database")
+    logger = get_logger(__name__)
+    logger.info(f"Created {result['chunks_processed']} chunks")
+    logger.info(f"Stored {result['chunks_stored']} chunks in database")
     ```
 
 Key Features:
@@ -166,8 +167,8 @@ class ExecutiveOrderChunk:
             chunk_index=3
         )
 
-        print(f"Chunk {chunk.chunk_index}: {chunk.section_title}")
-        print(f"Type: {chunk.chunk_type}, Subsection: {chunk.subsection}")
+        logger.info(f"Chunk {chunk.chunk_index}: {chunk.section_title}")
+        logger.info(f"Type: {chunk.chunk_type}, Subsection: {chunk.subsection}")
         ```
 
     Regulatory Structure Context:

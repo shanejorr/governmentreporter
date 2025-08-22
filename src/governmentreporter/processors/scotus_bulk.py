@@ -3,6 +3,7 @@
 from typing import Any, Dict, Optional
 
 from ..apis import CourtListenerClient
+from ..utils import get_logger
 from .base_bulk import BaseBulkProcessor
 from .scotus_opinion_chunker import SCOTUSOpinionProcessor
 
@@ -44,10 +45,16 @@ class SCOTUSBulkProcessor(BaseBulkProcessor):
         self.since_date = since_date
         self.until_date = until_date
         self.max_retries = max_retries
+        self.logger = get_logger(__name__)
 
         # Initialize clients
         self.court_client = CourtListenerClient()
         self.opinion_processor = SCOTUSOpinionProcessor()
+        
+        self.logger.info(
+            f"SCOTUSBulkProcessor initialized: dates={since_date} to {until_date}, "
+            f"collection={collection_name}"
+        )
 
     def _get_additional_progress_data(self) -> Dict[str, Any]:
         """Get additional data to save in progress file."""
@@ -70,25 +77,27 @@ class SCOTUSBulkProcessor(BaseBulkProcessor):
             True if successful, False otherwise
         """
         opinion_id = self._extract_document_id(opinion_summary)
-        print(f"Processing opinion {opinion_id}...")
+        self.logger.info(f"Processing opinion {opinion_id}")
 
         try:
             # Process and store opinion using the processor's integrated method
-            print("  Processing opinion with hierarchical chunking...")
+            self.logger.debug(f"Processing opinion {opinion_id} with hierarchical chunking")
             result = self.opinion_processor.process_and_store(
                 document_id=opinion_id, collection_name=self.collection_name
             )
 
             if result["success"]:
-                print(f"  Generated {result['chunks_processed']} chunks")
-                print(f"  ✅ Stored {result['chunks_stored']} chunks in database")
+                self.logger.info(
+                    f"Opinion {opinion_id}: Generated {result['chunks_processed']} chunks, "
+                    f"stored {result['chunks_stored']} chunks in database"
+                )
                 return True
             else:
                 raise Exception(result.get("error", "Unknown error during processing"))
 
         except Exception as e:
             error_msg = f"Failed to process opinion {opinion_id}: {str(e)}"
-            print(f"  ❌ {error_msg}")
+            self.logger.error(error_msg)
             self._log_error(opinion_id, error_msg, opinion_summary)
             return False
 
@@ -103,7 +112,7 @@ class SCOTUSBulkProcessor(BaseBulkProcessor):
                 since_date=self.since_date, until_date=self.until_date
             )
         except Exception as e:
-            print(f"Warning: Could not get total count: {e}")
+            self.logger.warning(f"Could not get total count: {e}")
             return 0
 
     def get_documents_iterator(self, max_results=None, **kwargs):
@@ -138,7 +147,7 @@ class SCOTUSBulkProcessor(BaseBulkProcessor):
         if self.until_date:
             date_range = f"from {self.since_date} to {self.until_date}"
 
-        print(f"Starting SCOTUS opinion processing {date_range}")
+        self.logger.info(f"Starting SCOTUS opinion processing {date_range}")
 
         # Use the base class method
         return self.process_documents(max_documents=max_opinions)

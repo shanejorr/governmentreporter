@@ -495,8 +495,8 @@ class CourtListenerClient(GovernmentAPIClient):
                 metadata["case_name"] = case_name
                 metadata["citation"] = citation
             except Exception as e:
-                print(
-                    f"Warning: Failed to fetch cluster data for opinion {document_id}: {str(e)}"
+                self.logger.warning(
+                    f"Failed to fetch cluster data for opinion {document_id}: {str(e)}"
                 )
 
         return Document(
@@ -591,7 +591,7 @@ class CourtListenerClient(GovernmentAPIClient):
                 if rate_limit_delay > 0:
                     time.sleep(rate_limit_delay)
 
-                print(f"Fetching: {url}")
+                self.logger.debug(f"Fetching: {url}")
                 response = client.get(url, headers=self.headers, params=params)
                 response.raise_for_status()
 
@@ -610,7 +610,7 @@ class CourtListenerClient(GovernmentAPIClient):
                 # Clear params for subsequent requests (they're included in the next URL)
                 params = {}
 
-                print(f"Progress: Processed {results_count} opinions")
+                self.logger.info(f"Progress: Processed {results_count} opinions")
 
     def get_scotus_opinion_count(
         self, since_date: str = "1900-01-01", until_date: Optional[str] = None

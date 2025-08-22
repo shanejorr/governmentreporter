@@ -57,7 +57,8 @@ Example Usage:
         document_id="123456",
         collection_name="scotus_opinions"
     )
-    print(f"Created {result['chunks_processed']} chunks")
+    logger = get_logger(__name__)
+    logger.info(f"Created {result['chunks_processed']} chunks")
     ```
 
 Dependencies:

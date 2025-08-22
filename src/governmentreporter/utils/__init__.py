@@ -33,8 +33,7 @@ from typing import Optional
 import yaml
 
 from .citations import build_bluebook_citation
-from .config import (get_congress_gov_token, get_court_listener_token,
-                     get_federal_register_token, get_google_gemini_api_key)
+from .config import get_court_listener_token, get_google_gemini_api_key
 from .embeddings import GoogleEmbeddingsClient
 
 # Global flag to track if logging has been configured
@@ -91,7 +90,7 @@ def setup_logging(config_path: Optional[Path] = None) -> None:
 
     if config_path is None:
         # Default to logging_config.yaml in project root
-        project_root = Path(__file__).parent.parent.parent
+        project_root = Path(__file__).parent.parent.parent.parent
         config_path = project_root / "logging_config.yaml"
 
     if not config_path.exists():
@@ -161,8 +160,6 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
 
 __all__ = [
     "get_court_listener_token",
-    "get_federal_register_token",
-    "get_congress_gov_token",
     "get_google_gemini_api_key",
     "GoogleEmbeddingsClient",
     "build_bluebook_citation",
