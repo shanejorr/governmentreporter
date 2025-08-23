@@ -141,9 +141,9 @@ class CourtListenerClient(GovernmentAPIClient):
             ConfigurationError: If token is invalid or environment misconfigured
 
         Side Effects:
-            - Sets self.token for future API requests
             - Configures self.headers with authentication and user agent
             - Calls parent __init__ to set up base API client functionality
+            - Parent stores token as self.api_key for standardized access
 
         Example:
             >>> # With explicit token
@@ -162,18 +162,21 @@ class CourtListenerClient(GovernmentAPIClient):
         Python Learning Notes:
             - Optional[str]: Parameter can be string or None
             - Logical OR (or): "a or b" returns first truthy value
-            - f-strings: f"Token {self.token}" for string interpolation
+            - f-strings: f"Token {self.api_key}" for string interpolation
             - Dictionary literals: {"key": "value"} syntax
             - super(): Calls parent class method
             - Constructor chaining: Calling parent __init__ with parameters
         """
-        self.token = token or get_court_listener_token()
+        # Get token and pass to parent for centralized storage
+        api_key = token or get_court_listener_token()
+        super().__init__(api_key=api_key)
+        
+        # Set up logging and headers using parent's api_key
         self.logger = get_logger(__name__)
         self.headers = {
-            "Authorization": f"Token {self.token}",
+            "Authorization": f"Token {self.api_key}",
             "User-Agent": "GovernmentReporter/0.1.0",
         }
-        super().__init__(api_key=self.token)
         self.logger.info("CourtListenerClient initialized successfully")
 
     def _get_base_url(self) -> str:
@@ -392,15 +395,15 @@ class CourtListenerClient(GovernmentAPIClient):
 
         Example Usage:
             >>> client = CourtListenerClient()
-            >>> 
+            >>>
             >>> # Search for specific topic
             >>> docs = client.search_documents("freedom of speech", limit=5)
             >>> for doc in docs:
             ...     print(f"{doc.title}: {doc.metadata.get('citation')}")
-            >>> 
+            >>>
             >>> # Get all opinions in date range
             >>> docs = client.search_documents("", start_date="2024-01-01", end_date="2024-12-31")
-            >>> 
+            >>>
             >>> # Search with all filters
             >>> docs = client.search_documents(
             ...     query="constitutional",
@@ -427,64 +430,68 @@ class CourtListenerClient(GovernmentAPIClient):
             "cluster__docket__court": "scotus",  # Supreme Court only
             "order_by": "date_created",
         }
-        
+
         # Add search query if provided
         if query:
             params["search"] = query
-        
+
         # Add date filters
         if start_date:
             params["date_created__gte"] = start_date
         else:
             params["date_created__gte"] = "1900-01-01"
-        
+
         if end_date:
             params["date_created__lte"] = end_date
-        
+
         documents = []
-        
+
         with httpx.Client(timeout=30.0) as client:
             while url and len(documents) < limit:
                 # Rate limiting
                 time.sleep(self._get_rate_limit_delay())
-                
+
                 self.logger.debug(f"Fetching: {url}")
                 response = client.get(url, headers=self.headers, params=params)
                 response.raise_for_status()
-                
+
                 data = response.json()
-                
+
                 # Process each opinion in the current page
                 for opinion_summary in data.get("results", []):
                     if len(documents) >= limit:
                         break
-                    
+
                     try:
                         # Fetch full opinion data
                         opinion_id = opinion_summary.get("id")
                         if not opinion_id:
                             continue
-                        
-                        self.logger.debug(f"Fetching full data for opinion {opinion_id}")
-                        
+
+                        self.logger.debug(
+                            f"Fetching full data for opinion {opinion_id}"
+                        )
+
                         # Use get_document to build complete Document object
                         # This handles cluster data, citations, and full text
                         document = self.get_document(str(opinion_id))
                         documents.append(document)
-                        
+
                     except Exception as e:
                         self.logger.warning(
                             f"Failed to process opinion {opinion_id}: {str(e)}"
                         )
                         continue
-                
+
                 # Get next page URL
                 url = data.get("next")
                 # Clear params for subsequent requests (they're included in the next URL)
                 params = {}
-                
-                self.logger.info(f"Search progress: Retrieved {len(documents)} documents")
-        
+
+                self.logger.info(
+                    f"Search progress: Retrieved {len(documents)} documents"
+                )
+
         return documents
 
     def get_document(self, document_id: str) -> Document:
@@ -632,7 +639,6 @@ class CourtListenerClient(GovernmentAPIClient):
             "page_count": opinion_data.get("page_count"),
             "download_url": opinion_data.get("download_url"),
         }
-
 
     def get_opinion_cluster(self, cluster_url: str) -> Dict[str, Any]:
         """
