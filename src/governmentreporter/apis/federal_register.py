@@ -656,6 +656,10 @@ class FederalRegisterClient(GovernmentAPIClient):
                 if max_results is not None and results_count >= max_results:
                     return
 
+                # Extract only agency names if agencies field exists
+                if "agencies" in order and isinstance(order["agencies"], list):
+                    order["agencies"] = [agency.get("name", "") for agency in order["agencies"]]
+
                 yield order
                 results_count += 1
 
@@ -756,7 +760,13 @@ class FederalRegisterClient(GovernmentAPIClient):
         url = f"{self.base_url}/documents/{document_number}"
 
         response = self._make_request_with_retry(url)
-        return response.json()
+        order_data = response.json()
+        
+        # Extract only agency names if agencies field exists
+        if "agencies" in order_data and isinstance(order_data["agencies"], list):
+            order_data["agencies"] = [agency.get("name", "") for agency in order_data["agencies"]]
+        
+        return order_data
 
     def search_documents(
         self,
@@ -965,6 +975,10 @@ class FederalRegisterClient(GovernmentAPIClient):
         documents = []
         for order_data in results[:limit]:  # Respect the limit parameter
             try:
+                # Extract only agency names if agencies field exists
+                if "agencies" in order_data and isinstance(order_data["agencies"], list):
+                    order_data["agencies"] = [agency.get("name", "") for agency in order_data["agencies"]]
+                
                 # Get the document number
                 document_number = order_data.get("document_number")
                 if not document_number:
@@ -1202,7 +1216,7 @@ class FederalRegisterClient(GovernmentAPIClient):
         Error Handling:
             - Invalid document_id: Raises HTTPError from get_executive_order()
             - Missing raw_text_url: Returns empty string (no abstracts for executive orders)
-            - Text fetch failure: Returns empty string  
+            - Text fetch failure: Returns empty string
             - No content available: Returns empty string
 
         Comparison with get_document():
