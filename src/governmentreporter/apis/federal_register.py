@@ -764,6 +764,7 @@ class FederalRegisterClient(GovernmentAPIClient):
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         limit: int = 10,
+        full_content: bool = False,
     ) -> List[Document]:
         """
         Search for executive orders using full-text search with date range filtering.
@@ -784,7 +785,7 @@ class FederalRegisterClient(GovernmentAPIClient):
             - Case-insensitive matching
             - Supports phrases and multiple terms
             - Results ordered by relevance (Federal Register default)
-            - Fetches full text content for each result
+            - Optionally fetches full text content for each result
 
         API Endpoint:
             GET /api/v1/documents with search parameters:
@@ -818,9 +819,14 @@ class FederalRegisterClient(GovernmentAPIClient):
                         The method respects this limit and won't return more documents.
                         Set higher for comprehensive searches (e.g., 100).
 
+            full_content (bool): Whether to fetch full document content and metadata.
+                               If True: Makes additional API calls for full text content.
+                               If False: Returns only metadata from search results (faster, no extra calls).
+                               Default is False for optimal performance.
+
         Returns:
             List[Document]: List of Document objects matching search criteria.
-                          Each Document contains:
+                          If full_content=True, each Document contains:
                           - id: Federal Register document number
                           - title: Executive order title
                           - date: Signing date in YYYY-MM-DD format
@@ -828,6 +834,15 @@ class FederalRegisterClient(GovernmentAPIClient):
                           - source: "FederalRegister"
                           - content: Full plain text of the order
                           - metadata: Complete order data from API
+                          - url: HTML URL for web viewing
+                          If full_content=False, each Document contains:
+                          - id: Federal Register document number
+                          - title: Executive order title from search results
+                          - date: Signing date in YYYY-MM-DD format
+                          - type: "Executive Order"
+                          - source: "FederalRegister"
+                          - content: Abstract text only (no full text)
+                          - metadata: Search result data with summary_mode flag
                           - url: HTML URL for web viewing
                           Returns empty list if no matches found.
                           Results ordered by relevance score from search API.
@@ -873,8 +888,8 @@ class FederalRegisterClient(GovernmentAPIClient):
 
         Performance Notes:
             - Makes 1 API request for search results
-            - Makes additional requests for each document's full text (up to limit)
-            - Total requests: 1 + min(results_found, limit)
+            - If full_content=True: Makes additional requests for each document's full text (up to limit)
+            - Total requests: 1 (if full_content=False) or 1 + min(results_found, limit) (if full_content=True)
             - Subject to rate limiting (1.1 second delay between requests)
             - Consider caching for frequently searched terms
 
@@ -950,45 +965,76 @@ class FederalRegisterClient(GovernmentAPIClient):
         documents = []
         for order_data in results[:limit]:  # Respect the limit parameter
             try:
-                # Get the document number for full retrieval
+                # Get the document number
                 document_number = order_data.get("document_number")
                 if not document_number:
                     self.logger.warning("Skipping result without document_number")
                     continue
 
-                # Apply rate limiting between document fetches
-                time.sleep(self.rate_limit_delay)
-
-                # Get full document with content
-                document = self.get_document(document_number)
-                documents.append(document)
-
-                self.logger.debug(
-                    f"Retrieved document {document_number}: {document.title}"
-                )
-
-            except Exception as e:
-                # Log error but continue processing other results
-                self.logger.error(f"Error retrieving document {document_number}: {e}")
-                # Try to create a partial Document from search result data
-                try:
-                    # Create Document with available data (may lack full content)
-                    partial_doc = Document(
+                if full_content:
+                    # Fetch full document with extra API calls
+                    self.logger.debug(
+                        f"Fetching full data for document {document_number}"
+                    )
+                    # Apply rate limiting between document fetches
+                    time.sleep(self.rate_limit_delay)
+                    
+                    # Use get_document to build complete Document object
+                    # This handles full text retrieval and metadata
+                    document = self.get_document(document_number)
+                    documents.append(document)
+                    
+                    self.logger.debug(
+                        f"Retrieved full document {document_number}: {document.title}"
+                    )
+                else:
+                    # Create lightweight Document from search results only
+                    # No additional API calls - just use the summary data
+                    self.logger.debug(
+                        f"Creating summary document for {document_number}"
+                    )
+                    
+                    # Create Document with available data from search results
+                    document = Document(
                         id=document_number,
                         title=order_data.get("title", "Unknown Executive Order"),
                         date=order_data.get("signing_date", ""),
                         type="Executive Order",
                         source="FederalRegister",
-                        content=order_data.get(
-                            "abstract", ""
-                        ),  # Use abstract as fallback
-                        metadata=order_data,
+                        content=order_data.get("abstract", ""),  # Use abstract as content
+                        metadata={
+                            **order_data,  # Include all search result data
+                            "summary_mode": True,  # Flag to indicate this is summary data
+                        },
                         url=order_data.get("html_url"),
                     )
-                    documents.append(partial_doc)
-                    self.logger.info(f"Created partial document for {document_number}")
-                except Exception as inner_e:
-                    self.logger.error(f"Could not create partial document: {inner_e}")
+                    documents.append(document)
+
+            except Exception as e:
+                # Log error but continue processing other results
+                self.logger.error(f"Error processing document {document_number}: {e}")
+                # For full_content mode, try to at least return partial data
+                if full_content:
+                    try:
+                        # Create partial Document from search result data as fallback
+                        partial_doc = Document(
+                            id=document_number,
+                            title=order_data.get("title", "Unknown Executive Order"),
+                            date=order_data.get("signing_date", ""),
+                            type="Executive Order",
+                            source="FederalRegister",
+                            content=order_data.get("abstract", ""),  # Use abstract as fallback
+                            metadata={
+                                **order_data,
+                                "summary_mode": True,
+                                "error": str(e),  # Include error for debugging
+                            },
+                            url=order_data.get("html_url"),
+                        )
+                        documents.append(partial_doc)
+                        self.logger.info(f"Created partial document for {document_number} after error")
+                    except Exception as inner_e:
+                        self.logger.error(f"Could not create partial document: {inner_e}")
 
         self.logger.info(
             f"Successfully retrieved {len(documents)} documents for query '{query}'"

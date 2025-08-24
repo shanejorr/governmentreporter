@@ -345,7 +345,7 @@ class CourtListenerClient(GovernmentAPIClient):
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         limit: int = 10,
-        full_content: bool = True,
+        full_content: bool = False,
     ) -> List[Document]:
         """
         Search for Supreme Court opinions using Court Listener's API.
@@ -385,7 +385,7 @@ class CourtListenerClient(GovernmentAPIClient):
             full_content (bool): Whether to fetch full document content and metadata.
                                If True: Makes additional API calls for full text and cluster data.
                                If False: Returns only summary data from search results (faster, no extra calls).
-                               Default is True for backward compatibility.
+                               Default is False for optimal performance.
 
         Returns:
             List[Document]: List of Document objects with content and metadata.
