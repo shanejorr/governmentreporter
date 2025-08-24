@@ -492,21 +492,25 @@ class CourtListenerClient(GovernmentAPIClient):
                             self.logger.debug(
                                 f"Creating summary document for opinion {opinion_id}"
                             )
-                            
+
                             # Extract basic metadata from summary
                             date_str = opinion_summary.get("date_created", "")
                             try:
-                                date_created = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+                                date_created = datetime.fromisoformat(
+                                    date_str.replace("Z", "+00:00")
+                                )
                                 formatted_date = date_created.strftime("%Y-%m-%d")
                             except (ValueError, AttributeError):
                                 formatted_date = ""
-                            
+
                             # Create minimal Document object
                             # Content is empty since we're not fetching full text
                             # The ID is preserved so full content can be fetched later
                             document = Document(
                                 id=str(opinion_id),
-                                title=opinion_summary.get("snippet", "Opinion " + str(opinion_id))[:100],
+                                title=opinion_summary.get(
+                                    "snippet", "Opinion " + str(opinion_id)
+                                )[:100],
                                 date=formatted_date,
                                 type="Supreme Court Opinion",
                                 source="CourtListener",
@@ -518,7 +522,7 @@ class CourtListenerClient(GovernmentAPIClient):
                                 },
                                 url=opinion_summary.get("absolute_url"),
                             )
-                        
+
                         documents.append(document)
 
                     except Exception as e:
