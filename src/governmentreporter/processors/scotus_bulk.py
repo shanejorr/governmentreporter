@@ -123,15 +123,17 @@ class SCOTUSBulkProcessor(BaseBulkProcessor):
         Yields:
             Opinion summaries
         """
-        # Fetch documents using search_documents
-        # We use a large limit if max_results is None
+        # Fetch documents using search_documents with full_content=False
+        # This avoids fetching full text and making extra API calls
+        # since we only need the IDs for bulk processing
         limit = max_results if max_results is not None else 10000
         
         documents = self.court_client.search_documents(
             query="",  # Empty query to get all documents
             start_date=self.since_date,
             end_date=self.until_date,
-            limit=limit
+            limit=limit,
+            full_content=False  # Only get summaries, not full content
         )
         
         # Convert Document objects to opinion summaries for compatibility

@@ -170,7 +170,7 @@ class CourtListenerClient(GovernmentAPIClient):
         # Get token and pass to parent for centralized storage
         api_key = token or get_court_listener_token()
         super().__init__(api_key=api_key)
-        
+
         # Set up logging and headers using parent's api_key
         self.logger = get_logger(__name__)
         self.headers = {
@@ -345,22 +345,24 @@ class CourtListenerClient(GovernmentAPIClient):
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         limit: int = 10,
+        full_content: bool = True,
     ) -> List[Document]:
         """
         Search for Supreme Court opinions using Court Listener's API.
 
         This method implements comprehensive search functionality for Supreme Court
-        opinions, combining text search, date filtering, and full document retrieval.
-        It handles pagination internally and returns fully populated Document objects
-        suitable for processing and storage.
+        opinions, combining text search, date filtering, and optional full document retrieval.
+        It handles pagination internally and returns Document objects with either full
+        content or just metadata, depending on the full_content parameter.
 
         Search Process:
             1. Build search parameters with filters
             2. Execute paginated API requests
-            3. For each opinion result, fetch full data
-            4. Retrieve cluster information for case names
-            5. Build Document objects with complete metadata
-            6. Return list of Documents up to limit
+            3. For each opinion result:
+               - If full_content=True: fetch full data, cluster info, and text
+               - If full_content=False: return summary data only (no extra API calls)
+            4. Build Document objects with available data
+            5. Return list of Documents up to limit
 
         Args:
             query (str): Search query string for full-text search.
@@ -380,13 +382,22 @@ class CourtListenerClient(GovernmentAPIClient):
                         Default of 10 prevents overwhelming responses.
                         Set higher for bulk processing operations.
 
+            full_content (bool): Whether to fetch full document content and metadata.
+                               If True: Makes additional API calls for full text and cluster data.
+                               If False: Returns only summary data from search results (faster, no extra calls).
+                               Default is True for backward compatibility.
+
         Returns:
-            List[Document]: List of Document objects with populated content and metadata.
-                           Each Document contains:
+            List[Document]: List of Document objects with content and metadata.
+                           If full_content=True, each Document contains:
                            - Full opinion text
                            - Case name from cluster data
                            - Bluebook citation
                            - Complete metadata
+                           If full_content=False, each Document contains:
+                           - Empty content field
+                           - Basic metadata from search results
+                           - ID for later full retrieval
                            Returns empty list if no matches found.
 
         Raises:
@@ -463,18 +474,51 @@ class CourtListenerClient(GovernmentAPIClient):
                         break
 
                     try:
-                        # Fetch full opinion data
                         opinion_id = opinion_summary.get("id")
                         if not opinion_id:
                             continue
 
-                        self.logger.debug(
-                            f"Fetching full data for opinion {opinion_id}"
-                        )
-
-                        # Use get_document to build complete Document object
-                        # This handles cluster data, citations, and full text
-                        document = self.get_document(str(opinion_id))
+                        if full_content:
+                            # Fetch full opinion data with extra API calls
+                            self.logger.debug(
+                                f"Fetching full data for opinion {opinion_id}"
+                            )
+                            # Use get_document to build complete Document object
+                            # This handles cluster data, citations, and full text
+                            document = self.get_document(str(opinion_id))
+                        else:
+                            # Create lightweight Document from search results only
+                            # No additional API calls - just use the summary data
+                            self.logger.debug(
+                                f"Creating summary document for opinion {opinion_id}"
+                            )
+                            
+                            # Extract basic metadata from summary
+                            date_str = opinion_summary.get("date_created", "")
+                            try:
+                                date_created = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+                                formatted_date = date_created.strftime("%Y-%m-%d")
+                            except (ValueError, AttributeError):
+                                formatted_date = ""
+                            
+                            # Create minimal Document object
+                            # Content is empty since we're not fetching full text
+                            # The ID is preserved so full content can be fetched later
+                            document = Document(
+                                id=str(opinion_id),
+                                title=opinion_summary.get("snippet", "Opinion " + str(opinion_id))[:100],
+                                date=formatted_date,
+                                type="Supreme Court Opinion",
+                                source="CourtListener",
+                                content="",  # Empty content for summary mode
+                                metadata={
+                                    "id": opinion_id,
+                                    "resource_uri": opinion_summary.get("resource_uri"),
+                                    "summary_mode": True,  # Flag to indicate this is summary data
+                                },
+                                url=opinion_summary.get("absolute_url"),
+                            )
+                        
                         documents.append(document)
 
                     except Exception as e:
