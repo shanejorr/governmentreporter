@@ -631,6 +631,7 @@ class FederalRegisterClient(GovernmentAPIClient):
                 "body_html_url",
                 "raw_text_url",
                 "json_url",
+                "agencies",
             ],
             "per_page": 100,
             "page": 1,
@@ -709,7 +710,6 @@ class FederalRegisterClient(GovernmentAPIClient):
                 - pdf_url: PDF download URL (str)
                 - raw_text_url: Plain text URL (str)
                 - full_text_xml_url: XML format URL (str)
-                - abstract: Brief summary (str, optional)
                 - agencies: Related agencies (list, optional)
                 Plus additional metadata fields from the API
 
@@ -775,7 +775,7 @@ class FederalRegisterClient(GovernmentAPIClient):
         terms, applies date range filters if provided, and returns Document objects with
         complete content for each matching order.
 
-        The Federal Register search API allows searching across document titles, abstracts,
+        The Federal Register search API allows searching across document titles
         and full text content. This implementation focuses specifically on executive orders
         (PRESDOCU type with executive_order subtype) to maintain consistency with the rest
         of the client's functionality.
@@ -802,7 +802,7 @@ class FederalRegisterClient(GovernmentAPIClient):
                         - "climate change" - Orders mentioning climate change
                         - "national security" - Orders related to national security
                         - "Executive Order 14000" - Specific order reference
-                        The API searches across titles, abstracts, and full text.
+                        The API searches across titles and full text.
 
             start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
                                        If provided, only returns orders signed on or after this date.
@@ -841,7 +841,7 @@ class FederalRegisterClient(GovernmentAPIClient):
                           - date: Signing date in YYYY-MM-DD format
                           - type: "Executive Order"
                           - source: "FederalRegister"
-                          - content: Abstract text only (no full text)
+                          - content: Empty string (no full text available)
                           - metadata: Search result data with summary_mode flag
                           - url: HTML URL for web viewing
                           Returns empty list if no matches found.
@@ -896,7 +896,7 @@ class FederalRegisterClient(GovernmentAPIClient):
         Search Tips:
             - Use quotes for exact phrases: '"artificial intelligence"'
             - Multiple terms are AND'd by default: "climate energy" finds both
-            - Searches titles, abstracts, and full text content
+            - Searches titles and full text content
             - More specific queries return more relevant results
             - Date filters significantly improve search performance
 
@@ -938,7 +938,7 @@ class FederalRegisterClient(GovernmentAPIClient):
                 "html_url",
                 "pdf_url",
                 "raw_text_url",
-                "abstract",
+                "agencies",
             ],
             "per_page": min(limit, 100),  # API max is 100 per page
             "page": 1,
@@ -978,12 +978,12 @@ class FederalRegisterClient(GovernmentAPIClient):
                     )
                     # Apply rate limiting between document fetches
                     time.sleep(self.rate_limit_delay)
-                    
+
                     # Use get_document to build complete Document object
                     # This handles full text retrieval and metadata
                     document = self.get_document(document_number)
                     documents.append(document)
-                    
+
                     self.logger.debug(
                         f"Retrieved full document {document_number}: {document.title}"
                     )
@@ -993,7 +993,7 @@ class FederalRegisterClient(GovernmentAPIClient):
                     self.logger.debug(
                         f"Creating summary document for {document_number}"
                     )
-                    
+
                     # Create Document with available data from search results
                     document = Document(
                         id=document_number,
@@ -1001,7 +1001,7 @@ class FederalRegisterClient(GovernmentAPIClient):
                         date=order_data.get("signing_date", ""),
                         type="Executive Order",
                         source="FederalRegister",
-                        content=order_data.get("abstract", ""),  # Use abstract as content
+                        content="",  # Executive orders don't have abstracts
                         metadata={
                             **order_data,  # Include all search result data
                             "summary_mode": True,  # Flag to indicate this is summary data
@@ -1023,7 +1023,7 @@ class FederalRegisterClient(GovernmentAPIClient):
                             date=order_data.get("signing_date", ""),
                             type="Executive Order",
                             source="FederalRegister",
-                            content=order_data.get("abstract", ""),  # Use abstract as fallback
+                            content="",  # Executive orders don't have abstracts
                             metadata={
                                 **order_data,
                                 "summary_mode": True,
@@ -1032,9 +1032,13 @@ class FederalRegisterClient(GovernmentAPIClient):
                             url=order_data.get("html_url"),
                         )
                         documents.append(partial_doc)
-                        self.logger.info(f"Created partial document for {document_number} after error")
+                        self.logger.info(
+                            f"Created partial document for {document_number} after error"
+                        )
                     except Exception as inner_e:
-                        self.logger.error(f"Could not create partial document: {inner_e}")
+                        self.logger.error(
+                            f"Could not create partial document: {inner_e}"
+                        )
 
         self.logger.info(
             f"Successfully retrieved {len(documents)} documents for query '{query}'"
@@ -1075,8 +1079,8 @@ class FederalRegisterClient(GovernmentAPIClient):
                 - url: HTML URL for web viewing
 
         Content Handling:
-            - Prefers full text from raw_text_url if available
-            - Falls back to abstract/summary if no raw text URL
+            - Retrieves full text from raw_text_url if available
+            - Returns empty string if no raw text URL (executive orders don't have abstracts)
             - Text is cleaned of HTML markup and properly formatted
             - Empty content handled gracefully (won't cause errors)
 
@@ -1091,8 +1095,8 @@ class FederalRegisterClient(GovernmentAPIClient):
 
         Error Handling:
             - Invalid document_id: Raises HTTPError from get_executive_order()
-            - Missing raw_text_url: Uses abstract as fallback content
-            - Text fetch failure: Uses abstract as fallback content
+            - Missing raw_text_url: Returns empty string as content
+            - Text fetch failure: Returns empty string as content
             - Missing metadata fields: Uses defaults ("Unknown Executive Order", empty strings)
 
         Metadata Fields:
@@ -1128,7 +1132,7 @@ class FederalRegisterClient(GovernmentAPIClient):
         if raw_text_url:
             content = self.get_executive_order_text(raw_text_url)
         else:
-            content = order_data.get("abstract", "")
+            content = ""  # Executive orders don't have abstracts, use empty string as fallback
 
         return Document(
             id=document_id,
@@ -1164,8 +1168,8 @@ class FederalRegisterClient(GovernmentAPIClient):
         Returns:
             str: Clean plain text content of the executive order.
                 Includes the complete text with HTML markup removed.
-                May be abstract/summary if raw text unavailable.
-                Returns empty string if no content available.
+                Returns empty string if raw text unavailable
+                (executive orders don't have abstracts).
 
         Performance Benefits:
             - Lighter than get_document(): No Document object construction
@@ -1197,8 +1201,8 @@ class FederalRegisterClient(GovernmentAPIClient):
 
         Error Handling:
             - Invalid document_id: Raises HTTPError from get_executive_order()
-            - Missing raw_text_url: Returns abstract/summary as fallback
-            - Text fetch failure: Returns abstract/summary as fallback
+            - Missing raw_text_url: Returns empty string (no abstracts for executive orders)
+            - Text fetch failure: Returns empty string  
             - No content available: Returns empty string
 
         Comparison with get_document():
@@ -1223,7 +1227,7 @@ class FederalRegisterClient(GovernmentAPIClient):
         if raw_text_url:
             return self.get_executive_order_text(raw_text_url)
         else:
-            return order_data.get("abstract", "")
+            return ""  # Executive orders don't have abstracts, return empty string
 
     def extract_basic_metadata(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
         """
