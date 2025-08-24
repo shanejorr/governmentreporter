@@ -766,94 +766,234 @@ class FederalRegisterClient(GovernmentAPIClient):
         limit: int = 10,
     ) -> List[Document]:
         """
-        Search for executive orders (minimal implementation for interface compliance).
+        Search for executive orders using full-text search with date range filtering.
 
-        This method provides a placeholder implementation of the abstract
-        search_documents method required by GovernmentAPIClient. The current
-        implementation returns an empty list as the primary document processing
-        workflow uses the more specialized list_executive_orders method directly.
+        This method implements the abstract search_documents method from GovernmentAPIClient,
+        providing full-text search capabilities for executive orders in the Federal Register.
+        It uses the Federal Register's search API to find executive orders matching the query
+        terms, applies date range filters if provided, and returns Document objects with
+        complete content for each matching order.
 
-        Design Decision:
-            Rather than duplicating the complex executive order processing logic,
-            this client separates concerns by providing:
-            1. This minimal search implementation for interface compliance
-            2. Specialized list_executive_orders() for actual data processing
-            3. Direct get_document() calls for specific order retrieval
+        The Federal Register search API allows searching across document titles, abstracts,
+        and full text content. This implementation focuses specifically on executive orders
+        (PRESDOCU type with executive_order subtype) to maintain consistency with the rest
+        of the client's functionality.
 
-        Future Enhancement:
-            This could be expanded to use Federal Register's search capabilities:
-            - Full-text search across executive order content
-            - Advanced filtering by president, topic, agency
-            - Relevance ranking of search results
-            - Complete Document object construction from search results
+        Search Behavior:
+            - Full-text search across executive order content and metadata
+            - Case-insensitive matching
+            - Supports phrases and multiple terms
+            - Results ordered by relevance (Federal Register default)
+            - Fetches full text content for each result
 
-        Federal Register Search API:
-            The Federal Register API supports text search with parameters like:
-            - term: Full-text search term
-            - conditions[agencies][]: Filter by agencies
-            - conditions[president]: Filter by president
-            - conditions[significant]: Filter significant documents
+        API Endpoint:
+            GET /api/v1/documents with search parameters:
+            - term: Search query for full-text search
+            - conditions[type]: PRESDOCU (Presidential Documents)
+            - conditions[presidential_document_type]: executive_order
+            - conditions[signing_date][gte/lte]: Date range filters
+            - per_page: Results per page (respects limit parameter)
 
         Args:
             query (str): Search query string for full-text search.
-                        Currently not used in implementation.
-                        Could support executive order titles, keywords, topics.
+                        Can include keywords, phrases, topics, or any text.
+                        Examples:
+                        - "climate change" - Orders mentioning climate change
+                        - "national security" - Orders related to national security
+                        - "Executive Order 14000" - Specific order reference
+                        The API searches across titles, abstracts, and full text.
 
             start_date (Optional[str]): Start date filter in YYYY-MM-DD format.
-                                       Currently not used in implementation.
-                                       Would limit results to orders after this date.
+                                       If provided, only returns orders signed on or after this date.
+                                       Example: "2024-01-01" for orders from 2024 onwards.
+                                       If None, no start date restriction applied.
 
             end_date (Optional[str]): End date filter in YYYY-MM-DD format.
-                                     Currently not used in implementation.
-                                     Would limit results to orders before this date.
+                                     If provided, only returns orders signed on or before this date.
+                                     Example: "2024-12-31" for orders through end of 2024.
+                                     If None, no end date restriction applied.
 
             limit (int): Maximum number of results to return.
-                        Currently not used in implementation.
-                        Default of 10 prevents overwhelming responses.
+                        Default is 10 to prevent overwhelming responses.
+                        The method respects this limit and won't return more documents.
+                        Set higher for comprehensive searches (e.g., 100).
 
         Returns:
-            List[Document]: Empty list in current minimal implementation.
-                           Future implementation would return list of matching
-                           Document objects with populated content and metadata.
+            List[Document]: List of Document objects matching search criteria.
+                          Each Document contains:
+                          - id: Federal Register document number
+                          - title: Executive order title
+                          - date: Signing date in YYYY-MM-DD format
+                          - type: "Executive Order"
+                          - source: "FederalRegister"
+                          - content: Full plain text of the order
+                          - metadata: Complete order data from API
+                          - url: HTML URL for web viewing
+                          Returns empty list if no matches found.
+                          Results ordered by relevance score from search API.
 
-        Alternative Usage:
-            For actual executive order processing, use:
+        Raises:
+            ValueError: If start_date or end_date format is invalid (not YYYY-MM-DD).
+
+            httpx.HTTPError: For API-related failures:
+                - 429: Rate limit exceeded (handled by retry logic)
+                - 500+: Server errors (handled by retry logic)
+                - Other HTTP errors from _make_request_with_retry()
+
+            httpx.RequestError: For network-related failures after retries exhausted.
+
+        Example Usage:
             >>> client = FederalRegisterClient()
-            >>> for order_data in client.list_executive_orders("2024-01-01", "2024-12-31"):
-            ...     document = client.get_document(order_data['document_number'])
-            ...     # Process document...
+            >>>
+            >>> # Search for climate-related executive orders
+            >>> climate_orders = client.search_documents(
+            ...     "climate change renewable energy",
+            ...     start_date="2021-01-01",
+            ...     limit=5
+            ... )
+            >>> for doc in climate_orders:
+            ...     print(f"{doc.title} ({doc.date})")
+            ...     print(f"  Preview: {doc.content[:200]}...")
+            >>>
+            >>> # Search for specific executive order
+            >>> results = client.search_documents("Executive Order 14019")
+            >>> if results:
+            ...     order = results[0]
+            ...     print(f"Found: {order.title}")
+            ...     print(f"Signed: {order.date} by {order.metadata.get('president', {}).get('name')}")
+            >>>
+            >>> # Search all orders in date range containing keyword
+            >>> security_orders = client.search_documents(
+            ...     "national security",
+            ...     start_date="2023-01-01",
+            ...     end_date="2023-12-31",
+            ...     limit=20
+            ... )
+            >>> print(f"Found {len(security_orders)} national security orders in 2023")
 
-        Implementation Example (Future):
-            ```python
-            def search_documents(self, query, start_date=None, end_date=None, limit=10):
-                # Build search parameters
-                params = {
-                    "conditions[type]": "PRESDOCU",
-                    "conditions[presidential_document_type]": "executive_order",
-                    "term": query,
-                    "per_page": limit
-                }
-                if start_date:
-                    params["conditions[signing_date][gte]"] = start_date
-                if end_date:
-                    params["conditions[signing_date][lte]"] = end_date
+        Performance Notes:
+            - Makes 1 API request for search results
+            - Makes additional requests for each document's full text (up to limit)
+            - Total requests: 1 + min(results_found, limit)
+            - Subject to rate limiting (1.1 second delay between requests)
+            - Consider caching for frequently searched terms
 
-                # Make search request and convert to Documents
-                response = self._make_request_with_retry(f"{self.base_url}/documents", params)
-                results = response.json()["results"]
-                return [self._convert_to_document(item) for item in results[:limit]]
-            ```
+        Search Tips:
+            - Use quotes for exact phrases: '"artificial intelligence"'
+            - Multiple terms are AND'd by default: "climate energy" finds both
+            - Searches titles, abstracts, and full text content
+            - More specific queries return more relevant results
+            - Date filters significantly improve search performance
+
+        Integration Notes:
+            - Complements list_executive_orders() for date-based retrieval
+            - Returns same Document format as get_document()
+            - Compatible with downstream processing pipelines
+            - Suitable for user-facing search interfaces
+            - Works with document indexing and analysis workflows
 
         Python Learning Notes:
-            - Abstract method implementation: Required by parent class interface
-            - Minimal implementation: Satisfies contract without full functionality
-            - Empty return: return [] creates empty list
-            - Design patterns: Separation of concerns between generic and specific methods
-            - Interface compliance: Maintaining consistent API across different clients
+            - List comprehension: Building Document list from search results
+            - Error handling: Date validation before API calls
+            - API parameter building: Conditional parameter addition
+            - Memory efficiency: Limiting results to prevent overflow
+            - Type hints: Clear interface definition with Optional and List
+            - Documentation: Comprehensive docstring for complex method
         """
-        # This is a minimal implementation to satisfy the abstract base class
-        # The actual processing uses list_executive_orders directly
-        return []
+        # Validate date formats if provided
+        if start_date and not self.validate_date_format(start_date):
+            raise ValueError(f"Invalid start_date format: {start_date}. Use YYYY-MM-DD")
+        if end_date and not self.validate_date_format(end_date):
+            raise ValueError(f"Invalid end_date format: {end_date}. Use YYYY-MM-DD")
+
+        # Build search parameters
+        url = f"{self.base_url}/documents"
+        params = {
+            "conditions[type]": "PRESDOCU",
+            "conditions[presidential_document_type]": "executive_order",
+            "term": query,  # Full-text search parameter
+            "fields[]": [
+                "document_number",
+                "title",
+                "executive_order_number",
+                "publication_date",
+                "signing_date",
+                "president",
+                "citation",
+                "html_url",
+                "pdf_url",
+                "raw_text_url",
+                "abstract",
+            ],
+            "per_page": min(limit, 100),  # API max is 100 per page
+            "page": 1,
+        }
+
+        # Add date filters if provided
+        if start_date:
+            params["conditions[signing_date][gte]"] = start_date
+        if end_date:
+            params["conditions[signing_date][lte]"] = end_date
+
+        # Apply rate limiting before request
+        time.sleep(self.rate_limit_delay)
+
+        # Make search request with retry logic
+        self.logger.info(f"Searching for executive orders with query: '{query}'")
+        response = self._make_request_with_retry(url, params)
+        data = response.json()
+
+        results = data.get("results", [])
+        self.logger.info(f"Found {len(results)} executive orders matching '{query}'")
+
+        # Convert search results to Document objects
+        documents = []
+        for order_data in results[:limit]:  # Respect the limit parameter
+            try:
+                # Get the document number for full retrieval
+                document_number = order_data.get("document_number")
+                if not document_number:
+                    self.logger.warning("Skipping result without document_number")
+                    continue
+
+                # Apply rate limiting between document fetches
+                time.sleep(self.rate_limit_delay)
+
+                # Get full document with content
+                document = self.get_document(document_number)
+                documents.append(document)
+
+                self.logger.debug(
+                    f"Retrieved document {document_number}: {document.title}"
+                )
+
+            except Exception as e:
+                # Log error but continue processing other results
+                self.logger.error(f"Error retrieving document {document_number}: {e}")
+                # Try to create a partial Document from search result data
+                try:
+                    # Create Document with available data (may lack full content)
+                    partial_doc = Document(
+                        id=document_number,
+                        title=order_data.get("title", "Unknown Executive Order"),
+                        date=order_data.get("signing_date", ""),
+                        type="Executive Order",
+                        source="FederalRegister",
+                        content=order_data.get(
+                            "abstract", ""
+                        ),  # Use abstract as fallback
+                        metadata=order_data,
+                        url=order_data.get("html_url"),
+                    )
+                    documents.append(partial_doc)
+                    self.logger.info(f"Created partial document for {document_number}")
+                except Exception as inner_e:
+                    self.logger.error(f"Could not create partial document: {inner_e}")
+
+        self.logger.info(
+            f"Successfully retrieved {len(documents)} documents for query '{query}'"
+        )
+        return documents
 
     def get_document(self, document_id: str) -> Document:
         """
