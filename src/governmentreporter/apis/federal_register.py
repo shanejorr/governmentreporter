@@ -1255,9 +1255,10 @@ class FederalRegisterClient(GovernmentAPIClient):
         Data Processing:
             1. Parse signing date to YYYY-MM-DD format
             2. Extract president information with type handling
-            3. Safely extract string and numeric fields
-            4. Handle missing or malformed data gracefully
-            5. Return structured metadata dictionary
+            3. Extract agency names from agencies field
+            4. Safely extract string and numeric fields
+            5. Handle missing or malformed data gracefully
+            6. Return structured metadata dictionary
 
         Args:
             order_data (Dict[str, Any]): Raw executive order data from Federal Register API.
@@ -1275,6 +1276,7 @@ class FederalRegisterClient(GovernmentAPIClient):
                 - html_url (str): Web page URL (empty string if missing)
                 - raw_text_url (str): Plain text URL (empty string if missing)
                 - publication_date (str): Federal Register publication date (empty string if missing)
+                - agencies (list): List of agency names (empty list if missing)
 
         Date Processing:
             Input formats handled:
@@ -1314,7 +1316,8 @@ class FederalRegisterClient(GovernmentAPIClient):
                 "citation": "89 FR 15234",
                 "html_url": "https://www.federalregister.gov/documents/2024/03/07/2024-12345/...",
                 "raw_text_url": "https://www.federalregister.gov/documents/full_text/txt/...",
-                "publication_date": "2024-03-07"
+                "publication_date": "2024-03-07",
+                "agencies": ["Executive Office of the President"]
             }
             ```
 
@@ -1347,6 +1350,20 @@ class FederalRegisterClient(GovernmentAPIClient):
         else:
             president_name = str(president_data) if president_data else "Unknown"
 
+        # Extract agency names
+        agencies_data = order_data.get("agencies", [])
+        agency_names = []
+        if isinstance(agencies_data, list):
+            # Check if agencies have already been processed to just names (strings)
+            # or if they are still full objects with a "name" field
+            for agency in agencies_data:
+                if isinstance(agency, str):
+                    # Already processed to just the name
+                    agency_names.append(agency)
+                elif isinstance(agency, dict):
+                    # Still a full object, extract the name
+                    agency_names.append(agency.get("name", ""))
+
         return {
             "document_number": order_data.get("document_number"),
             "title": order_data.get("title", ""),
@@ -1357,4 +1374,5 @@ class FederalRegisterClient(GovernmentAPIClient):
             "html_url": order_data.get("html_url", ""),
             "raw_text_url": order_data.get("raw_text_url", ""),
             "publication_date": order_data.get("publication_date", ""),
+            "agencies": agency_names,
         }
