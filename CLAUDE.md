@@ -49,6 +49,7 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 - MCP protocol integration for LLM compatibility
 - Real-time document retrieval ensures fresh government data
 - I am an intermediate Python programmer. If I ask you to do something and you do not think it is the best approach please say so. If I ask a question please answer truthfully. Do not simply agree with me.
+- Extensively document the code. The documentation should say what the code does and how it works. Include robust docstrings to all classes and methods. The documentation should explain the code, classes, and methods to a beginner Python programmer. Documentatino should also serve as a Python tutorial and help a beginner learn Python.
 
 ## Dependencies
 
