@@ -17,6 +17,12 @@ src/governmentreporter/
 ├── database/                    # Vector database integration
 │   ├── __init__.py
 │   └── qdrant_client.py        # Qdrant vector database operations
+├── processors/                  # Document processing and transformation
+│   ├── __init__.py             # Package exports and documentation
+│   ├── build_payloads.py       # Main orchestration for document processing
+│   ├── chunking.py             # Hierarchical document chunking algorithms
+│   ├── llm_extraction.py       # GPT-5-nano metadata extraction
+│   └── schema.py               # Pydantic models for metadata validation
 └── utils/                       # Shared utilities and helpers
     ├── __init__.py             # Package initializer with logging setup
     ├── citations.py            # Bluebook citation formatting
@@ -27,9 +33,9 @@ src/governmentreporter/
 
 ### 1. Document Indexing Pipeline
 ```
-Government API → Fetch Documents → Generate Embeddings → Store in Qdrant
-                                 ↓
-                          Extract Metadata
+Government API → Fetch Documents → Chunk Documents → Extract Metadata
+                                         ↓                ↓
+                                  Generate Embeddings → Store in Qdrant
 ```
 
 ### 2. Query/Retrieval Pipeline  
@@ -102,7 +108,56 @@ This module provides client implementations for various government data sources.
   - `list_collections()`: Lists available collections
   - `delete_collection()`: Removes collections
 
-### 3. Utils Module (`src/governmentreporter/utils/`)
+### 3. Processors Module (`src/governmentreporter/processors/`)
+
+This module provides document processing capabilities for transforming raw government documents into structured, searchable chunks with rich metadata.
+
+#### `schema.py` - Pydantic Data Models
+- **Purpose**: Defines strict data validation schemas using Pydantic
+- **Key Models**:
+  - `SupremeCourtMetadata`: SCOTUS-specific metadata (legal topics, constitutional provisions, holdings)
+  - `ExecutiveOrderMetadata`: EO-specific metadata (policy topics, agencies, economic sectors)
+  - `ChunkMetadata`: Common chunk data (text, type, indices)
+  - `QdrantPayload`: Complete payload structure for vector database
+- **Validation**: Ensures data integrity with type checking and constraints
+
+#### `chunking.py` - Hierarchical Document Chunking
+- **Purpose**: Intelligently splits documents by their natural structure
+- **Key Functions**:
+  - `chunk_supreme_court_opinion()`: Splits SCOTUS opinions by type, sections, and paragraphs
+    - Detects syllabus, majority, concurring, dissenting opinions
+    - Parses Roman numeral sections (I, II, III) and subsections (A, B, C)
+    - Target 600 tokens, max 800 tokens per chunk
+  - `chunk_executive_order()`: Splits EOs by header, sections, subsections, tail
+    - Identifies numbered sections (Sec. 1, Sec. 2) and lettered subsections
+    - Preserves section titles and structure
+    - Target 300 tokens, max 400 tokens with overlap
+
+#### `llm_extraction.py` - AI-Powered Metadata Generation
+- **Purpose**: Uses GPT-5-nano to extract rich metadata from document text
+- **Key Functions**:
+  - `generate_scotus_llm_fields()`: Extracts legal metadata from Supreme Court opinions
+    - Legal topics and key questions
+    - Constitutional provisions and statutes cited
+    - Holdings and vote breakdowns
+  - `generate_eo_llm_fields()`: Extracts policy metadata from Executive Orders
+    - Policy summaries and topics
+    - Impacted agencies and legal authorities
+    - Economic sectors affected
+- **Implementation**: Structured prompts with JSON output for reliable extraction
+
+#### `build_payloads.py` - Processing Orchestration
+- **Purpose**: Main entry point that coordinates all processing steps
+- **Key Function**:
+  - `build_payloads_from_document()`: Orchestrates complete processing pipeline
+    - Accepts Document object from API clients
+    - Routes to appropriate chunking algorithm based on document type
+    - Generates metadata using LLM extraction
+    - Validates data with Pydantic schemas
+    - Returns Qdrant-ready payloads
+- **Flow**: Document → Chunk → Extract Metadata → Validate → Return Payloads
+
+### 4. Utils Module (`src/governmentreporter/utils/`)
 
 #### `config.py` - Configuration Management
 - **Purpose**: Secure access to API credentials via environment variables
@@ -127,11 +182,24 @@ This module provides client implementations for various government data sources.
 
 ## Component Interactions
 
-### 1. API Client Hierarchy
+### 1. Module Hierarchy
 ```
-GovernmentAPIClient (abstract base)
-    ├── CourtListenerClient (concrete implementation)
-    └── FederalRegisterClient (concrete implementation)
+GovernmentReporter Package
+    ├── APIs Module
+    │   ├── GovernmentAPIClient (abstract base)
+    │   ├── CourtListenerClient (concrete implementation)
+    │   └── FederalRegisterClient (concrete implementation)
+    ├── Processors Module
+    │   ├── Schema (data validation)
+    │   ├── Chunking (document splitting)
+    │   ├── LLM Extraction (metadata generation)
+    │   └── Build Payloads (orchestration)
+    ├── Database Module
+    │   └── QdrantDBClient (vector storage)
+    └── Utils Module
+        ├── Config (credentials)
+        ├── Citations (formatting)
+        └── Logging (operation tracking)
 ```
 
 ### 2. Data Flow Between Components
@@ -139,26 +207,35 @@ GovernmentAPIClient (abstract base)
 #### Document Storage Flow:
 1. **API Client** fetches document from government source
 2. **API Client** creates standardized `Document` object
-3. **Embedding generation** (not in src, but would use OpenAI)
-4. **QdrantDBClient** stores document + embedding + metadata
+3. **Processors Module** processes document:
+   - **Chunking** splits by natural structure
+   - **LLM Extraction** generates metadata
+   - **Schema** validates all data
+   - **Build Payloads** orchestrates and returns payloads
+4. **Embedding generation** (external, uses OpenAI API)
+5. **QdrantDBClient** stores chunks + embeddings + metadata
 
 #### Document Retrieval Flow:
-1. Query embedding generated (not in src)
-2. **QdrantDBClient** performs semantic search
-3. Returns document IDs and scores
-4. **API Client** fetches fresh content using document IDs
-5. Returns updated `Document` objects
+1. Query embedding generated (external)
+2. **QdrantDBClient** performs semantic search on chunks
+3. Returns chunk IDs, metadata, and similarity scores
+4. **API Client** can fetch fresh full documents if needed
+5. Returns relevant chunks or complete documents
 
 ### 3. Configuration Dependencies
 ```
 config.py provides credentials to:
     ├── court_listener.py (needs Court Listener token)
-    └── (future) OpenAI embedding client (needs OpenAI key)
+    ├── llm_extraction.py (needs OpenAI key for GPT-5-nano)
+    └── (external) Embedding generation (needs OpenAI key)
 ```
 
-### 4. Utility Usage
-- **citations.py** used by `court_listener.py` for Bluebook formatting
-- **logging** from `utils/__init__.py` used by all modules for operation tracking
+### 4. Module Interactions
+- **APIs → Processors**: Documents flow from API clients to processors
+- **Processors → Database**: Processed chunks stored in Qdrant
+- **Utils → All**: Config and logging used throughout
+- **citations.py** used by `court_listener.py` and processors for Bluebook formatting
+- **schema.py** validates data throughout processing pipeline
 
 ## Key Design Patterns
 
@@ -183,6 +260,21 @@ config.py provides credentials to:
 - `FederalRegisterClient._make_request_with_retry()` handles network failures
 - Progressively increases delay between retries
 
+### 6. Pipeline Pattern
+- `build_payloads.py` implements processing pipeline
+- Each stage transforms data for the next
+- Clear separation of concerns
+
+### 7. Strategy Pattern
+- Different chunking strategies for different document types
+- `chunk_supreme_court_opinion()` vs `chunk_executive_order()`
+- Selected based on document type
+
+### 8. Validation Pattern
+- Pydantic models ensure data integrity
+- Type checking and constraint validation
+- Fail-fast approach for invalid data
+
 ## Error Handling Strategy
 
 1. **Configuration Errors**: Raise `ValueError` immediately (fail fast)
@@ -203,8 +295,13 @@ The architecture is designed to easily add:
 1. New government API clients (Congress.gov, etc.)
 2. Additional document types (federal rules, congressional bills)
 3. Cloud database support (remote Qdrant instance)
-4. Advanced metadata extraction
+4. Advanced metadata extraction strategies
 5. Caching layers for frequently accessed documents
+6. Alternative chunking strategies for new document types
+7. Different LLM providers for metadata extraction
+8. Additional validation schemas for new metadata types
+9. Batch processing optimizations
+10. MCP server implementation for LLM integration
 
 ## Security Considerations
 
@@ -219,6 +316,10 @@ The architecture is designed to easily add:
 2. **Lazy Loading**: Documents fetched only when needed
 3. **Memory Efficiency**: Iterator patterns for large result sets
 4. **Connection Pooling**: HTTP clients with context managers
+5. **Token-Aware Chunking**: Optimized chunk sizes for embedding efficiency
+6. **Structured Metadata**: Pydantic models for fast serialization
+7. **Parallel Processing**: Ready for concurrent document processing
+8. **Smart Overlap**: Minimal overlap in chunks to reduce redundancy
 
 ## Testing Considerations
 

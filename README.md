@@ -62,6 +62,13 @@ GovernmentReporter creates a Qdrant vector database storing semantic embeddings 
 - **Development**: VS Code with Claude Code support
 - **Storage**: Qdrant vector database
 
+### Core Modules
+
+- **APIs Module** (`src/governmentreporter/apis/`): Government API clients
+- **Database Module** (`src/governmentreporter/database/`): Qdrant vector storage
+- **Processors Module** (`src/governmentreporter/processors/`): Document chunking and metadata extraction
+- **Utils Module** (`src/governmentreporter/utils/`): Citations, config, and logging
+
 ## Data Flow
 
 ### 1. **Hierarchical Document Processing**:
@@ -127,28 +134,34 @@ GovernmentReporter creates a Qdrant vector database storing semantic embeddings 
 
 ## Data Processing Pipeline
 
-The system follows a structured processing pipeline:
+The system follows a structured processing pipeline powered by the processors module:
 
-1. **Document Fetching**:
+1. **Document Fetching** (APIs Module):
    - SCOTUS: CourtListener API for opinion and cluster data
    - Executive Orders: Federal Register API for order data and raw text
 
-2. **Hierarchical Chunking**:
+2. **Hierarchical Chunking** (Processors Module - `chunking.py`):
    - SCOTUS: Split by opinion type → sections → paragraphs (600/800 tokens)
    - Executive Orders: Split by header → sections → subsections → tail (300/400 tokens)
 
-3. **Metadata Extraction**:
+3. **Metadata Extraction** (Processors Module - `llm_extraction.py`):
    - Use GPT-5-nano to extract rich legal/policy metadata
    - Generate bluebook citations and structured metadata
+   - Validate with Pydantic schemas (`schema.py`)
 
-4. **Embedding Generation**:
+4. **Payload Building** (Processors Module - `build_payloads.py`):
+   - Orchestrates chunking and metadata extraction
+   - Creates Qdrant-ready payloads with standardized structure
+
+5. **Embedding Generation**:
    - OpenAI text-embedding-3-small for semantic embeddings
    - Each chunk gets its own embedding vector
 
-5. **Storage**:
+6. **Storage** (Database Module):
    - Store chunk embeddings + metadata in Qdrant
+   - Batch operations for efficiency
 
-6. **Search & Retrieval**:
+7. **Search & Retrieval**:
    - User query converted to embedding
    - Qdrant returns similar chunk metadata
    - Fresh content can be retrieved on-demand from government APIs
@@ -265,24 +278,26 @@ GovernmentReporter automatically identifies and chunks Supreme Court opinions us
 ### Processing Pipeline
 
 **Supreme Court Opinions:**
-1. **API Retrieval**: Fetch opinion and cluster data from CourtListener
-2. **Opinion Type Detection**: Use regex patterns to identify different opinion types
-3. **Section Parsing**: Detect Roman numeral sections and lettered subsections
-4. **Intelligent Chunking**: Target 600 tokens, max 800 tokens while preserving legal structure
-5. **Metadata Extraction**: Use GPT-5-nano for rich legal metadata
-6. **Citation Formatting**: Build proper bluebook citations from cluster data
-7. **Embedding Generation**: Create semantic embeddings for each chunk
-8. **Database Storage**: Store chunks with complete metadata in Qdrant
+1. **API Retrieval** (`apis/court_listener.py`): Fetch opinion and cluster data from CourtListener
+2. **Opinion Type Detection** (`processors/chunking.py`): Use regex patterns to identify different opinion types
+3. **Section Parsing** (`processors/chunking.py`): Detect Roman numeral sections and lettered subsections
+4. **Intelligent Chunking** (`processors/chunking.py`): Target 600 tokens, max 800 tokens while preserving legal structure
+5. **Metadata Extraction** (`processors/llm_extraction.py`): Use GPT-5-nano for rich legal metadata
+6. **Citation Formatting** (`utils/citations.py`): Build proper bluebook citations from cluster data
+7. **Payload Building** (`processors/build_payloads.py`): Orchestrate processing and create Qdrant-ready payloads
+8. **Embedding Generation**: Create semantic embeddings for each chunk
+9. **Database Storage** (`database/qdrant_client.py`): Store chunks with complete metadata in Qdrant
 
 **Executive Orders:**
-1. **API Retrieval**: Fetch order data and raw text from Federal Register
-2. **Structure Detection**: Identify header, sections, subsections, and tail blocks
-3. **HTML Cleaning**: Remove markup and extract clean text
-4. **Intelligent Chunking**: Target 300 tokens, max 400 tokens with sentence overlap
-5. **Metadata Extraction**: Use GPT-5-nano for policy metadata
-6. **API Metadata**: Extract signing date, president, agencies from API response
-7. **Embedding Generation**: Create semantic embeddings for each chunk
-8. **Database Storage**: Store chunks with complete metadata in Qdrant
+1. **API Retrieval** (`apis/federal_register.py`): Fetch order data and raw text from Federal Register
+2. **Structure Detection** (`processors/chunking.py`): Identify header, sections, subsections, and tail blocks
+3. **HTML Cleaning** (`apis/federal_register.py`): Remove markup and extract clean text
+4. **Intelligent Chunking** (`processors/chunking.py`): Target 300 tokens, max 400 tokens with sentence overlap
+5. **Metadata Extraction** (`processors/llm_extraction.py`): Use GPT-5-nano for policy metadata
+6. **Schema Validation** (`processors/schema.py`): Validate metadata with Pydantic models
+7. **Payload Building** (`processors/build_payloads.py`): Orchestrate processing and create Qdrant-ready payloads
+8. **Embedding Generation**: Create semantic embeddings for each chunk
+9. **Database Storage** (`database/qdrant_client.py`): Store chunks with complete metadata in Qdrant
 
 ## Government Data Sources
 

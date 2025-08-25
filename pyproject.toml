@@ -31,5 +31,5 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["governmentreporter"]
+packages = ["governmentreporter", "governmentreporter.apis", "governmentreporter.database", "governmentreporter.processors", "governmentreporter.utils"]
 package-dir = {"" = "src"}
