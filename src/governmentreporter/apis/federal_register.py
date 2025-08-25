@@ -1012,9 +1012,9 @@ class FederalRegisterClient(GovernmentAPIClient):
                     document = Document(
                         id=document_number,
                         title=order_data.get("title", "Unknown Executive Order"),
-                        date=order_data.get("signing_date", ""),
+                        date=order_data.get("publication_date", order_data.get("signing_date", "")),
                         type="Executive Order",
-                        source="FederalRegister",
+                        source="Federal Register",
                         content="",  # Executive orders don't have abstracts
                         metadata={
                             **order_data,  # Include all search result data
@@ -1034,9 +1034,9 @@ class FederalRegisterClient(GovernmentAPIClient):
                         partial_doc = Document(
                             id=document_number,
                             title=order_data.get("title", "Unknown Executive Order"),
-                            date=order_data.get("signing_date", ""),
+                            date=order_data.get("publication_date", order_data.get("signing_date", "")),
                             type="Executive Order",
-                            source="FederalRegister",
+                            source="Federal Register",
                             content="",  # Executive orders don't have abstracts
                             metadata={
                                 **order_data,
@@ -1151,9 +1151,9 @@ class FederalRegisterClient(GovernmentAPIClient):
         return Document(
             id=document_id,
             title=order_data.get("title", "Unknown Executive Order"),
-            date=order_data.get("signing_date", ""),
+            date=order_data.get("publication_date", order_data.get("signing_date", "")),
             type="Executive Order",
-            source="FederalRegister",
+            source="Federal Register",
             content=content,
             metadata=order_data,
             url=order_data.get("html_url"),
