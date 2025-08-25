@@ -419,18 +419,6 @@ class QdrantDBClient:
 
         return None
 
-    def get_opinion_by_id(
-        self, opinion_id: str, collection_name: str = "federal_court_scotus_opinions"
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Retrieve a Supreme Court opinion (backward compatibility wrapper).
-
-        This method maintains compatibility with existing code while using
-        the more general get_document_by_id method internally.
-        """
-        return self.get_document_by_id(
-            document_id=opinion_id, collection_name=collection_name
-        )
 
     def semantic_search(
         self,
