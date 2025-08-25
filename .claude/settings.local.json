@@ -17,7 +17,8 @@
       "Bash(uv sync:*)",
       "Bash(git branch:*)",
       "Bash(git merge:*)",
-      "WebFetch(domain:googleapis.github.io)"
+      "WebFetch(domain:googleapis.github.io)",
+      "Bash(git pull:*)"
     ],
     "deny": []
   }
