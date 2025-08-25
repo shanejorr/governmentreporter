@@ -1,4 +1,95 @@
-"""Executive Order Hierarchical Chunking and Metadata Extraction."""
+"""
+Executive Order Hierarchical Chunking and Metadata Extraction
+
+This module implements sophisticated hierarchical chunking for Presidential Executive
+Orders, recognizing the standardized structure of federal regulatory documents and
+extracting comprehensive policy metadata for enhanced search and analysis.
+
+Core Components:
+    - ExecutiveOrderChunk: Data structure for chunks with regulatory structure
+    - ProcessedExecutiveOrderChunk: Complete chunk with policy metadata for database storage
+    - ExecutiveOrderChunker: Hierarchical chunking algorithm for regulatory documents
+    - ExecutiveOrderMetadataGenerator: AI-powered policy metadata extraction
+    - ExecutiveOrderProcessor: Complete processing pipeline coordination
+
+Hierarchical Chunking Strategy:
+    Executive Orders follow a standardized regulatory document structure that
+    enables sophisticated semantic chunking:
+
+    1. **Document Level Structure**:
+       - Header Block: Title, EO number, date, president, legal authority
+       - Main Content: Policy sections with numbered directives
+       - Tail Block: Signature, filing information, billing codes
+
+    2. **Section Level Structure**:
+       - Major sections (Section 1., Sec. 2., etc.)
+       - Subsections with letter designations (a), (b), (c)
+       - Numbered items within subsections (1), (2), (3)
+
+    3. **Chunk Level Processing**:
+       - Paragraph-based chunking within sections
+       - Token-aware splitting (target ~300 tokens per chunk)
+       - Sentence-level overlap between chunks for context continuity
+       - Preservation of regulatory citation and cross-reference integrity
+
+Policy Metadata Extraction:
+    Using Google's Gemini 2.5 Flash-Lite API to extract comprehensive policy data:
+    - Executive summary and policy objectives
+    - Federal agencies impacted or tasked with implementation
+    - Legal authorities and statutory citations (USC, CFR)
+    - Referenced, amended, or revoked Executive Orders
+    - Economic sectors and policy domains affected
+    - Implementation requirements and timelines
+
+Processing Pipeline:
+    1. **Document Retrieval**: Fetch Executive Order data from Federal Register API
+    2. **Structure Analysis**: Identify header, sections, subsections, and tail blocks
+    3. **Hierarchical Chunking**: Create chunks preserving regulatory structure
+    4. **Policy Analysis**: Extract metadata using AI analysis of policy content
+    5. **Citation Processing**: Identify legal authorities and EO cross-references
+    6. **Embedding Generation**: Create vector embeddings for semantic search
+    7. **Database Storage**: Store in Qdrant with comprehensive policy metadata
+
+Executive Order Format:
+    Presidential Executive Orders follow Title 3 Code of Federal Regulations format:
+    - Standardized header with OMB control information
+    - "By the authority vested in me..." legal basis statement
+    - "It is hereby ordered:" directive introduction
+    - Numbered sections with specific policy directives
+    - Signature block with date and presidential signature
+    - Federal Register filing and billing information
+
+Python Learning Notes:
+    - @dataclass for structured data with automatic method generation
+    - Regular expressions for complex regulatory text pattern matching
+    - Token counting integration with Google's Gemini API
+    - Overlap algorithms for maintaining context between chunks
+    - AI prompt engineering for policy metadata extraction
+    - Exception handling for robust processing of varied document formats
+    - File I/O patterns for progress tracking and error logging
+
+Example Usage:
+    ```python
+    processor = ExecutiveOrderProcessor()
+    result = processor.process_and_store(
+        document_id="2024-12345",  # Federal Register document number
+        collection_name="executive_orders_2024"
+    )
+
+    logger = get_logger(__name__)
+    logger.info(f"Created {result['chunks_processed']} chunks")
+    logger.info(f"Stored {result['chunks_stored']} chunks in database")
+    ```
+
+Key Features:
+    - Preserves regulatory document structure and hierarchy
+    - Extracts comprehensive policy metadata using AI analysis
+    - Handles varied Executive Order formats and edge cases
+    - Optimizes chunk size for Executive Orders (shorter than court opinions)
+    - Provides sentence-level overlap for improved context
+    - Integrates with Federal Register API and Google AI services
+    - Supports multiple presidencies and administrative styles
+"""
 
 import json
 import logging
@@ -7,19 +98,87 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
-import google.generativeai as genai
+# Removed: google.generativeai import (no longer needed)
 
 from ..apis.federal_register import FederalRegisterClient
-from ..database.chroma_client import ChromaDBClient
-from ..metadata.gemini_generator import GeminiMetadataGenerator
+from ..database import QdrantDBClient
+from ..metadata.gpt5_generator import GPT5MetadataGenerator
 from ..utils import get_logger
-from ..utils.embeddings import GoogleEmbeddingsClient
+from ..utils.embeddings import OpenAIEmbeddingsClient
 from .base import BaseDocumentProcessor, ProcessedChunk
 
 
 @dataclass
 class ExecutiveOrderChunk:
-    """Represents a chunk of Executive Order text with metadata."""
+    """
+    Represents a semantically coherent chunk of Executive Order text with regulatory structure.
+
+    This data class captures a single chunk of regulatory text along with its
+    structural position within the Executive Order document. The metadata preserves
+    the hierarchical structure that is essential for regulatory analysis, compliance
+    tracking, and legal citation.
+
+    Executive Orders have a more standardized structure than court opinions,
+    following federal regulatory document conventions with numbered sections,
+    lettered subsections, and standardized header/tail blocks.
+
+    Attributes:
+        text (str): The actual text content of the chunk. Typically includes
+                   complete regulatory directives, policy statements, or
+                   administrative instructions. Usually 200-600 words
+                   (300-900 tokens) depending on section complexity.
+
+        chunk_type (str): The type of content this chunk represents:
+                         - 'header': Title, EO number, authority statement, preamble
+                         - 'section': Main policy directive or administrative section
+                         - 'tail': Signature block, filing info, billing codes
+
+        section_title (Optional[str]): Full section heading including number and title.
+                                      Examples:
+                                      - 'Sec. 1. Policy'
+                                      - 'Section 3. Agency Coordination'
+                                      - 'Sec. 4. Implementation Timeline'
+                                      None for header and tail chunks.
+
+        subsection (Optional[str]): Subsection identifier within major sections.
+                                   Examples: '(a)', '(b)', '(i)', '(1)'
+                                   Follows federal regulatory citation format.
+                                   None if chunk spans multiple subsections.
+
+        chunk_index (int): Zero-based position of this chunk within the entire
+                          Executive Order. Used for maintaining document order
+                          and creating unique identifiers. Essential for proper
+                          document reconstruction and regulatory citation.
+
+    Python Learning Notes:
+        - @dataclass automatically generates __init__, __repr__, __eq__ methods
+        - Type hints improve code clarity and enable IDE assistance
+        - Optional[str] indicates the field can be None for some chunk types
+        - Multi-line string in section_title comment shows example formatting
+        - Dataclass fields are ordered and used for string representation
+
+    Example:
+        ```python
+        chunk = ExecutiveOrderChunk(
+            text="The Secretary of Transportation shall, within 60 days...",
+            chunk_type="section",
+            section_title="Sec. 2. Agency Implementation Requirements",
+            subsection="(a)",
+            chunk_index=3
+        )
+
+        logger.info(f"Chunk {chunk.chunk_index}: {chunk.section_title}")
+        logger.info(f"Type: {chunk.chunk_type}, Subsection: {chunk.subsection}")
+        ```
+
+    Regulatory Structure Context:
+        Executive Orders follow standard federal document conventions:
+        - Header: Authority statement, background, policy declaration
+        - Sections: Numbered policy directives (Sec. 1, Sec. 2, etc.)
+        - Subsections: Lettered subdivisions ((a), (b), (c), etc.)
+        - Items: Numbered items within subsections ((1), (2), (3), etc.)
+        - Tail: Signature, effective date, Federal Register information
+    """
 
     text: str
     chunk_type: str  # 'header', 'section', 'tail'
@@ -32,7 +191,97 @@ class ExecutiveOrderChunk:
 
 @dataclass
 class ProcessedExecutiveOrderChunk:
-    """Represents a processed chunk with complete metadata for database storage."""
+    """
+    Complete processed Executive Order chunk ready for database storage with full metadata.
+
+    This comprehensive data class combines the chunk content with all available
+    metadata from multiple sources: the chunk's regulatory structure, the Federal
+    Register API data, and AI-extracted policy metadata from Gemini analysis.
+
+    The class represents the final form of a processed chunk before database
+    storage, containing everything needed for policy search, regulatory analysis,
+    and document reconstruction.
+
+    Data Sources:
+    1. **Chunk Structure**: From hierarchical chunking of regulatory text
+    2. **Federal Register API**: Official government metadata and document info
+    3. **AI Policy Analysis**: Policy metadata extracted by Gemini 2.5 Flash-Lite
+
+    Attributes:
+        # === Chunk Content and Regulatory Structure ===
+        text (str): The actual chunk text content
+        chunk_type (str): Type of content (header, section, tail)
+        section_title (Optional[str]): Full section heading with number
+        subsection (Optional[str]): Subsection identifier ((a), (b), etc.)
+        chunk_index (int): Position of chunk within the document
+
+        # === Federal Register API Metadata ===
+        document_number (str): Federal Register document number (e.g., "2024-12345")
+        title (str): Full title of the Executive Order
+        executive_order_number (str): EO number (e.g., "14123")
+        signing_date (str): Date the president signed the order
+        president (str): Name of the president who issued the order
+        citation (str): Federal Register citation (e.g., "89 FR 12345")
+        html_url (str): URL to HTML version on Federal Register
+        raw_text_url (str): URL to plain text version
+
+        # === Gemini AI Extracted Policy Metadata ===
+        summary (str): AI-generated executive summary of the order
+        policy_topics (List[str]): Policy areas and subject matter tags
+        impacted_agencies (List[str]): Federal agencies affected or tasked
+        legal_authorities (List[str]): Legal authorities cited (USC, CFR references)
+        executive_orders_referenced (List[str]): Other EOs referenced in text
+        executive_orders_revoked (List[str]): EOs explicitly revoked by this order
+        executive_orders_amended (List[str]): EOs explicitly amended by this order
+        economic_sectors (List[str]): Economic/societal sectors impacted
+
+    Python Learning Notes:
+        - Comprehensive dataclass with 16+ fields from multiple data sources
+        - Mix of primitive types (str, int) and collections (List[str])
+        - Optional types handle cases where regulatory structure varies
+        - Comments organize fields by data source for code clarity
+        - @dataclass handles complex constructor and representation automatically
+
+    Database Storage:
+        The to_dict() method converts this structure for Qdrant storage,
+        handling JSON serialization of list fields and None value conversion.
+
+    Policy Analysis Applications:
+        The rich metadata enables sophisticated policy analysis:
+        - Track which agencies are mentioned across presidencies
+        - Identify patterns in legal authorities cited
+        - Analyze EO cross-references and revocation patterns
+        - Search by policy topics and economic sectors
+        - Monitor implementation timelines and requirements
+
+    Example Usage:
+        ```python
+        processed_chunk = ProcessedExecutiveOrderChunk(
+            text="The Secretary of Energy shall establish...",
+            chunk_type="section",
+            section_title="Sec. 3. Implementation Requirements",
+            subsection="(a)",
+            chunk_index=5,
+            document_number="2024-12345",
+            title="Executive Order on Clean Energy",
+            executive_order_number="14150",
+            president="Biden",
+            policy_topics=["energy", "climate", "regulation"],
+            impacted_agencies=["DOE", "EPA"],
+            # ... other fields
+        )
+
+        # Convert for database storage
+        db_data = processed_chunk.to_dict()
+        ```
+
+    Regulatory Compliance:
+        The comprehensive metadata supports regulatory compliance analysis:
+        - Track implementation deadlines and requirements
+        - Identify affected regulations and statutes
+        - Monitor agency responsibilities and authorities
+        - Analyze policy continuity across administrations
+    """
 
     # Chunk content and structure
     text: str
@@ -65,7 +314,7 @@ class ProcessedExecutiveOrderChunk:
         """Convert to dictionary for database storage."""
         data = asdict(self)
 
-        # Convert list fields to JSON strings for ChromaDB compatibility
+        # Convert list fields to JSON strings for Qdrant compatibility
         list_fields = [
             "policy_topics",
             "impacted_agencies",
@@ -76,7 +325,7 @@ class ProcessedExecutiveOrderChunk:
             "economic_sectors",
         ]
 
-        # Process all fields to ensure ChromaDB compatibility
+        # Process all fields to ensure Qdrant compatibility
         processed_data = {}
         for field, value in data.items():
             if value is None:
@@ -497,9 +746,9 @@ class ExecutiveOrderChunker:
 class ExecutiveOrderMetadataGenerator:
     """Generate metadata for Executive Orders using Gemini."""
 
-    def __init__(self, gemini_api_key: Optional[str] = None):
+    def __init__(self, openai_api_key: Optional[str] = None):
         """Initialize the metadata generator."""
-        self.gemini_generator = GeminiMetadataGenerator(gemini_api_key)
+        self.gpt5_generator = GPT5MetadataGenerator(openai_api_key)
         self.logger = get_logger(__name__)
 
     def extract_executive_order_metadata(self, text: str) -> Dict[str, Any]:
@@ -514,11 +763,16 @@ class ExecutiveOrderMetadataGenerator:
         prompt = self._create_metadata_prompt(text)
 
         try:
-            # Use the existing Gemini generator's model
-            response = self.gemini_generator.model.generate_content(prompt)
+            # Use the GPT-5 responses API
+            response = self.gpt5_generator.client.responses.create(
+                model=self.gpt5_generator.model,
+                input=prompt,
+                reasoning={"effort": "minimal"},
+                text={"verbosity": "low"}
+            )
 
-            # Strip markdown code fences if present
-            response_text = response.text.strip()
+            # Get the response text
+            response_text = response.output_text.strip()
             if response_text.startswith("```json") and response_text.endswith("```"):
                 response_text = response_text[7:-3].strip()
             elif response_text.startswith("```") and response_text.endswith("```"):
@@ -622,17 +876,17 @@ class ExecutiveOrderProcessor(BaseDocumentProcessor):
 
     def __init__(
         self,
-        gemini_api_key: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
         target_chunk_size: int = 300,
         max_chunk_size: int = 400,
-        embeddings_client: Optional[GoogleEmbeddingsClient] = None,
-        db_client: Optional[ChromaDBClient] = None,
+        embeddings_client: Optional[OpenAIEmbeddingsClient] = None,
+        db_client: Optional[QdrantDBClient] = None,
         logger: Optional[logging.Logger] = None,
     ):
         """Initialize the processor with API clients.
 
         Args:
-            gemini_api_key: Google Gemini API key
+            openai_api_key: OpenAI API key
             target_chunk_size: Target size for chunks in tokens
             max_chunk_size: Maximum allowed chunk size in tokens
             embeddings_client: Client for generating embeddings
@@ -641,9 +895,9 @@ class ExecutiveOrderProcessor(BaseDocumentProcessor):
         """
         super().__init__(embeddings_client, db_client, logger)
         self.federal_register = FederalRegisterClient()
-        self.metadata_generator = ExecutiveOrderMetadataGenerator(gemini_api_key)
+        self.metadata_generator = ExecutiveOrderMetadataGenerator(openai_api_key)
         self.chunker = ExecutiveOrderChunker(
-            target_chunk_size, max_chunk_size, gemini_api_key
+            target_chunk_size, max_chunk_size, openai_api_key
         )
         self.logger = logger or get_logger(__name__)
 

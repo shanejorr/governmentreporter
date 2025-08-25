@@ -3,8 +3,9 @@
 from typing import Any, Dict, Optional
 
 from ..apis import CourtListenerClient
-from .scotus_opinion_chunker import SCOTUSOpinionProcessor
+from ..utils import get_logger
 from .base_bulk import BaseBulkProcessor
+from .scotus_opinion_chunker import SCOTUSOpinionProcessor
 
 
 class SCOTUSBulkProcessor(BaseBulkProcessor):
@@ -36,7 +37,7 @@ class SCOTUSBulkProcessor(BaseBulkProcessor):
             until_date: End date for opinion retrieval (YYYY-MM-DD, optional)
             rate_limit_delay: Delay between API requests in seconds
             max_retries: Maximum number of retries for failed requests
-            collection_name: ChromaDB collection name for storage
+            collection_name: Qdrant collection name for storage
         """
         # Initialize base class
         super().__init__(output_dir, collection_name, rate_limit_delay)
@@ -44,10 +45,16 @@ class SCOTUSBulkProcessor(BaseBulkProcessor):
         self.since_date = since_date
         self.until_date = until_date
         self.max_retries = max_retries
+        self.logger = get_logger(__name__)
 
         # Initialize clients
         self.court_client = CourtListenerClient()
         self.opinion_processor = SCOTUSOpinionProcessor()
+        
+        self.logger.info(
+            f"SCOTUSBulkProcessor initialized: dates={since_date} to {until_date}, "
+            f"collection={collection_name}"
+        )
 
     def _get_additional_progress_data(self) -> Dict[str, Any]:
         """Get additional data to save in progress file."""
@@ -70,25 +77,27 @@ class SCOTUSBulkProcessor(BaseBulkProcessor):
             True if successful, False otherwise
         """
         opinion_id = self._extract_document_id(opinion_summary)
-        print(f"Processing opinion {opinion_id}...")
+        self.logger.info(f"Processing opinion {opinion_id}")
 
         try:
             # Process and store opinion using the processor's integrated method
-            print("  Processing opinion with hierarchical chunking...")
+            self.logger.debug(f"Processing opinion {opinion_id} with hierarchical chunking")
             result = self.opinion_processor.process_and_store(
                 document_id=opinion_id, collection_name=self.collection_name
             )
 
             if result["success"]:
-                print(f"  Generated {result['chunks_processed']} chunks")
-                print(f"  ✅ Stored {result['chunks_stored']} chunks in database")
+                self.logger.info(
+                    f"Opinion {opinion_id}: Generated {result['chunks_processed']} chunks, "
+                    f"stored {result['chunks_stored']} chunks in database"
+                )
                 return True
             else:
                 raise Exception(result.get("error", "Unknown error during processing"))
 
         except Exception as e:
             error_msg = f"Failed to process opinion {opinion_id}: {str(e)}"
-            print(f"  ❌ {error_msg}")
+            self.logger.error(error_msg)
             self._log_error(opinion_id, error_msg, opinion_summary)
             return False
 
@@ -98,13 +107,11 @@ class SCOTUSBulkProcessor(BaseBulkProcessor):
         Returns:
             Total number of opinions matching the criteria
         """
-        try:
-            return self.court_client.get_scotus_opinion_count(
-                since_date=self.since_date, until_date=self.until_date
-            )
-        except Exception as e:
-            print(f"Warning: Could not get total count: {e}")
-            return 0
+        # Since the API doesn't provide a separate count endpoint,
+        # we return 0 to indicate unknown count
+        # The progress will still work based on processed documents
+        self.logger.info("Total count not available, progress will be tracked by documents processed")
+        return 0
 
     def get_documents_iterator(self, max_results=None, **kwargs):
         """Return an iterator over SCOTUS opinions.
@@ -116,12 +123,24 @@ class SCOTUSBulkProcessor(BaseBulkProcessor):
         Yields:
             Opinion summaries
         """
-        return self.court_client.list_scotus_opinions(
-            since_date=self.since_date,
-            until_date=self.until_date,
-            max_results=max_results,
-            rate_limit_delay=self.rate_limit_delay,
+        # Fetch documents using search_documents with full_content=False
+        # This avoids fetching full text and making extra API calls
+        # since we only need the IDs for bulk processing
+        limit = max_results if max_results is not None else 10000
+        
+        documents = self.court_client.search_documents(
+            query="",  # Empty query to get all documents
+            start_date=self.since_date,
+            end_date=self.until_date,
+            limit=limit,
+            full_content=False  # Only get summaries, not full content
         )
+        
+        # Convert Document objects to opinion summaries for compatibility
+        # The bulk processor only needs the ID from each document
+        for doc in documents:
+            # Create a minimal opinion summary with just the ID
+            yield {"id": int(doc.id)}
 
     def process_all_opinions(
         self, max_opinions: Optional[int] = None
@@ -138,7 +157,7 @@ class SCOTUSBulkProcessor(BaseBulkProcessor):
         if self.until_date:
             date_range = f"from {self.since_date} to {self.until_date}"
 
-        print(f"Starting SCOTUS opinion processing {date_range}")
+        self.logger.info(f"Starting SCOTUS opinion processing {date_range}")
 
         # Use the base class method
         return self.process_documents(max_documents=max_opinions)

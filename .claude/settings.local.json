@@ -18,7 +18,14 @@
       "Bash(git branch:*)",
       "Bash(git merge:*)",
       "WebFetch(domain:googleapis.github.io)",
-      "Bash(git pull:*)"
+      "Bash(cat:*)",
+      "WebSearch",
+      "WebFetch(domain:www.federalregister.gov)",
+      "WebFetch(domain:unblock.federalregister.gov)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:platform.openai.com)",
+      "Bash(git pull:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }

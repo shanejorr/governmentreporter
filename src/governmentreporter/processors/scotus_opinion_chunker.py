@@ -1,4 +1,84 @@
-"""Supreme Court Opinion Hierarchical Chunking and Metadata Extraction."""
+"""
+Supreme Court Opinion Hierarchical Chunking and Metadata Extraction
+
+This module implements sophisticated hierarchical chunking for Supreme Court opinions,
+recognizing the unique structure of judicial documents and extracting rich legal
+metadata for enhanced search and analysis capabilities.
+
+Core Components:
+    - OpinionChunk: Data structure for individual chunks with structural metadata
+    - ProcessedOpinionChunk: Complete chunk with all metadata for database storage
+    - SCOTUSOpinionChunker: Hierarchical chunking algorithm implementation
+    - SCOTUSOpinionProcessor: Complete processing pipeline coordination
+
+Hierarchical Chunking Strategy:
+    Supreme Court opinions have a well-defined structure that enables
+    sophisticated semantic chunking:
+
+    1. **Opinion Type Level**:
+       - Syllabus: Court's official summary of case and holding
+       - Majority Opinion: Primary reasoning and legal analysis
+       - Concurring Opinions: Additional reasoning by agreeing justices
+       - Dissenting Opinions: Alternative reasoning by disagreeing justices
+
+    2. **Sectional Level**:
+       - Roman numeral sections (I, II, III, etc.)
+       - Letter subsections (A, B, C, etc.)
+       - Numbered paragraphs within sections
+
+    3. **Chunk Level**:
+       - Paragraph-based chunking within sections
+       - Token-aware splitting (target ~600 tokens per chunk)
+       - Preservation of legal citation integrity
+
+Legal Metadata Extraction:
+    Using Google's Gemini 2.5 Flash-Lite API to extract:
+    - Legal topics and subject matter areas
+    - Key legal questions and issues addressed
+    - Constitutional provisions cited and interpreted
+    - Statutes and regulations analyzed
+    - Legal holdings and conclusions
+    - Cited cases and precedential relationships
+
+Processing Pipeline:
+    1. **Document Retrieval**: Fetch opinion and cluster data from CourtListener
+    2. **Structure Analysis**: Identify opinion types and sectional boundaries
+    3. **Hierarchical Chunking**: Create chunks preserving legal structure
+    4. **Metadata Extraction**: Extract legal metadata using AI analysis
+    5. **Citation Processing**: Build Bluebook citations and identify cited cases
+    6. **Embedding Generation**: Create vector embeddings for semantic search
+    7. **Database Storage**: Store in Qdrant with comprehensive metadata
+
+Python Learning Notes:
+    - @dataclass decorator for structured data with automatic methods
+    - Regular expressions for complex text pattern matching
+    - Generator functions and iterators for memory-efficient processing
+    - Abstract base class implementation for consistent interfaces
+    - Exception handling for robust error recovery
+    - Type hints for code clarity and IDE support
+    - API integration patterns with retry logic and rate limiting
+
+Example Usage:
+    ```python
+    processor = SCOTUSOpinionProcessor()
+    result = processor.process_and_store(
+        document_id="123456",
+        collection_name="scotus_opinions"
+    )
+
+    logger = get_logger(__name__)
+    logger.info(f"Created {result['chunks_processed']} chunks")
+    logger.info(f"Stored {result['chunks_stored']} chunks in database")
+    ```
+
+Key Features:
+    - Preserves legal document structure and hierarchy
+    - Extracts rich legal metadata using AI analysis
+    - Handles complex opinion formats and edge cases
+    - Provides comprehensive error handling and logging
+    - Optimizes for both processing speed and chunk quality
+    - Integrates with multiple APIs (CourtListener, Gemini, Qdrant)
+"""
 
 import json
 import logging
@@ -7,19 +87,85 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
-import google.generativeai as genai
+# Removed: google.generativeai import (no longer needed)
 
 from ..apis.court_listener import CourtListenerClient
-from ..database.chroma_client import ChromaDBClient
-from ..metadata.gemini_generator import GeminiMetadataGenerator
+from ..database import QdrantDBClient
+from ..metadata.gpt5_generator import GPT5MetadataGenerator
+from ..utils import get_logger
 from ..utils.citations import build_bluebook_citation
-from ..utils.embeddings import GoogleEmbeddingsClient
+from ..utils.embeddings import OpenAIEmbeddingsClient
 from .base import BaseDocumentProcessor, ProcessedChunk
 
 
 @dataclass
 class OpinionChunk:
-    """Represents a chunk of Supreme Court opinion text with metadata."""
+    """
+    Represents a semantically coherent chunk of Supreme Court opinion text.
+
+    This data class captures a single chunk of legal text along with its
+    structural position within the larger opinion document. The metadata
+    preserves the hierarchical structure that is crucial for legal analysis
+    and citation.
+
+    The @dataclass decorator automatically generates __init__, __repr__, and
+    __eq__ methods, reducing boilerplate code while ensuring consistent
+    data handling.
+
+    Attributes:
+        text (str): The actual text content of the chunk. This includes
+                   complete sentences and paragraphs that form a coherent
+                   semantic unit. Typically 400-800 words (600-1200 tokens).
+
+        opinion_type (str): The type of opinion this chunk belongs to:
+                           - 'syllabus': Court's official summary
+                           - 'majority': Primary opinion of the Court
+                           - 'concurring': Additional reasoning by agreeing justices
+                           - 'dissenting': Alternative reasoning by disagreeing justices
+
+        justice (Optional[str]): Name of the justice who authored this opinion.
+                                For majority opinions, this is typically the Court.
+                                For concurring/dissenting opinions, this identifies
+                                the specific justice. None for syllabus sections.
+
+        section (Optional[str]): Hierarchical section identifier within the opinion.
+                                Examples: 'I', 'II.A', 'III.B.1', etc.
+                                Follows traditional legal document structure.
+                                None if no clear sectional organization.
+
+        chunk_index (int): Zero-based index of this chunk within the opinion type.
+                          Used for maintaining document order and creating
+                          unique identifiers. Essential for proper document
+                          reconstruction and citation accuracy.
+
+    Python Learning Notes:
+        - @dataclass reduces code compared to manual __init__ definition
+        - Type hints improve code documentation and enable IDE assistance
+        - Optional[str] indicates the field can be None
+        - Dataclasses are hashable by default (useful for sets/dictionaries)
+        - Fields are ordered and used for __repr__ output
+
+    Example:
+        ```python
+        chunk = OpinionChunk(
+            text="The Supreme Court has long recognized that the Fourteenth Amendment...",
+            opinion_type="majority",
+            justice="Justice Roberts",
+            section="II.A",
+            chunk_index=3
+        )
+
+        logger.info(f"Opinion type: {chunk.opinion_type}")  # "majority"
+        logger.info(f"Chunk {chunk.chunk_index} in section {chunk.section}")
+        ```
+
+    Legal Structure Context:
+        Supreme Court opinions follow a traditional structure:
+        - Syllabus: Official summary prepared by Reporter of Decisions
+        - Majority: Primary reasoning binding on lower courts
+        - Concurring: Additional reasoning, not binding but persuasive
+        - Dissenting: Alternative view, not binding but historically important
+    """
 
     text: str
     opinion_type: str  # 'syllabus', 'majority', 'concurring', 'dissenting'
@@ -30,7 +176,85 @@ class OpinionChunk:
 
 @dataclass
 class ProcessedOpinionChunk:
-    """Represents a processed chunk with complete metadata for database storage."""
+    """
+    Complete processed chunk ready for database storage with full metadata.
+
+    This comprehensive data class combines the chunk content with all available
+    metadata from multiple sources: the chunk's structural position, the original
+    CourtListener API data, and AI-extracted legal metadata from Gemini.
+
+    The class represents the final form of a processed chunk before database
+    storage, containing everything needed for semantic search, legal analysis,
+    and document reconstruction.
+
+    Data Sources:
+    1. **Chunk Structure**: From hierarchical chunking algorithm
+    2. **Opinion API**: Raw data from CourtListener opinion endpoint
+    3. **Cluster API**: Case-level data from CourtListener cluster endpoint
+    4. **AI Analysis**: Legal metadata extracted by Gemini 2.5 Flash-Lite
+
+    Attributes:
+        # === Chunk Content and Structure ===
+        text (str): The actual chunk text content
+        opinion_type (str): Type of opinion (syllabus, majority, concurring, dissenting)
+        justice (Optional[str]): Authoring justice for concurring/dissenting opinions
+        section (Optional[str]): Section identifier within opinion (I, II.A, etc.)
+        chunk_index (int): Position of chunk within the document
+
+        # === CourtListener Opinion Endpoint Data ===
+        id (int): Unique CourtListener opinion ID
+        cluster_id (int): ID of the associated case cluster
+        resource_uri (str): API URI for the opinion resource
+        download_url (Optional[str]): URL for downloading original opinion file
+        author_str (str): String representation of opinion author
+        page_count (Optional[int]): Number of pages in original opinion
+        joined_by_str (str): Justices who joined this opinion
+        type (str): CourtListener opinion type classification
+        per_curiam (bool): Whether this is a per curiam opinion
+        date_created (str): ISO date when opinion was created
+        opinions_cited (List[str]): List of other opinions cited by this opinion
+
+        # === CourtListener Cluster Endpoint Data ===
+        case_name (str): Full name of the legal case (e.g., "Brown v. Board of Education")
+        citation (Optional[str]): Bluebook citation for the case
+
+        # === Gemini AI Extracted Legal Metadata ===
+        legal_topics (List[str]): AI-identified legal subject areas
+        key_legal_questions (List[str]): Main legal questions addressed
+        constitutional_provisions (List[str]): Constitutional sections analyzed
+        statutes_interpreted (List[str]): Federal statutes interpreted
+        holding (Optional[str]): AI-extracted summary of legal holding
+
+    Python Learning Notes:
+        - Large dataclass with many fields demonstrates comprehensive data modeling
+        - Mix of primitive types (str, int, bool) and collections (List[str])
+        - Optional types allow for missing data without breaking the structure
+        - Comments group related fields for better code organization
+        - @dataclass handles all the boilerplate for this complex structure
+
+    Database Storage:
+        The to_dict() method converts this structure to a format suitable for
+        Qdrant storage, handling type conversions and JSON serialization.
+
+    Example Usage:
+        ```python
+        processed_chunk = ProcessedOpinionChunk(
+            text="The Court holds that...",
+            opinion_type="majority",
+            justice=None,
+            section="II",
+            chunk_index=5,
+            id=123456,
+            case_name="Important Case v. Government",
+            legal_topics=["constitutional law", "due process"],
+            holding="Government action requires procedural safeguards",
+            # ... other fields
+        )
+
+        # Convert for database storage
+        db_data = processed_chunk.to_dict()
+        ```
+    """
 
     # Chunk content and structure
     text: str
@@ -69,7 +293,7 @@ class ProcessedOpinionChunk:
 
         data = asdict(self)
 
-        # Convert list fields to JSON strings for ChromaDB compatibility
+        # Convert list fields to JSON strings for Qdrant compatibility
         list_fields = [
             "opinions_cited",
             "legal_topics",
@@ -78,7 +302,7 @@ class ProcessedOpinionChunk:
             "statutes_interpreted",
         ]
 
-        # Process all fields to ensure ChromaDB compatibility
+        # Process all fields to ensure Qdrant compatibility
         processed_data = {}
         for field, value in data.items():
             if value is None:
@@ -443,18 +667,18 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
     def __init__(
         self,
         court_listener_token: Optional[str] = None,
-        gemini_api_key: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
         target_chunk_size: int = 600,
         max_chunk_size: int = 800,
-        embeddings_client: Optional[GoogleEmbeddingsClient] = None,
-        db_client: Optional[ChromaDBClient] = None,
+        embeddings_client: Optional[OpenAIEmbeddingsClient] = None,
+        db_client: Optional[QdrantDBClient] = None,
         logger: Optional[logging.Logger] = None,
     ):
         """Initialize the processor with API clients.
 
         Args:
             court_listener_token: Court Listener API token
-            gemini_api_key: Google Gemini API key
+            openai_api_key: OpenAI API key
             target_chunk_size: Target size for chunks in tokens
             max_chunk_size: Maximum allowed chunk size in tokens
             embeddings_client: Client for generating embeddings
@@ -463,9 +687,9 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
         """
         super().__init__(embeddings_client, db_client, logger)
         self.court_listener = CourtListenerClient(court_listener_token)
-        self.gemini_generator = GeminiMetadataGenerator(gemini_api_key)
+        self.gpt5_generator = GPT5MetadataGenerator(openai_api_key)
         self.chunker = SCOTUSOpinionChunker(
-            target_chunk_size, max_chunk_size, gemini_api_key
+            target_chunk_size, max_chunk_size, openai_api_key
         )
 
     def process_document(self, document_id: str) -> List[ProcessedChunk]:
@@ -580,7 +804,7 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
 
         # Step 5: Extract legal metadata (only once for the entire opinion)
         try:
-            legal_metadata = self.gemini_generator.extract_legal_metadata(plain_text)
+            legal_metadata = self.gpt5_generator.extract_legal_metadata(plain_text)
 
             # Log Gemini metadata extraction result
             if self.logger:
@@ -596,8 +820,8 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
                     f"Failed to extract legal metadata for opinion {opinion_id}: {str(e)}"
                 )
             else:
-                print(
-                    f"Warning: Failed to extract legal metadata for opinion {opinion_id}: {str(e)}"
+                self.logger.warning(
+                    f"Failed to extract legal metadata for opinion {opinion_id}: {str(e)}"
                 )
             legal_metadata = {
                 "legal_topics": [],

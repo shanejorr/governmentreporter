@@ -1,11 +1,46 @@
-"""Base bulk processor for shared functionality across document types."""
+"""
+Base Bulk Processing Framework for Large-Scale Document Processing
+
+This module provides the foundational infrastructure for processing thousands of
+government documents in batch operations. It implements a robust framework for
+handling large-scale document processing with progress tracking, error recovery,
+and performance monitoring.
+
+Core Features:
+    - Progress persistence across interruptions and restarts
+    - Comprehensive error logging with document-specific details
+    - Performance metrics and rate limiting
+    - Automatic resume capability for long-running operations
+    - Memory-efficient processing with configurable batch sizes
+
+Design Patterns:
+    - Abstract Base Class: Defines common bulk processing interface
+    - Template Method: Provides processing workflow framework
+    - Strategy Pattern: Allows different document processing strategies
+    - Observer Pattern: Progress tracking and reporting system
+
+Key Components:
+    - BaseBulkProcessor: Abstract base class for all bulk processors
+    - Progress tracking: JSON-based persistence for resume capability
+    - Error logging: JSONL format for structured error analysis
+    - Rate limiting: Configurable delays to respect API limits
+
+Python Learning Notes:
+    - ABC (Abstract Base Class) enforces implementation of required methods
+    - Set data structure provides O(1) lookup for processed document tracking
+    - Path class from pathlib provides modern file system operations
+    - Context managers (with statements) ensure proper file handling
+    - Exception handling prevents single failures from stopping entire process
+"""
 
 import json
 import time
+from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Set
-from abc import ABC, abstractmethod
+
+from ..utils import get_logger
 
 
 class BaseBulkProcessor(ABC):
@@ -33,9 +68,10 @@ class BaseBulkProcessor(ABC):
 
         Args:
             output_dir: Directory to store progress and error logs
-            collection_name: ChromaDB collection name for storage
+            collection_name: Qdrant collection name for storage
             rate_limit_delay: Delay between API requests in seconds
         """
+        self.logger = get_logger(__name__)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -49,6 +85,11 @@ class BaseBulkProcessor(ABC):
 
         # Load existing progress
         self._load_progress()
+        
+        self.logger.info(
+            f"BaseBulkProcessor initialized: output_dir={output_dir}, "
+            f"collection={collection_name}"
+        )
 
     def _load_progress(self) -> None:
         """Load previously processed document IDs from progress file."""
@@ -57,11 +98,11 @@ class BaseBulkProcessor(ABC):
                 with open(self.progress_file, "r") as f:
                     progress_data = json.load(f)
                     self.processed_ids = set(progress_data.get("processed_ids", []))
-                    print(
+                    self.logger.info(
                         f"Loaded progress: {len(self.processed_ids)} documents already processed"
                     )
             except Exception as e:
-                print(f"Warning: Could not load progress file: {e}")
+                self.logger.warning(f"Could not load progress file: {e}")
                 self.processed_ids = set()
 
     def _save_progress(self) -> None:
@@ -105,16 +146,16 @@ class BaseBulkProcessor(ABC):
         Returns:
             Dictionary with processing statistics
         """
-        print(f"Starting document processing")
-        print(f"Output directory: {self.output_dir}")
-        print(f"Collection: {self.collection_name}")
+        self.logger.info("Starting document processing")
+        self.logger.info(f"Output directory: {self.output_dir}")
+        self.logger.info(f"Collection: {self.collection_name}")
 
         # Get total count if available
         total_count = self.get_total_count(**kwargs)
         if total_count > 0:
-            print(f"Total documents available: {total_count:,}")
+            self.logger.info(f"Total documents available: {total_count:,}")
             remaining = total_count - len(self.processed_ids)
-            print(f"Remaining to process: {remaining:,}")
+            self.logger.info(f"Remaining to process: {remaining:,}")
 
         start_time = time.time()
         processed_count = 0
@@ -150,7 +191,7 @@ class BaseBulkProcessor(ABC):
                 elapsed = time.time() - start_time
                 if elapsed > 0 and (processed_count + failed_count) % 10 == 0:
                     rate = processed_count / elapsed if processed_count > 0 else 0
-                    print(
+                    self.logger.info(
                         f"Progress: {processed_count} processed, {failed_count} failed, "
                         f"{skipped_count} skipped, {rate:.2f} docs/sec"
                     )
@@ -160,29 +201,26 @@ class BaseBulkProcessor(ABC):
                     time.sleep(self.rate_limit_delay)
 
         except KeyboardInterrupt:
-            print("\n⚠️  Processing interrupted by user")
+            self.logger.warning("Processing interrupted by user")
         except Exception as e:
-            print(f"\n❌ Processing failed with error: {e}")
+            self.logger.error(f"Processing failed with error: {e}")
         finally:
             # Save final progress
             self._save_progress()
 
-            # Print summary
+            # Log summary
             elapsed = time.time() - start_time
-            print(f"\n{'='*60}")
-            print(f"Processing Summary:")
-            print(f"  Total processed: {processed_count}")
-            print(f"  Total failed: {failed_count}")
-            print(f"  Total skipped: {skipped_count}")
-            print(f"  Time elapsed: {elapsed/60:.1f} minutes")
-            print(
-                f"  Average rate: {processed_count/elapsed:.2f} docs/sec"
-                if elapsed > 0
-                else ""
-            )
-            print(f"  Progress saved to: {self.progress_file}")
+            self.logger.info("="*60)
+            self.logger.info("Processing Summary:")
+            self.logger.info(f"  Total processed: {processed_count}")
+            self.logger.info(f"  Total failed: {failed_count}")
+            self.logger.info(f"  Total skipped: {skipped_count}")
+            self.logger.info(f"  Time elapsed: {elapsed/60:.1f} minutes")
+            if elapsed > 0:
+                self.logger.info(f"  Average rate: {processed_count/elapsed:.2f} docs/sec")
+            self.logger.info(f"  Progress saved to: {self.progress_file}")
             if failed_count > 0:
-                print(f"  Error log: {self.error_log_file}")
+                self.logger.info(f"  Error log: {self.error_log_file}")
 
         return {
             "processed_count": processed_count,

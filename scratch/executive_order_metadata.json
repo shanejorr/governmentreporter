@@ -1,18 +1,92 @@
 {
-  "document_number": "2025-10800",
-  "title": "Leading the World in Supersonic Flight",
-  "executive_order_number": "14304",
-  "publication_date": "2025-06-11",
-  "signing_date": "2025-06-06",
-  "president": {
-    "identifier": "donald-trump",
-    "name": "Donald Trump"
-  },
-  "citation": "90 FR 24717",
-  "html_url": "https://www.federalregister.gov/documents/2025/06/11/2025-10800/leading-the-world-in-supersonic-flight",
-  "pdf_url": "https://www.govinfo.gov/content/pkg/FR-2025-06-11/pdf/2025-10800.pdf",
-  "full_text_xml_url": "https://www.federalregister.gov/documents/full_text/xml/2025/06/11/2025-10800.xml",
+  "abstract": null,
+  "action": null,
+  "agencies": [
+    {
+      "raw_name": "EXECUTIVE OFFICE OF THE PRESIDENT",
+      "name": "Executive Office of the President",
+      "id": 538,
+      "url": "https://www.federalregister.gov/agencies/executive-office-of-the-president",
+      "json_url": "https://www.federalregister.gov/api/v1/agencies/538",
+      "parent_id": null,
+      "slug": "executive-office-of-the-president"
+    }
+  ],
   "body_html_url": "https://www.federalregister.gov/documents/full_text/html/2025/06/11/2025-10800.html",
+  "cfr_references": [],
+  "citation": "90 FR 24717",
+  "comment_url": null,
+  "comments_close_on": null,
+  "correction_of": null,
+  "corrections": [],
+  "dates": null,
+  "disposition_notes": null,
+  "docket_ids": [],
+  "dockets": [],
+  "document_number": "2025-10800",
+  "effective_on": null,
+  "end_page": 24718,
+  "executive_order_notes": null,
+  "executive_order_number": "14304",
+  "explanation": null,
+  "full_text_xml_url": "https://www.federalregister.gov/documents/full_text/xml/2025/06/11/2025-10800.xml",
+  "html_url": "https://www.federalregister.gov/documents/2025/06/11/2025-10800/leading-the-world-in-supersonic-flight",
+  "images": {
+    "TRUMP": {
+      "large": "https://img.federalregister.gov/TRUMP/TRUMP_large.png",
+      "original_size": "https://img.federalregister.gov/TRUMP/TRUMP_original_size.png"
+    }
+  },
+  "images_metadata": {
+    "TRUMP": {
+      "large": {
+        "identifier": "TRUMP",
+        "content_type": "image/png",
+        "size": 4837,
+        "width": 278,
+        "sha": "e76cde96299eaa37d682560f39698be8",
+        "url": "https://img.federalregister.gov/TRUMP/TRUMP_large.png",
+        "height": 209
+      },
+      "original_size": {
+        "identifier": "TRUMP",
+        "content_type": "image/png",
+        "size": 2334,
+        "width": 494,
+        "sha": "11642e3879ff805f30105d2de6901584",
+        "url": "https://img.federalregister.gov/TRUMP/TRUMP_original_size.png",
+        "height": 371
+      }
+    }
+  },
+  "json_url": "https://www.federalregister.gov/api/v1/documents/2025-10800?publication_date=2025-06-11",
+  "mods_url": "https://www.govinfo.gov/metadata/granule/FR-2025-06-11/2025-10800/mods.xml",
+  "not_received_for_publication": null,
+  "page_length": 2,
+  "page_views": {
+    "count": 2135,
+    "last_updated": "2025-08-24 14:15:03 -0400"
+  },
+  "pdf_url": "https://www.govinfo.gov/content/pkg/FR-2025-06-11/pdf/2025-10800.pdf",
+  "presidential_document_number": "14304",
+  "proclamation_number": null,
+  "public_inspection_pdf_url": "https://public-inspection.federalregister.gov/2025-10800.pdf?1749568928",
+  "publication_date": "2025-06-11",
   "raw_text_url": "https://www.federalregister.gov/documents/full_text/text/2025/06/11/2025-10800.txt",
-  "json_url": "https://www.federalregister.gov/api/v1/documents/2025-10800?publication_date=2025-06-11"
+  "regulation_id_number_info": {},
+  "regulation_id_numbers": [],
+  "regulations_dot_gov_info": {
+    "checked_regulationsdotgov_at": "2025-06-11T08:02:36Z"
+  },
+  "regulations_dot_gov_url": null,
+  "significant": null,
+  "signing_date": "2025-06-06",
+  "start_page": 24717,
+  "subtype": "Executive Order",
+  "title": "Leading the World in Supersonic Flight",
+  "toc_doc": "Leading the World in Supersonic Flight (EO 14304)",
+  "toc_subject": null,
+  "topics": [],
+  "type": "Presidential Document",
+  "volume": 90
 }

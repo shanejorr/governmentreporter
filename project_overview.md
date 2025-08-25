@@ -14,7 +14,7 @@ This document provides a comprehensive overview of every file in the GovernmentR
 
 ## Project Structure
 
-GovernmentReporter is a Python library for retrieving, processing, and storing US federal government publications in a ChromaDB vector database for retrieval augmented generation (RAG). The system uses hierarchical document chunking to break down complex legal documents, stores semantic embeddings and metadata in ChromaDB, and can retrieve current document text on-demand from government APIs.
+GovernmentReporter is a Python library for retrieving, processing, and storing US federal government publications in a Qdrant vector database for retrieval augmented generation (RAG). The system uses hierarchical document chunking to break down complex legal documents, stores semantic embeddings and metadata in Qdrant, and can retrieve current document text on-demand from government APIs.
 
 ```
 src/governmentreporter/
@@ -84,26 +84,26 @@ scripts/
 
 #### `src/governmentreporter/database/__init__.py`
 - **Purpose**: Database module initialization
-- **Exports**: ChromaDBClient
+- **Exports**: QdrantDBClient
 
-#### `src/governmentreporter/database/chroma_client.py`
-- **Purpose**: ChromaDB integration for vector storage
+#### `src/governmentreporter/database/qdrant_client.py`
+- **Purpose**: Qdrant integration for vector storage
 - **Key Methods**:
   - `get_or_create_collection()`: Collection management
-  - `store_scotus_opinion()`: Store opinion with embeddings and metadata
-  - `get_opinion_by_id()`: Retrieve specific opinion
+  - `store_document()`: Store document with embeddings and metadata
+  - `get_document_by_id()`: Retrieve specific document
   - `list_collections()`: Collection management
-- **Features**: Metadata normalization for ChromaDB compatibility, persistent storage
-- **Storage**: Local ChromaDB instance at `./chroma_db`
+- **Features**: Metadata storage with payload support, persistent storage
+- **Storage**: Local Qdrant instance at `./qdrant_db`
 
 ### Metadata Generation (`src/governmentreporter/metadata/`)
 
 #### `src/governmentreporter/metadata/__init__.py`
 - **Purpose**: Metadata module initialization
-- **Exports**: GeminiMetadataGenerator
+- **Exports**: GPT5MetadataGenerator
 
-#### `src/governmentreporter/metadata/gemini_generator.py`
-- **Purpose**: AI-powered legal metadata extraction using Google Gemini 2.5 Flash-Lite
+#### `src/governmentreporter/metadata/gpt5_generator.py`
+- **Purpose**: AI-powered legal metadata extraction using OpenAI GPT-5-nano
 - **Key Methods**:
   - `extract_legal_metadata()`: Extract comprehensive legal metadata from court opinions
   - `_create_legal_metadata_prompt()`: Structured prompt for legal analysis
@@ -124,7 +124,7 @@ scripts/
   - `BaseDocumentProcessor` abstract class: Common processing interface
 - **Key Methods**:
   - `process_document()`: Abstract method for document processing
-  - `store_chunks()`: Store processed chunks in ChromaDB
+  - `store_chunks()`: Store processed chunks in Qdrant
   - `process_and_store()`: Complete processing pipeline
 - **Features**: Integrated embedding generation, error handling, progress tracking
 
@@ -166,7 +166,7 @@ scripts/
   2. Detect sections within each opinion type
   3. Chunk within sections respecting paragraph boundaries
   4. Target 600 tokens, max 800 tokens per chunk
-- **Features**: Google token counting, justice attribution, section detection, integrated metadata
+- **Features**: Token counting, justice attribution, section detection, integrated metadata
 
 #### `src/governmentreporter/processors/executive_order_bulk.py`
 - **Purpose**: Bulk processing system for Executive Orders (inherits from BaseBulkProcessor)
@@ -203,7 +203,7 @@ scripts/
 
 #### `src/governmentreporter/utils/__init__.py`
 - **Purpose**: Utilities module initialization and common functions
-- **Exports**: All configuration functions, GoogleEmbeddingsClient, build_bluebook_citation, get_logger
+- **Exports**: All configuration functions, OpenAIEmbeddingsClient, build_bluebook_citation, get_logger
 - **Features**: Centralized logger configuration
 
 #### `src/governmentreporter/utils/config.py`
@@ -212,15 +212,15 @@ scripts/
   - `get_court_listener_token()`: Required Court Listener API token
   - `get_federal_register_token()`: Optional Federal Register token (planned)
   - `get_congress_gov_token()`: Optional Congress.gov token (planned)
-  - `get_google_gemini_api_key()`: Required Google Gemini API key
+  - `get_openai_api_key()`: Required OpenAI API key
 - **Features**: Environment variable validation with helpful error messages
 
 #### `src/governmentreporter/utils/embeddings.py`
-- **Purpose**: Google embeddings generation using text-embedding-004 model
+- **Purpose**: OpenAI embeddings generation using text-embedding-3-small model
 - **Key Methods**:
   - `generate_embedding()`: Generate semantic embeddings for text
-- **Features**: Text truncation (10K chars), retrieval-optimized embeddings
-- **Model**: Google's text-embedding-004 with "retrieval_document" task type
+- **Features**: Text truncation (32K chars), retrieval-optimized embeddings
+- **Model**: OpenAI's text-embedding-3-small for cost-effective embeddings
 
 #### `src/governmentreporter/utils/citations.py`
 - **Purpose**: Legal citation formatting utilities
@@ -247,7 +247,7 @@ scripts/
   - `--until-date`: End date for processing (optional, NEW)
   - `--max-opinions`: Limit processing count
   - `--rate-limit-delay`: API rate limiting
-  - `--collection-name`: ChromaDB collection
+  - `--collection-name`: Qdrant collection
   - `--count-only`: Show count without processing
   - `--stats`: Show current statistics
 - **Usage**: `uv run python scripts/download_scotus_bulk.py --since-date 2020-01-01 --until-date 2024-12-31`
@@ -264,7 +264,7 @@ scripts/
   - `end_date` (required): End date in YYYY-MM-DD format
   - `--output-dir`: Progress/error log directory
   - `--max-orders`: Limit processing count
-  - `--collection-name`: ChromaDB collection
+  - `--collection-name`: Qdrant collection
   - `--stats`: Show statistics without processing
 - **Usage**: `uv run python scripts/process_executive_orders.py 2024-01-01 2024-12-31`
 
@@ -283,9 +283,9 @@ src/governmentreporter/processors/scotus_bulk.py (SCOTUSBulkProcessor)
 src/governmentreporter/processors/scotus_opinion_chunker.py (SCOTUSOpinionProcessor)
     ↓ coordinates these components:
     ├── src/governmentreporter/apis/court_listener.py (CourtListenerClient)
-    ├── src/governmentreporter/metadata/gemini_generator.py (GeminiMetadataGenerator)
-    ├── src/governmentreporter/utils/embeddings.py (GoogleEmbeddingsClient)
-    └── src/governmentreporter/database/chroma_client.py (ChromaDBClient)
+    ├── src/governmentreporter/metadata/gpt5_generator.py (GPT5MetadataGenerator)
+    ├── src/governmentreporter/utils/embeddings.py (OpenAIEmbeddingsClient)
+    └── src/governmentreporter/database/qdrant_client.py (QdrantDBClient)
 ```
 
 #### Executive Order Processing Flow:
@@ -298,8 +298,8 @@ src/governmentreporter/processors/executive_order_chunker.py (ExecutiveOrderProc
     ↓ coordinates these components:
     ├── src/governmentreporter/apis/federal_register.py (FederalRegisterClient)
     ├── src/governmentreporter/processors/executive_order_chunker.py (ExecutiveOrderMetadataGenerator)
-    ├── src/governmentreporter/utils/embeddings.py (GoogleEmbeddingsClient)
-    └── src/governmentreporter/database/chroma_client.py (ChromaDBClient)
+    ├── src/governmentreporter/utils/embeddings.py (OpenAIEmbeddingsClient)
+    └── src/governmentreporter/database/qdrant_client.py (QdrantDBClient)
 ```
 
 [REMOVED - MCP server integration no longer part of project]
@@ -311,7 +311,7 @@ All components depend on:
 src/governmentreporter/utils/config.py
     ↓ provides API keys/tokens to
     ├── APIs (court_listener.py, federal_register.py)
-    ├── Metadata generators (gemini_generator.py)
+    ├── Metadata generators (gpt5_generator.py)
     └── Embedding clients (embeddings.py)
 
 src/governmentreporter/utils/__init__.py
@@ -324,17 +324,17 @@ src/governmentreporter/utils/__init__.py
 #### For SCOTUS Opinions:
 1. **Fetch**: CourtListenerClient retrieves opinion data and cluster metadata
 2. **Chunk**: SCOTUSOpinionChunker hierarchically splits text by opinion type → sections → paragraphs
-3. **Metadata**: GeminiMetadataGenerator extracts legal metadata using AI
-4. **Embed**: GoogleEmbeddingsClient generates semantic embeddings
-5. **Store**: ChromaDBClient stores chunks with embeddings and metadata
-6. **Search**: Applications can query ChromaDB for semantic search
+3. **Metadata**: GPT5MetadataGenerator extracts legal metadata using AI
+4. **Embed**: OpenAIEmbeddingsClient generates semantic embeddings
+5. **Store**: QdrantDBClient stores chunks with embeddings and metadata
+6. **Search**: Applications can query Qdrant for semantic search
 
 #### For Executive Orders:
 1. **Fetch**: FederalRegisterClient retrieves order data and raw text
 2. **Chunk**: ExecutiveOrderChunker hierarchically splits text by header → sections → subsections → tail
 3. **Metadata**: ExecutiveOrderMetadataGenerator extracts policy metadata using AI
-4. **Embed**: GoogleEmbeddingsClient generates semantic embeddings
-5. **Store**: ChromaDBClient stores chunks with embeddings and metadata
+4. **Embed**: OpenAIEmbeddingsClient generates semantic embeddings
+5. **Store**: QdrantDBClient stores chunks with embeddings and metadata
 
 ---
 
@@ -343,7 +343,7 @@ src/governmentreporter/utils/__init__.py
 ### External API Dependencies:
 - **CourtListener API**: SCOTUS opinion data (`court_listener.py`)
 - **Federal Register API**: Executive order data (`federal_register.py`)
-- **Google Gemini API**: Metadata extraction and embeddings (`gemini_generator.py`, `embeddings.py`)
+- **OpenAI API**: Metadata extraction and embeddings (`gpt5_generator.py`, `embeddings.py`)
 
 ### Internal Component Dependencies:
 
@@ -363,12 +363,8 @@ src/governmentreporter/utils/__init__.py
 - **Bulk processors** inherit from `processors/base_bulk.py` (NEW)
 
 ### Database Dependencies:
-- **All processors** store data via `database/chroma_client.py`
-- **ChromaDB** provides persistent vector storage for embeddings and metadata
-- **Applications** can query ChromaDB directly for semantic search
+- **All processors** store data via `database/qdrant_client.py`
+- **Qdrant** provides persistent vector storage for embeddings and metadata
+- **Applications** can query Qdrant directly for semantic search
 
 This architecture enables a modular, scalable system where each component has clear responsibilities and well-defined interfaces, allowing for easy extension to additional government data sources while maintaining consistency in processing and storage.
-
-<function_calls>
-<invoke name="TodoWrite">
-<parameter name="todos">[{"id": "1", "content": "Analyze all files in src/ directory structure", "status": "completed"}, {"id": "2", "content": "Analyze all files in scripts/ directory", "status": "completed"}, {"id": "3", "content": "Document file purposes and functionality", "status": "completed"}, {"id": "4", "content": "Identify and document file interactions between scripts and src", "status": "completed"}, {"id": "5", "content": "Create project_overview.md with comprehensive documentation", "status": "completed"}]

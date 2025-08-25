@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs with access to US federal government publications through RAG. The system stores semantic embeddings and metadata in ChromaDB, then retrieves current document text on-demand from government APIs.
+GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs with access to US federal government publications through RAG. The system stores semantic embeddings and metadata in Qdrant, then retrieves current document text on-demand from government APIs.
 
 ## Development Commands
 
@@ -28,17 +28,17 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 
 ### Core Components
 - **APIs Module** (`src/governmentreporter/apis/`): Government API clients (CourtListener, Federal Register, Congress.gov)
-- **Database Module** (`src/governmentreporter/database/`): ChromaDB integration for vector storage
-- **Metadata Module** (`src/governmentreporter/metadata/`): Document metadata generation using Gemini 2.5 Flash-Lite API
+- **Database Module** (`src/governmentreporter/database/`): Qdrant integration for vector storage
+- **Metadata Module** (`src/governmentreporter/metadata/`): Document metadata generation using GPT-5-nano API
 - **Utils Module** (`src/governmentreporter/utils/`): Shared utilities and helpers
 
 ### Data Flow
-1. **Indexing**: Fetch documents → Generate embeddings → Create metadata with Gemini 2.5 Flash-Lite → Store in ChromaDB
-2. **Querying**: Query embedding → ChromaDB search → API retrieval → Return fresh content
+1. **Indexing**: Fetch documents → Generate embeddings → Create metadata with GPT-5-nano → Store in Qdrant
+2. **Querying**: Query embedding → Qdrant search → API retrieval → Return fresh content
 
 ### External Dependencies
-- **ChromaDB**: Vector database for embeddings and metadata storage
-- **Gemini 2.5 Flash-Lite API**: Google's API for metadata generation
+- **Qdrant**: Vector database for embeddings and metadata storage
+- **OpenAI API**: GPT-5-nano for metadata generation, text-embedding-3-small for embeddings
 - **Government APIs**: CourtListener, Federal Register, Congress.gov for document retrieval
 
 ## Key Implementation Notes
@@ -49,9 +49,10 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 - MCP protocol integration for LLM compatibility
 - Real-time document retrieval ensures fresh government data
 - I am an intermediate Python programmer. If I ask you to do something and you do not think it is the best approach please say so. If I ask a question please answer truthfully. Do not simply agree with me.
+- Extensively document the code. The documentation should say what the code does and how it works. Include robust docstrings to all classes and methods. The documentation should explain the code, classes, and methods to a beginner Python programmer. Documentatino should also serve as a Python tutorial and help a beginner learn Python.
 
 ## Dependencies
 
 - Python 3.11+ (specified in pyproject.toml)
-- Core: chromadb, mcp, ollama, httpx, requests, beautifulsoup4, feedparser
+- Core: qdrant-client, mcp, openai, ollama, httpx, requests, beautifulsoup4, feedparser
 - Dev: black, isort, mypy, pytest
