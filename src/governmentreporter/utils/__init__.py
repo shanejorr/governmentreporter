@@ -34,7 +34,7 @@ import yaml
 
 from .citations import build_bluebook_citation
 from .config import get_court_listener_token, get_openai_api_key
-from .embeddings import OpenAIEmbeddingsClient
+# from .embeddings import OpenAIEmbeddingsClient  # Module removed
 
 # Global flag to track if logging has been configured
 _logging_configured = False
@@ -161,7 +161,7 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
 __all__ = [
     "get_court_listener_token",
     "get_openai_api_key",
-    "OpenAIEmbeddingsClient",
+    # "OpenAIEmbeddingsClient",  # Module removed
     "build_bluebook_citation",
     "setup_logging",
     "get_logger",
