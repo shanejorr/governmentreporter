@@ -298,7 +298,7 @@ class QdrantDBClient:
             print("Opinion stored successfully")
         """
         # Ensure collection exists
-        self.get_or_create_collection(collection_name, len(embedding))
+        self.get_or_create_collection(collection_name)
 
         # Prepare payload with both text and metadata
         payload = {
@@ -322,7 +322,6 @@ class QdrantDBClient:
         self.logger.debug(
             "Stored document %s in Qdrant collection %s", document_id, collection_name
         )
-
 
     def get_document_by_id(
         self, document_id: str, collection_name: str = "federal_court_scotus_opinions"
