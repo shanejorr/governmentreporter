@@ -23,7 +23,8 @@
       "WebFetch(domain:www.federalregister.gov)",
       "WebFetch(domain:unblock.federalregister.gov)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:platform.openai.com)"
+      "WebFetch(domain:platform.openai.com)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }
