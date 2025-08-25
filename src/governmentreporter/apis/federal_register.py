@@ -42,7 +42,7 @@ Integration Points:
     - Inherits from GovernmentAPIClient (base.py)
     - Uses logging utilities for operation tracking (utils/)
     - Returns standardized Document objects for processing pipeline
-    - Integrates with ChromaDB for document storage and retrieval
+    - Integrates with Qdrant for document storage and retrieval
 
 Python Learning Notes:
     - API client design patterns: Separation of concerns, error handling

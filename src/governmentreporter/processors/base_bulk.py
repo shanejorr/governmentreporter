@@ -68,7 +68,7 @@ class BaseBulkProcessor(ABC):
 
         Args:
             output_dir: Directory to store progress and error logs
-            collection_name: ChromaDB collection name for storage
+            collection_name: Qdrant collection name for storage
             rate_limit_delay: Delay between API requests in seconds
         """
         self.logger = get_logger(__name__)

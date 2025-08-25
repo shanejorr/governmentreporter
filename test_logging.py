@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from governmentreporter.utils import setup_logging, get_logger
 from governmentreporter.apis.court_listener import CourtListenerClient
 from governmentreporter.apis.federal_register import FederalRegisterClient
-from governmentreporter.database.chroma_client import ChromaDBClient
+from governmentreporter.database import QdrantDBClient
 
 
 def test_basic_logging():
@@ -81,11 +81,11 @@ def test_database_logging():
     logger.info("Testing database module logging")
     
     try:
-        db_client = ChromaDBClient(db_path="./test_chroma_db")
-        print("✓ ChromaDB client initialized with logging")
+        db_client = QdrantDBClient(db_path="./test_qdrant_db")
+        print("✓ QdrantDB client initialized with logging")
     except Exception as e:
-        logger.error(f"Failed to initialize ChromaDB client: {e}")
-        print(f"✗ ChromaDB client initialization failed: {e}")
+        logger.error(f"Failed to initialize QdrantDB client: {e}")
+        print(f"✗ QdrantDB client initialization failed: {e}")
 
 
 def test_processor_logging():

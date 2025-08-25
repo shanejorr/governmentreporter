@@ -5,14 +5,14 @@ Bulk Processing Script for US Executive Orders from the Federal Register API.
 This script serves as the command-line interface for downloading and processing Executive Orders
 in bulk from the Federal Register API. It orchestrates the complete document processing pipeline
 for presidential executive orders, implementing hierarchical chunking, AI-powered metadata
-extraction, embedding generation, and storage in ChromaDB.
+extraction, embedding generation, and storage in Qdrant.
 
 Key Features:
     - Fetches Executive Orders from Federal Register API by date range
     - Implements hierarchical chunking (header, sections, subsections, tail)
     - Extracts rich policy metadata using Google Gemini 2.5 Flash-Lite AI
     - Generates semantic embeddings for intelligent search
-    - Stores processed chunks in ChromaDB vector database
+    - Stores processed chunks in Qdrant vector database
     - Provides resumable operations with progress tracking
     - Detects and skips duplicate documents already in database
     - Handles errors gracefully with detailed logging
@@ -21,7 +21,7 @@ The script works in conjunction with:
     - ExecutiveOrderBulkProcessor: Manages bulk processing workflow (src/governmentreporter/processors/executive_order_bulk.py)
     - ExecutiveOrderProcessor: Processes individual orders (src/governmentreporter/processors/executive_order_chunker.py)
     - FederalRegisterClient: Interfaces with Federal Register API (src/governmentreporter/apis/federal_register.py)
-    - ChromaDBClient: Manages vector database storage (src/governmentreporter/database/chroma_client.py)
+    - QdrantDBClient: Manages vector database storage (src/governmentreporter/database/qdrant_client.py)
 
 Usage Examples:
     # Process all Executive Orders from 2024
@@ -46,7 +46,7 @@ Arguments:
 Options:
     --output-dir: Output directory for progress and error logs (default: raw-data/executive_orders_data)
     --max-orders: Maximum number of orders to process (default: all)
-    --collection-name: ChromaDB collection name (default: federal-executive-orders)
+    --collection-name: Qdrant collection name (default: federal-executive-orders)
     --stats: Show current processing statistics without processing
 
 Environment Requirements:
@@ -139,7 +139,7 @@ def main() -> None:
         end_date: End date for order retrieval (YYYY-MM-DD format, required)
         --output-dir: Directory for storing progress files and error logs
         --max-orders: Limit on number of orders to process (for testing)
-        --collection-name: Name of ChromaDB collection for storage
+        --collection-name: Name of Qdrant collection for storage
         --stats: Flag to display current processing statistics only
 
     Exit Codes:
@@ -200,7 +200,7 @@ def main() -> None:
     parser.add_argument(
         "--collection-name",
         default="federal-executive-orders",
-        help="ChromaDB collection name (default: federal-executive-orders)",
+        help="Qdrant collection name (default: federal-executive-orders)",
     )
     parser.add_argument(
         "--stats",

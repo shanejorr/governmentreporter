@@ -28,7 +28,7 @@ Processing Workflow:
     2. **Hierarchical Chunking**: Break documents into semantic chunks based on structure
     3. **Metadata Generation**: Extract legal metadata using Gemini 2.5 Flash-Lite
     4. **Embedding Creation**: Generate vector embeddings using Google's text embeddings
-    5. **Database Storage**: Store chunks and metadata in ChromaDB for retrieval
+    5. **Database Storage**: Store chunks and metadata in Qdrant for retrieval
 
 Document Types Supported:
     - Supreme Court Opinions: Full-text opinions with syllabus, majority, concurring, and dissenting sections
@@ -36,7 +36,7 @@ Document Types Supported:
 
 Integration Points:
     - APIs: CourtListener, Federal Register
-    - Database: ChromaDB for vector storage
+    - Database: Qdrant for vector storage
     - AI Services: Google Gemini for metadata, Google text embeddings for vectors
     - Utils: Citation formatting, embeddings client, logging utilities
 
@@ -62,7 +62,7 @@ Example Usage:
     ```
 
 Dependencies:
-    - chromadb: Vector database for embeddings storage
+    - qdrant-client: Vector database for embeddings storage
     - google.generativeai: Gemini API for metadata extraction
     - dataclasses: Python's structured data classes
     - abc: Abstract base class functionality

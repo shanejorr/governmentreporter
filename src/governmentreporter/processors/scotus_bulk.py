@@ -37,7 +37,7 @@ class SCOTUSBulkProcessor(BaseBulkProcessor):
             until_date: End date for opinion retrieval (YYYY-MM-DD, optional)
             rate_limit_delay: Delay between API requests in seconds
             max_retries: Maximum number of retries for failed requests
-            collection_name: ChromaDB collection name for storage
+            collection_name: Qdrant collection name for storage
         """
         # Initialize base class
         super().__init__(output_dir, collection_name, rate_limit_delay)

@@ -25,7 +25,7 @@ Key Design Patterns:
 
 Integration with GovernmentReporter:
 - Called during document indexing to enrich metadata
-- Works with ChromaDB storage to persist extracted information
+- Works with Qdrant storage to persist extracted information
 - Integrates with the utils.config module for API key management
 - Designed to process documents from the APIs module (CourtListener, etc.)
 """
@@ -70,7 +70,7 @@ class GeminiMetadataGenerator:
 
     Integration Points:
         - Uses utils.config.get_google_gemini_api_key() for API key management
-        - Returns metadata compatible with ChromaDB storage format
+        - Returns metadata compatible with Qdrant storage format
         - Designed to work with document text from the APIs module
     """
 
@@ -175,7 +175,7 @@ class GeminiMetadataGenerator:
 
         Integration Notes:
             The returned metadata is designed to integrate seamlessly with:
-            - ChromaDB storage for vector database persistence
+            - Qdrant storage for vector database persistence
             - Search interfaces for filtered document retrieval
             - LLM context enhancement for better legal reasoning
         """
@@ -272,7 +272,7 @@ You are a legal expert analyzing a US Supreme Court opinion. Extract the followi
 
 Requirements:
 - Return ONLY a valid JSON object with these exact field names
-- All field names must be in lowercase  
+- All field names must be in lowercase
 - For constitutional_provisions and statutes_interpreted, be very precise with citations
 - Use legal bluebook format when citing statutes and constitutional provisions
 - Only include actual legal citations, not general references

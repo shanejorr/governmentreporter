@@ -6,7 +6,7 @@ for analyzing Supreme Court opinions and other legal texts.
 
 The metadata module is part of the GovernmentReporter system's data processing
 pipeline, where documents are analyzed to extract semantic meaning and structured
-information that can be stored alongside vector embeddings in ChromaDB.
+information that can be stored alongside vector embeddings in Qdrant.
 
 Python Learning Notes:
 - This is a package initialization file (__init__.py) that controls what gets

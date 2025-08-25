@@ -30,7 +30,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from ..database.chroma_client import ChromaDBClient
+from ..database import QdrantDBClient
 from ..utils import get_logger
 from ..utils.embeddings import GoogleEmbeddingsClient
 
@@ -126,7 +126,7 @@ class BaseDocumentProcessor(ABC):
     def __init__(
         self,
         embeddings_client: Optional[GoogleEmbeddingsClient] = None,
-        db_client: Optional[ChromaDBClient] = None,
+        db_client: Optional[QdrantDBClient] = None,
         logger: Optional[logging.Logger] = None,
     ):
         """
@@ -141,8 +141,8 @@ class BaseDocumentProcessor(ABC):
                 vector embeddings from text. If None, creates a new instance with
                 default configuration. The embeddings are used for semantic search
                 in the RAG system.
-            db_client (Optional[ChromaDBClient]): Client for ChromaDB vector database
-                storage. If None, creates a new instance. ChromaDB stores both the
+            db_client (Optional[QdrantDBClient]): Client for Qdrant vector database
+                storage. If None, creates a new instance. Qdrant stores both the
                 embeddings and metadata for retrieval.
             logger (Optional[logging.Logger]): Logger instance for debug and info
                 output. If None, no logging will be performed. Useful for tracking
@@ -173,7 +173,7 @@ class BaseDocumentProcessor(ABC):
             ```
         """
         self.embeddings_client = embeddings_client or GoogleEmbeddingsClient()
-        self.db_client = db_client or ChromaDBClient()
+        self.db_client = db_client or QdrantDBClient()
         self.logger = logger or get_logger(__name__)
 
     @abstractmethod
@@ -251,24 +251,24 @@ class BaseDocumentProcessor(ABC):
         self, chunks: List[ProcessedChunk], collection_name: str, document_id: str
     ) -> int:
         """
-        Store processed document chunks in the ChromaDB vector database.
+        Store processed document chunks in the Qdrant vector database.
 
-        This method handles the technical details of storing chunks in ChromaDB,
+        This method handles the technical details of storing chunks in Qdrant,
         including ID generation, metadata formatting, and batch insertion. It
         provides comprehensive logging for debugging and monitoring.
 
         The storage process:
-        1. Creates or retrieves the specified ChromaDB collection
+        1. Creates or retrieves the specified Qdrant collection
         2. Generates unique IDs for each chunk (document_id + chunk_index)
         3. Prepares data for batch insertion (IDs, embeddings, documents, metadata)
         4. Adds source document ID and chunk index to metadata
-        5. Performs batch insertion to ChromaDB
+        5. Performs batch insertion to Qdrant
         6. Logs detailed information about the storage process
 
         Args:
             chunks (List[ProcessedChunk]): List of processed chunks to store.
                 Each chunk must have text, embedding, metadata, and chunk_index.
-            collection_name (str): Name of the ChromaDB collection where chunks
+            collection_name (str): Name of the Qdrant collection where chunks
                 will be stored. Collections group related documents (e.g.,
                 "scotus_opinions", "executive_orders").
             document_id (str): Unique identifier of the source document. Used
@@ -285,7 +285,7 @@ class BaseDocumentProcessor(ABC):
             - f-strings: f"{variable}_chunk_{index}" for string formatting
             - Batch operations are more efficient than individual insertions
 
-        ChromaDB Storage Format:
+        Qdrant Storage Format:
             - IDs: "document_id_chunk_0", "document_id_chunk_1", etc.
             - Embeddings: List of floats representing text vectors
             - Documents: The actual text content for each chunk
@@ -336,7 +336,7 @@ class BaseDocumentProcessor(ABC):
             metadatas.append(metadata)
 
             if self.logger:
-                self.logger.debug(f"\n--- ChromaDB Entry {i+1}/{len(chunks)} ---")
+                self.logger.debug(f"\n--- Qdrant Entry {i+1}/{len(chunks)} ---")
                 self.logger.debug(f"Chunk ID: {chunk_id}")
                 self.logger.debug(f"Text length: {len(chunk.text)} characters")
                 self.logger.debug(
@@ -354,13 +354,13 @@ class BaseDocumentProcessor(ABC):
                     if key in metadata:
                         self.logger.debug(f"  {key}: {metadata[key]}")
 
-        # Store in ChromaDB
+        # Store in Qdrant
         collection.add(
             ids=ids, embeddings=embeddings, documents=documents, metadatas=metadatas
         )
 
         if self.logger:
-            self.logger.info(f"✅ Successfully stored {len(chunks)} chunks in ChromaDB")
+            self.logger.info(f"✅ Successfully stored {len(chunks)} chunks in Qdrant")
 
         return len(chunks)
 
@@ -387,7 +387,7 @@ class BaseDocumentProcessor(ABC):
             document_id (str): Unique identifier for the document to process.
                 Format depends on document type (CourtListener ID, Federal
                 Register document number, etc.).
-            collection_name (str): Name of the ChromaDB collection for storage.
+            collection_name (str): Name of the Qdrant collection for storage.
                 Should be consistent for each document type to enable effective
                 searching and organization.
 

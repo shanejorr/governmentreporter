@@ -31,7 +31,7 @@ class ExecutiveOrderBulkProcessor(BaseBulkProcessor):
 
         Args:
             output_dir: Directory to store progress and error logs
-            collection_name: ChromaDB collection name for storage
+            collection_name: Qdrant collection name for storage
             rate_limit_delay: Delay between API requests in seconds
         """
         # Initialize base class
@@ -64,7 +64,7 @@ class ExecutiveOrderBulkProcessor(BaseBulkProcessor):
             True if the document exists in the database, False otherwise
         """
         try:
-            # Check in ChromaDB collection
+            # Check in Qdrant collection
             collection = self.order_processor.db_client.get_or_create_collection(
                 self.collection_name
             )

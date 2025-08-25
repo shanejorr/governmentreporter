@@ -88,7 +88,7 @@ class Document:
     Integration Notes:
         - Used by all API clients as return type
         - Processed by chunkers and processors
-        - Stored in ChromaDB with embeddings
+        - Stored in Qdrant with embeddings
         - Provides consistent interface for different document types
 
     Python Learning Notes:

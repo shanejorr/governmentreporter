@@ -3,20 +3,20 @@ GovernmentReporter: US Federal Government Document Retrieval and RAG Database Sy
 
 This is the main package initialization file for GovernmentReporter, a comprehensive Python
 library designed for retrieving, processing, and storing US federal government publications
-in a ChromaDB vector database for retrieval augmented generation (RAG) applications.
+in a Qdrant vector database for retrieval augmented generation (RAG) applications.
 
 The GovernmentReporter system provides:
     - Hierarchical document chunking for complex legal documents
     - AI-powered metadata extraction using Google Gemini 2.5 Flash-Lite
     - Semantic embedding generation for intelligent search
-    - ChromaDB integration for vector storage and retrieval
+    - Qdrant integration for vector storage and retrieval
     - Support for multiple government data sources (SCOTUS opinions, Executive Orders)
     - Resumable bulk processing with progress tracking
     - Rich legal and policy metadata extraction
 
 Package Structure:
     - apis/: Government API client implementations (CourtListener, Federal Register)
-    - database/: ChromaDB vector database integration
+    - database/: Qdrant vector database integration
     - metadata/: AI-powered metadata generation using Gemini
     - processors/: Document processing pipelines with hierarchical chunking
     - utils/: Shared utilities for configuration, embeddings, and citations
@@ -29,13 +29,13 @@ Integration Points:
     - Works with scripts/download_scotus_bulk.py for SCOTUS opinion processing
     - Works with scripts/process_executive_orders.py for Executive Order processing
     - Can be used programmatically as a library for custom workflows
-    - Designed for integration with LLM applications via ChromaDB
+    - Designed for integration with LLM applications via Qdrant
 
 Environment Requirements:
     - Python 3.11+ (specified in pyproject.toml)
     - COURT_LISTENER_API_TOKEN (for SCOTUS opinions)
     - GOOGLE_GEMINI_API_KEY (for metadata and embeddings)
-    - ChromaDB for vector storage
+    - Qdrant for vector storage
 
 Python Learning Notes:
     - __version__: Special variable that defines the package version

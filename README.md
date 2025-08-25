@@ -1,10 +1,10 @@
 # GovernmentReporter
 
-A Python library for retrieving, processing, and storing US federal government publications in a ChromaDB vector database for retrieval augmented generation (RAG) using **hierarchical document chunking**.
+A Python library for retrieving, processing, and storing US federal government publications in a Qdrant vector database for retrieval augmented generation (RAG) using **hierarchical document chunking**.
 
 ## Overview
 
-GovernmentReporter creates a ChromaDB vector database storing semantic embeddings and rich metadata for hierarchically chunked US federal Supreme Court opinions and Executive Orders. The system uses **intelligent chunking** to break down documents by their natural structure - Supreme Court opinions by opinion type (syllabus, majority, concurring, dissenting) and sections, Executive Orders by header/sections/subsections/tail - enabling precise legal research and retrieval.
+GovernmentReporter creates a Qdrant vector database storing semantic embeddings and rich metadata for hierarchically chunked US federal Supreme Court opinions and Executive Orders. The system uses **intelligent chunking** to break down documents by their natural structure - Supreme Court opinions by opinion type (syllabus, majority, concurring, dissenting) and sections, Executive Orders by header/sections/subsections/tail - enabling precise legal research and retrieval.
 
 ## Features
 
@@ -52,7 +52,7 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
 
 - **Language**: Python 3.11+
 - **Package Manager**: uv (modern Python package manager)
-- **Vector Database**: ChromaDB (embeddings + metadata only)
+- **Vector Database**: Qdrant (embeddings + metadata only)
 - **AI Services**:
   - Google Gemini 2.5 Flash-Lite API for metadata generation
   - Google text-embedding-004 for semantic embeddings
@@ -60,7 +60,7 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
   - CourtListener API (Supreme Court opinions)
   - Federal Register API (Executive Orders)
 - **Development**: VS Code with Claude Code support
-- **Storage**: ChromaDB vector database
+- **Storage**: Qdrant vector database
 
 ## Data Flow
 
@@ -74,11 +74,11 @@ GovernmentReporter creates a ChromaDB vector database storing semantic embedding
      - Constitutional provisions and statutes cited
      - Court holdings and policy summaries
    - Generate embeddings for each chunk (SCOTUS: 600/800 tokens, EO: 300/400 tokens)
-   - Store chunk embeddings + metadata in ChromaDB
+   - Store chunk embeddings + metadata in Qdrant
 
 ### 2. **Semantic Search & Retrieval**:
    - Convert user query to embedding
-   - Search ChromaDB for semantically similar **chunks**
+   - Search Qdrant for semantically similar **chunks**
    - Retrieve chunk metadata with opinion type, justice, section info
    - Return contextually relevant legal content to LLM
 
@@ -268,11 +268,11 @@ The system follows a structured processing pipeline:
    - Each chunk gets its own embedding vector
 
 5. **Storage**:
-   - Store chunk embeddings + metadata in ChromaDB
+   - Store chunk embeddings + metadata in Qdrant
 
 6. **Search & Retrieval**:
    - User query converted to embedding
-   - ChromaDB returns similar chunk metadata
+   - Qdrant returns similar chunk metadata
    - Fresh content can be retrieved on-demand from government APIs
 
 ### Example Query Flows
@@ -281,7 +281,7 @@ The system follows a structured processing pipeline:
 ```
 User: "Find recent Supreme Court decisions about environmental regulation"
 
-1. Query embedded and searched in ChromaDB across SCOTUS chunks
+1. Query embedded and searched in Qdrant across SCOTUS chunks
 2. Matching chunks returned with metadata:
    - Case names, citations, dates
    - Opinion type (syllabus, majority, concurring, dissenting)
@@ -294,7 +294,7 @@ User: "Find recent Supreme Court decisions about environmental regulation"
 ```
 User: "Find Executive Orders about aviation regulatory reform"
 
-1. Query searches Executive Order chunks in ChromaDB
+1. Query searches Executive Order chunks in Qdrant
 2. Matching chunks returned with metadata:
    - EO numbers, titles, signing dates, presidents
    - Policy topics: ["aviation", "regulatory reform", "transportation"]
@@ -394,7 +394,7 @@ GovernmentReporter automatically identifies and chunks Supreme Court opinions us
 5. **Metadata Extraction**: Use Gemini 2.5 Flash-Lite for rich legal metadata
 6. **Citation Formatting**: Build proper bluebook citations from cluster data
 7. **Embedding Generation**: Create semantic embeddings for each chunk
-8. **Database Storage**: Store chunks with complete metadata in ChromaDB
+8. **Database Storage**: Store chunks with complete metadata in Qdrant
 
 **Executive Orders:**
 1. **API Retrieval**: Fetch order data and raw text from Federal Register
@@ -404,7 +404,7 @@ GovernmentReporter automatically identifies and chunks Supreme Court opinions us
 5. **Metadata Extraction**: Use Gemini 2.5 Flash-Lite for policy metadata
 6. **API Metadata**: Extract signing date, president, agencies from API response
 7. **Embedding Generation**: Create semantic embeddings for each chunk
-8. **Database Storage**: Store chunks with complete metadata in ChromaDB
+8. **Database Storage**: Store chunks with complete metadata in Qdrant
 
 ## Government Data Sources
 

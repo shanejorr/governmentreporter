@@ -48,7 +48,7 @@ Processing Pipeline:
     4. **Policy Analysis**: Extract metadata using AI analysis of policy content
     5. **Citation Processing**: Identify legal authorities and EO cross-references
     6. **Embedding Generation**: Create vector embeddings for semantic search
-    7. **Database Storage**: Store in ChromaDB with comprehensive policy metadata
+    7. **Database Storage**: Store in Qdrant with comprehensive policy metadata
 
 Executive Order Format:
     Presidential Executive Orders follow Title 3 Code of Federal Regulations format:
@@ -101,7 +101,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import google.generativeai as genai
 
 from ..apis.federal_register import FederalRegisterClient
-from ..database.chroma_client import ChromaDBClient
+from ..database import QdrantDBClient
 from ..metadata.gemini_generator import GeminiMetadataGenerator
 from ..utils import get_logger
 from ..utils.embeddings import GoogleEmbeddingsClient
@@ -243,7 +243,7 @@ class ProcessedExecutiveOrderChunk:
         - @dataclass handles complex constructor and representation automatically
 
     Database Storage:
-        The to_dict() method converts this structure for ChromaDB storage,
+        The to_dict() method converts this structure for Qdrant storage,
         handling JSON serialization of list fields and None value conversion.
 
     Policy Analysis Applications:
@@ -314,7 +314,7 @@ class ProcessedExecutiveOrderChunk:
         """Convert to dictionary for database storage."""
         data = asdict(self)
 
-        # Convert list fields to JSON strings for ChromaDB compatibility
+        # Convert list fields to JSON strings for Qdrant compatibility
         list_fields = [
             "policy_topics",
             "impacted_agencies",
@@ -325,7 +325,7 @@ class ProcessedExecutiveOrderChunk:
             "economic_sectors",
         ]
 
-        # Process all fields to ensure ChromaDB compatibility
+        # Process all fields to ensure Qdrant compatibility
         processed_data = {}
         for field, value in data.items():
             if value is None:
@@ -875,7 +875,7 @@ class ExecutiveOrderProcessor(BaseDocumentProcessor):
         target_chunk_size: int = 300,
         max_chunk_size: int = 400,
         embeddings_client: Optional[GoogleEmbeddingsClient] = None,
-        db_client: Optional[ChromaDBClient] = None,
+        db_client: Optional[QdrantDBClient] = None,
         logger: Optional[logging.Logger] = None,
     ):
         """Initialize the processor with API clients.

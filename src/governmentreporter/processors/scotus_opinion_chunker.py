@@ -47,7 +47,7 @@ Processing Pipeline:
     4. **Metadata Extraction**: Extract legal metadata using AI analysis
     5. **Citation Processing**: Build Bluebook citations and identify cited cases
     6. **Embedding Generation**: Create vector embeddings for semantic search
-    7. **Database Storage**: Store in ChromaDB with comprehensive metadata
+    7. **Database Storage**: Store in Qdrant with comprehensive metadata
 
 Python Learning Notes:
     - @dataclass decorator for structured data with automatic methods
@@ -77,7 +77,7 @@ Key Features:
     - Handles complex opinion formats and edge cases
     - Provides comprehensive error handling and logging
     - Optimizes for both processing speed and chunk quality
-    - Integrates with multiple APIs (CourtListener, Gemini, ChromaDB)
+    - Integrates with multiple APIs (CourtListener, Gemini, Qdrant)
 """
 
 import json
@@ -90,7 +90,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import google.generativeai as genai
 
 from ..apis.court_listener import CourtListenerClient
-from ..database.chroma_client import ChromaDBClient
+from ..database import QdrantDBClient
 from ..metadata.gemini_generator import GeminiMetadataGenerator
 from ..utils import get_logger
 from ..utils.citations import build_bluebook_citation
@@ -234,7 +234,7 @@ class ProcessedOpinionChunk:
 
     Database Storage:
         The to_dict() method converts this structure to a format suitable for
-        ChromaDB storage, handling type conversions and JSON serialization.
+        Qdrant storage, handling type conversions and JSON serialization.
 
     Example Usage:
         ```python
@@ -293,7 +293,7 @@ class ProcessedOpinionChunk:
 
         data = asdict(self)
 
-        # Convert list fields to JSON strings for ChromaDB compatibility
+        # Convert list fields to JSON strings for Qdrant compatibility
         list_fields = [
             "opinions_cited",
             "legal_topics",
@@ -302,7 +302,7 @@ class ProcessedOpinionChunk:
             "statutes_interpreted",
         ]
 
-        # Process all fields to ensure ChromaDB compatibility
+        # Process all fields to ensure Qdrant compatibility
         processed_data = {}
         for field, value in data.items():
             if value is None:
@@ -671,7 +671,7 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
         target_chunk_size: int = 600,
         max_chunk_size: int = 800,
         embeddings_client: Optional[GoogleEmbeddingsClient] = None,
-        db_client: Optional[ChromaDBClient] = None,
+        db_client: Optional[QdrantDBClient] = None,
         logger: Optional[logging.Logger] = None,
     ):
         """Initialize the processor with API clients.

@@ -8,13 +8,13 @@ The module uses Google's text-embedding-004 model, which is optimized for:
 - Document retrieval and semantic search
 - High-quality embeddings for legal and government text
 - Efficient processing of large document collections
-- Integration with vector databases like ChromaDB
+- Integration with vector databases like Qdrant
 
 Integration with GovernmentReporter:
     The GoogleEmbeddingsClient is used throughout the system for:
     - Document indexing: Converting legal documents into searchable vectors
     - Query processing: Converting user queries into vectors for similarity search
-    - ChromaDB storage: Providing embeddings for vector database operations
+    - Qdrant storage: Providing embeddings for vector database operations
     - Semantic search: Enabling meaning-based rather than keyword-based search
 
 Vector Embeddings Explained:
@@ -63,7 +63,7 @@ class GoogleEmbeddingsClient:
     Integration Points:
         - Used by document indexing processes to create searchable vectors
         - Called during query processing for semantic search
-        - Integrated with ChromaDB for vector storage and retrieval
+        - Integrated with Qdrant for vector storage and retrieval
         - Part of the metadata generation pipeline
 
     Model Details:
@@ -152,7 +152,7 @@ class GoogleEmbeddingsClient:
             This method is called by:
             - Document indexing processes to create searchable vectors
             - Query processing to convert user searches into comparable vectors
-            - ChromaDB integration for vector storage and similarity search
+            - Qdrant integration for vector storage and similarity search
             - Metadata generation pipelines for content analysis
 
         Vector Properties:

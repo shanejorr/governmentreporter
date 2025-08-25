@@ -5,7 +5,7 @@ Bulk Processing Script for US Supreme Court Opinions from CourtListener API.
 This script serves as the command-line interface for downloading and processing Supreme Court
 opinions in bulk from the CourtListener API. It orchestrates the complete document processing
 pipeline for SCOTUS opinions, from API retrieval through hierarchical chunking, metadata
-extraction, embedding generation, and storage in ChromaDB.
+extraction, embedding generation, and storage in Qdrant.
 
 Key Features:
     - Downloads SCOTUS opinions from CourtListener API (dating back to 1900)
@@ -13,7 +13,7 @@ Key Features:
     - Implements hierarchical document chunking (by opinion type, sections, paragraphs)
     - Generates rich legal metadata using Google Gemini 2.5 Flash-Lite AI
     - Creates semantic embeddings for intelligent search capabilities
-    - Stores processed chunks in ChromaDB vector database
+    - Stores processed chunks in Qdrant vector database
     - Provides resumable operations with progress tracking
     - Handles errors gracefully with detailed logging
 
@@ -21,7 +21,7 @@ The script works in conjunction with:
     - SCOTUSBulkProcessor: Manages bulk processing workflow (src/governmentreporter/processors/scotus_bulk.py)
     - SCOTUSOpinionProcessor: Processes individual opinions (src/governmentreporter/processors/scotus_opinion_chunker.py)
     - CourtListenerClient: Interfaces with CourtListener API (src/governmentreporter/apis/court_listener.py)
-    - ChromaDBClient: Manages vector database storage (src/governmentreporter/database/chroma_client.py)
+    - QdrantDBClient: Manages vector database storage (src/governmentreporter/database/qdrant_client.py)
 
 Example Usage:
     # Process recent opinions (last 5 years)
@@ -81,7 +81,7 @@ def main() -> None:
         --until-date: Optional end date for opinion retrieval (YYYY-MM-DD format)
         --max-opinions: Limit on number of opinions to process (for testing)
         --rate-limit-delay: Delay between API requests to respect rate limits
-        --collection-name: Name of ChromaDB collection for storage
+        --collection-name: Name of Qdrant collection for storage
         --count-only: Flag to only display count without processing
         --stats: Flag to display current processing statistics
 
@@ -135,7 +135,7 @@ def main() -> None:
     parser.add_argument(
         "--collection-name",
         default="federal_court_scotus_opinions",
-        help="ChromaDB collection name (default: federal_court_scotus_opinions)",
+        help="Qdrant collection name (default: federal_court_scotus_opinions)",
     )
     parser.add_argument(
         "--count-only",

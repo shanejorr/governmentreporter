@@ -13,7 +13,7 @@ Integration Points:
     - The config module provides secure access to API credentials for all
       external services (Court Listener, Federal Register, Congress.gov, Google)
     - The embeddings module generates vector representations of legal documents
-      for storage in ChromaDB and semantic search capabilities
+      for storage in Qdrant and semantic search capabilities
     - The citations module formats legal references according to Bluebook standards
     - The logger utility ensures consistent log formatting across all modules
 
