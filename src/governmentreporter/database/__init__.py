@@ -39,11 +39,12 @@ Example Usage:
     db = QdrantDBClient(db_path="./my_qdrant_db")
 
     # Store a document with embeddings
-    db.store_scotus_opinion(
-        opinion_id="scotus_2024_001",
-        plain_text="Supreme Court opinion text...",
+    db.store_document(
+        document_id="scotus_2024_001",
+        text="Supreme Court opinion text...",
         embedding=[0.1, 0.2, 0.3, ...],  # 1536-dimensional vector
-        metadata={"case_name": "Sample v. Example", "year": 2024}
+        metadata={"case_name": "Sample v. Example", "year": 2024},
+        collection_name="federal_court_scotus_opinions"
     )
 """
 

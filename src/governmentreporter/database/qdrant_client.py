@@ -206,9 +206,7 @@ class QdrantDBClient:
                 # Create new collection with vector configuration for OpenAI text-embedding-3-small
                 self.client.create_collection(
                     collection_name=collection_name,
-                    vectors_config=VectorParams(
-                        size=1536, distance=Distance.COSINE
-                    ),
+                    vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
                 )
                 self.logger.info("Created new collection: %s", collection_name)
             else:
@@ -325,26 +323,6 @@ class QdrantDBClient:
             "Stored document %s in Qdrant collection %s", document_id, collection_name
         )
 
-    def store_scotus_opinion(
-        self,
-        opinion_id: str,
-        plain_text: str,
-        embedding: List[float],
-        metadata: Dict[str, Any],
-    ) -> None:
-        """
-        Store a Supreme Court opinion (backward compatibility wrapper).
-
-        This method maintains compatibility with existing code while using
-        the more general store_document method internally.
-        """
-        self.store_document(
-            document_id=opinion_id,
-            text=plain_text,
-            embedding=embedding,
-            metadata=metadata,
-            collection_name="federal_court_scotus_opinions",
-        )
 
     def get_document_by_id(
         self, document_id: str, collection_name: str = "federal_court_scotus_opinions"
@@ -558,7 +536,7 @@ class QdrantDBClient:
             raise ValueError("Number of documents must match number of embeddings")
 
         # Ensure collection exists
-        self.get_or_create_collection(collection_name, len(embeddings[0]))
+        self.get_or_create_collection(collection_name)
 
         # Create points
         points = []

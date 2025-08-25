@@ -90,8 +90,8 @@ scripts/
 - **Purpose**: Qdrant integration for vector storage
 - **Key Methods**:
   - `get_or_create_collection()`: Collection management
-  - `store_scotus_opinion()`: Store opinion with embeddings and metadata
-  - `get_opinion_by_id()`: Retrieve specific opinion
+  - `store_document()`: Store document with embeddings and metadata
+  - `get_document_by_id()`: Retrieve specific document
   - `list_collections()`: Collection management
 - **Features**: Metadata storage with payload support, persistent storage
 - **Storage**: Local Qdrant instance at `./qdrant_db`
