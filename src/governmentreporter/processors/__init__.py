@@ -15,7 +15,7 @@ Core Architecture:
 
     2. **Document-Specific Chunkers** (scotus_opinion_chunker.py, executive_order_chunker.py):
        - Specialized hierarchical chunking algorithms for each document type
-       - Metadata extraction using Gemini AI
+       - Metadata extraction using OpenAI GPT-5
        - Integration with government APIs for data retrieval
 
     3. **Bulk Processing Layer** (scotus_bulk.py, executive_order_bulk.py):
@@ -26,8 +26,8 @@ Core Architecture:
 Processing Workflow:
     1. **Document Retrieval**: Fetch documents from government APIs
     2. **Hierarchical Chunking**: Break documents into semantic chunks based on structure
-    3. **Metadata Generation**: Extract legal metadata using Gemini 2.5 Flash-Lite
-    4. **Embedding Creation**: Generate vector embeddings using Google's text embeddings
+    3. **Metadata Generation**: Extract legal metadata using GPT-5-nano
+    4. **Embedding Creation**: Generate vector embeddings using OpenAI's text-embedding-3-small
     5. **Database Storage**: Store chunks and metadata in Qdrant for retrieval
 
 Document Types Supported:
@@ -37,7 +37,7 @@ Document Types Supported:
 Integration Points:
     - APIs: CourtListener, Federal Register
     - Database: Qdrant for vector storage
-    - AI Services: Google Gemini for metadata, Google text embeddings for vectors
+    - AI Services: OpenAI GPT-5 for metadata, OpenAI text embeddings for vectors
     - Utils: Citation formatting, embeddings client, logging utilities
 
 Python Learning Notes:
@@ -63,7 +63,7 @@ Example Usage:
 
 Dependencies:
     - qdrant-client: Vector database for embeddings storage
-    - google.generativeai: Gemini API for metadata extraction
+    - openai: OpenAI API for metadata extraction and embeddings
     - dataclasses: Python's structured data classes
     - abc: Abstract base class functionality
     - logging: Comprehensive logging system

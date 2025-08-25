@@ -27,11 +27,12 @@ Vector Embeddings Explained:
 
 Python Learning Notes:
     - The class follows the composition pattern with OpenAI's library
+    - Optional parameters allow flexibility in API key management
     - Exception handling ensures graceful failure with descriptive messages
     - Type hints specify that embeddings are List[float] for clarity
 """
 
-from typing import List
+from typing import ClassVar, List
 import logging
 
 from openai import OpenAI

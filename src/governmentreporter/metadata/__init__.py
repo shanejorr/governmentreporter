@@ -1,7 +1,7 @@
 """Metadata generation using AI models.
 
 This module provides tools for extracting structured metadata from legal documents
-using artificial intelligence models. Currently focused on Google's Gemini API
+using artificial intelligence models. Currently focused on OpenAI's GPT-5 API
 for analyzing Supreme Court opinions and other legal texts.
 
 The metadata module is part of the GovernmentReporter system's data processing
@@ -16,22 +16,22 @@ Python Learning Notes:
   being accidentally imported
 
 Components:
-- GeminiMetadataGenerator: Main class for AI-powered metadata extraction using
-  Google's Gemini 2.5 Flash-Lite model
+- GPT5MetadataGenerator: Main class for AI-powered metadata extraction using
+  OpenAI's GPT-5-nano model
 
 Integration Points:
-- Connects to Google Gemini API for natural language processing
+- Connects to OpenAI API for natural language processing
 - Works with the database module to store extracted metadata
 - Integrates with the APIs module to process documents from government sources
 - Used by the main indexing pipeline to enrich document storage
 
 Example Usage:
-    from governmentreporter.metadata import GeminiMetadataGenerator
+    from governmentreporter.metadata import GPT5MetadataGenerator
 
-    generator = GeminiMetadataGenerator()
+    generator = GPT5MetadataGenerator()
     metadata = generator.extract_legal_metadata(document_text)
 """
 
-from .gemini_generator import GeminiMetadataGenerator
+from .gpt5_generator import GPT5MetadataGenerator
 
-__all__ = ["GeminiMetadataGenerator"]
+__all__ = ["GPT5MetadataGenerator"]

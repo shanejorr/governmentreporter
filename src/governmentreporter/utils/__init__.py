@@ -5,13 +5,13 @@ functionality of the GovernmentReporter MCP server. The utilities are organized
 into specialized modules for different concerns:
 
 - config.py: Environment variable management for API keys and tokens
-- embeddings.py: Text embedding generation using Google's AI models
+- embeddings.py: Text embedding generation using OpenAI's models
 - citations.py: Legal citation formatting utilities
 - __init__.py: Centralized imports and common utilities like logging
 
 Integration Points:
     - The config module provides secure access to API credentials for all
-      external services (Court Listener, Federal Register, Congress.gov, Google)
+      external services (Court Listener, Federal Register, Congress.gov, OpenAI)
     - The embeddings module generates vector representations of legal documents
       for storage in Qdrant and semantic search capabilities
     - The citations module formats legal references according to Bluebook standards
@@ -33,8 +33,8 @@ from typing import Optional
 import yaml
 
 from .citations import build_bluebook_citation
-from .config import get_court_listener_token, get_google_gemini_api_key
-from .embeddings import GoogleEmbeddingsClient
+from .config import get_court_listener_token, get_openai_api_key
+from .embeddings import OpenAIEmbeddingsClient
 
 # Global flag to track if logging has been configured
 _logging_configured = False
@@ -160,8 +160,8 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
 
 __all__ = [
     "get_court_listener_token",
-    "get_google_gemini_api_key",
-    "GoogleEmbeddingsClient",
+    "get_openai_api_key",
+    "OpenAIEmbeddingsClient",
     "build_bluebook_citation",
     "setup_logging",
     "get_logger",

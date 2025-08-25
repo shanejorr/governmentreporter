@@ -13,7 +13,7 @@ The module follows security best practices by:
 Integration with GovernmentReporter:
     This module is imported by all components that need external API access:
     - APIs module: Uses tokens to authenticate with government data sources
-    - Metadata module: Uses Google Gemini API key for AI-powered metadata generation
+    - Metadata module: Uses OpenAI API key for AI-powered metadata generation
     - Database module: May use credentials for cloud database connections
     - MCP server: Validates all required credentials at startup
 
@@ -21,7 +21,7 @@ Environment Variable Setup:
     Create a .env file in the project root with these variables:
     ```
     COURT_LISTENER_API_TOKEN=your_court_listener_token_here
-    GOOGLE_GEMINI_API_KEY=your_google_api_key_here
+    OPENAI_API_KEY=your_openai_api_key_here
     FEDERAL_REGISTER_API_TOKEN=optional_future_use
     CONGRESS_GOV_API_TOKEN=optional_future_use
     ```
@@ -101,37 +101,39 @@ def get_court_listener_token() -> str:
     return token
 
 
-def get_google_gemini_api_key() -> str:
-    """Get Google Gemini API key from environment variables.
+def get_openai_api_key() -> str:
+    """Get OpenAI API key from environment variables.
 
-    Google Gemini is Google's advanced AI model family that provides natural
-    language processing capabilities. In GovernmentReporter, Gemini 2.5 Flash-Lite
-    is specifically used for generating metadata from legal documents.
+    OpenAI provides advanced AI models including GPT-5 and text embedding models
+    that provide natural language processing capabilities. In GovernmentReporter,
+    GPT-5-nano is used for metadata generation and text-embedding-3-small is used
+    for document embeddings.
 
     Integration with GovernmentReporter:
-        The Google Gemini API key enables several critical functions:
+        The OpenAI API key enables several critical functions:
         - Document metadata generation using AI analysis
         - Text summarization for large legal documents
         - Content classification and tagging
         - Semantic analysis for improved search relevance
+        - High-quality text embeddings for vector search
 
         Specifically used by:
-        - MetadataGenerator in the metadata module for AI-powered analysis
-        - GoogleEmbeddingsClient for generating document embeddings
+        - GPT5MetadataGenerator in the metadata module for AI-powered analysis
+        - OpenAIEmbeddingsClient for generating document embeddings
         - Document processing pipelines for content understanding
 
     API Key Setup:
-        1. Visit Google AI Studio (https://makersuite.google.com)
-        2. Create a new project or select an existing one
-        3. Enable the Generative AI API
-        4. Create an API key in the credentials section
-        5. Add the key to your .env file as GOOGLE_GEMINI_API_KEY
+        1. Visit OpenAI Platform (https://platform.openai.com)
+        2. Create an account or sign in
+        3. Navigate to API keys section
+        4. Create a new API key
+        5. Add the key to your .env file as OPENAI_API_KEY
 
     Security Notes:
         - Keep the API key secure and never commit it to version control
         - Monitor usage to avoid exceeding rate limits or quotas
         - Consider using different keys for development and production
-        - The key grants access to Google's AI services and should be protected
+        - The key grants access to OpenAI's AI services and should be protected
 
     Python Learning Notes:
         - This function follows the same pattern as get_court_listener_token()
@@ -140,37 +142,37 @@ def get_google_gemini_api_key() -> str:
         - Consistent error handling makes configuration issues easy to debug
 
     Returns:
-        str: The Google Gemini API key for authenticated requests to Google's
+        str: The OpenAI API key for authenticated requests to OpenAI's
             AI services. This key is used to access language models and
             embedding generation capabilities.
 
     Raises:
-        ValueError: If the GOOGLE_GEMINI_API_KEY environment variable is not
+        ValueError: If the OPENAI_API_KEY environment variable is not
             set or is empty. This is a required credential for AI-powered
             features to function properly.
 
     Example Usage:
         ```python
-        from governmentreporter.utils.config import get_google_gemini_api_key
-        import google.generativeai as genai
+        from governmentreporter.utils.config import get_openai_api_key
+        from openai import OpenAI
 
         try:
-            api_key = get_google_gemini_api_key()
-            genai.configure(api_key=api_key)
-            # Now you can use Google's AI services
+            api_key = get_openai_api_key()
+            client = OpenAI(api_key=api_key)
+            # Now you can use OpenAI's services
         except ValueError as e:
             logger = logging.getLogger(__name__)
-            logger.error(f"Google API configuration error: {e}")
+            logger.error(f"OpenAI API configuration error: {e}")
         ```
     """
     # Attempt to read the API key from environment variables
-    key = os.getenv("GOOGLE_GEMINI_API_KEY")
+    key = os.getenv("OPENAI_API_KEY")
 
     # Check if the key was found and is not empty
     if not key:
         # Raise a descriptive error that helps users fix the problem
         raise ValueError(
-            "GOOGLE_GEMINI_API_KEY not found in environment variables. "
+            "OPENAI_API_KEY not found in environment variables. "
             "Please set it in your .env file."
         )
 

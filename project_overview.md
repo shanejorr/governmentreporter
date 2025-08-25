@@ -100,10 +100,10 @@ scripts/
 
 #### `src/governmentreporter/metadata/__init__.py`
 - **Purpose**: Metadata module initialization
-- **Exports**: GeminiMetadataGenerator
+- **Exports**: GPT5MetadataGenerator
 
-#### `src/governmentreporter/metadata/gemini_generator.py`
-- **Purpose**: AI-powered legal metadata extraction using Google Gemini 2.5 Flash-Lite
+#### `src/governmentreporter/metadata/gpt5_generator.py`
+- **Purpose**: AI-powered legal metadata extraction using OpenAI GPT-5-nano
 - **Key Methods**:
   - `extract_legal_metadata()`: Extract comprehensive legal metadata from court opinions
   - `_create_legal_metadata_prompt()`: Structured prompt for legal analysis
@@ -166,7 +166,7 @@ scripts/
   2. Detect sections within each opinion type
   3. Chunk within sections respecting paragraph boundaries
   4. Target 600 tokens, max 800 tokens per chunk
-- **Features**: Google token counting, justice attribution, section detection, integrated metadata
+- **Features**: Token counting, justice attribution, section detection, integrated metadata
 
 #### `src/governmentreporter/processors/executive_order_bulk.py`
 - **Purpose**: Bulk processing system for Executive Orders (inherits from BaseBulkProcessor)
@@ -203,7 +203,7 @@ scripts/
 
 #### `src/governmentreporter/utils/__init__.py`
 - **Purpose**: Utilities module initialization and common functions
-- **Exports**: All configuration functions, GoogleEmbeddingsClient, build_bluebook_citation, get_logger
+- **Exports**: All configuration functions, OpenAIEmbeddingsClient, build_bluebook_citation, get_logger
 - **Features**: Centralized logger configuration
 
 #### `src/governmentreporter/utils/config.py`
@@ -212,15 +212,15 @@ scripts/
   - `get_court_listener_token()`: Required Court Listener API token
   - `get_federal_register_token()`: Optional Federal Register token (planned)
   - `get_congress_gov_token()`: Optional Congress.gov token (planned)
-  - `get_google_gemini_api_key()`: Required Google Gemini API key
+  - `get_openai_api_key()`: Required OpenAI API key
 - **Features**: Environment variable validation with helpful error messages
 
 #### `src/governmentreporter/utils/embeddings.py`
-- **Purpose**: Google embeddings generation using text-embedding-004 model
+- **Purpose**: OpenAI embeddings generation using text-embedding-3-small model
 - **Key Methods**:
   - `generate_embedding()`: Generate semantic embeddings for text
-- **Features**: Text truncation (10K chars), retrieval-optimized embeddings
-- **Model**: Google's text-embedding-004 with "retrieval_document" task type
+- **Features**: Text truncation (32K chars), retrieval-optimized embeddings
+- **Model**: OpenAI's text-embedding-3-small for cost-effective embeddings
 
 #### `src/governmentreporter/utils/citations.py`
 - **Purpose**: Legal citation formatting utilities
@@ -283,8 +283,8 @@ src/governmentreporter/processors/scotus_bulk.py (SCOTUSBulkProcessor)
 src/governmentreporter/processors/scotus_opinion_chunker.py (SCOTUSOpinionProcessor)
     ↓ coordinates these components:
     ├── src/governmentreporter/apis/court_listener.py (CourtListenerClient)
-    ├── src/governmentreporter/metadata/gemini_generator.py (GeminiMetadataGenerator)
-    ├── src/governmentreporter/utils/embeddings.py (GoogleEmbeddingsClient)
+    ├── src/governmentreporter/metadata/gpt5_generator.py (GPT5MetadataGenerator)
+    ├── src/governmentreporter/utils/embeddings.py (OpenAIEmbeddingsClient)
     └── src/governmentreporter/database/qdrant_client.py (QdrantDBClient)
 ```
 
@@ -298,7 +298,7 @@ src/governmentreporter/processors/executive_order_chunker.py (ExecutiveOrderProc
     ↓ coordinates these components:
     ├── src/governmentreporter/apis/federal_register.py (FederalRegisterClient)
     ├── src/governmentreporter/processors/executive_order_chunker.py (ExecutiveOrderMetadataGenerator)
-    ├── src/governmentreporter/utils/embeddings.py (GoogleEmbeddingsClient)
+    ├── src/governmentreporter/utils/embeddings.py (OpenAIEmbeddingsClient)
     └── src/governmentreporter/database/qdrant_client.py (QdrantDBClient)
 ```
 
@@ -311,7 +311,7 @@ All components depend on:
 src/governmentreporter/utils/config.py
     ↓ provides API keys/tokens to
     ├── APIs (court_listener.py, federal_register.py)
-    ├── Metadata generators (gemini_generator.py)
+    ├── Metadata generators (gpt5_generator.py)
     └── Embedding clients (embeddings.py)
 
 src/governmentreporter/utils/__init__.py
@@ -324,8 +324,8 @@ src/governmentreporter/utils/__init__.py
 #### For SCOTUS Opinions:
 1. **Fetch**: CourtListenerClient retrieves opinion data and cluster metadata
 2. **Chunk**: SCOTUSOpinionChunker hierarchically splits text by opinion type → sections → paragraphs
-3. **Metadata**: GeminiMetadataGenerator extracts legal metadata using AI
-4. **Embed**: GoogleEmbeddingsClient generates semantic embeddings
+3. **Metadata**: GPT5MetadataGenerator extracts legal metadata using AI
+4. **Embed**: OpenAIEmbeddingsClient generates semantic embeddings
 5. **Store**: QdrantDBClient stores chunks with embeddings and metadata
 6. **Search**: Applications can query Qdrant for semantic search
 
@@ -333,7 +333,7 @@ src/governmentreporter/utils/__init__.py
 1. **Fetch**: FederalRegisterClient retrieves order data and raw text
 2. **Chunk**: ExecutiveOrderChunker hierarchically splits text by header → sections → subsections → tail
 3. **Metadata**: ExecutiveOrderMetadataGenerator extracts policy metadata using AI
-4. **Embed**: GoogleEmbeddingsClient generates semantic embeddings
+4. **Embed**: OpenAIEmbeddingsClient generates semantic embeddings
 5. **Store**: QdrantDBClient stores chunks with embeddings and metadata
 
 ---
@@ -343,7 +343,7 @@ src/governmentreporter/utils/__init__.py
 ### External API Dependencies:
 - **CourtListener API**: SCOTUS opinion data (`court_listener.py`)
 - **Federal Register API**: Executive order data (`federal_register.py`)
-- **Google Gemini API**: Metadata extraction and embeddings (`gemini_generator.py`, `embeddings.py`)
+- **OpenAI API**: Metadata extraction and embeddings (`gpt5_generator.py`, `embeddings.py`)
 
 ### Internal Component Dependencies:
 

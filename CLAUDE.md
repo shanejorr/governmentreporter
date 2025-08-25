@@ -29,16 +29,16 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 ### Core Components
 - **APIs Module** (`src/governmentreporter/apis/`): Government API clients (CourtListener, Federal Register, Congress.gov)
 - **Database Module** (`src/governmentreporter/database/`): Qdrant integration for vector storage
-- **Metadata Module** (`src/governmentreporter/metadata/`): Document metadata generation using Gemini 2.5 Flash-Lite API
+- **Metadata Module** (`src/governmentreporter/metadata/`): Document metadata generation using GPT-5-nano API
 - **Utils Module** (`src/governmentreporter/utils/`): Shared utilities and helpers
 
 ### Data Flow
-1. **Indexing**: Fetch documents → Generate embeddings → Create metadata with Gemini 2.5 Flash-Lite → Store in Qdrant
+1. **Indexing**: Fetch documents → Generate embeddings → Create metadata with GPT-5-nano → Store in Qdrant
 2. **Querying**: Query embedding → Qdrant search → API retrieval → Return fresh content
 
 ### External Dependencies
 - **Qdrant**: Vector database for embeddings and metadata storage
-- **Gemini 2.5 Flash-Lite API**: Google's API for metadata generation
+- **OpenAI API**: GPT-5-nano for metadata generation, text-embedding-3-small for embeddings
 - **Government APIs**: CourtListener, Federal Register, Congress.gov for document retrieval
 
 ## Key Implementation Notes
@@ -54,5 +54,5 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 ## Dependencies
 
 - Python 3.11+ (specified in pyproject.toml)
-- Core: qdrant-client, mcp, ollama, httpx, requests, beautifulsoup4, feedparser
+- Core: qdrant-client, mcp, openai, ollama, httpx, requests, beautifulsoup4, feedparser
 - Dev: black, isort, mypy, pytest

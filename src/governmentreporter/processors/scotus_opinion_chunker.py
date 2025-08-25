@@ -87,14 +87,14 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
-import google.generativeai as genai
+# Removed: google.generativeai import (no longer needed)
 
 from ..apis.court_listener import CourtListenerClient
 from ..database import QdrantDBClient
-from ..metadata.gemini_generator import GeminiMetadataGenerator
+from ..metadata.gpt5_generator import GPT5MetadataGenerator
 from ..utils import get_logger
 from ..utils.citations import build_bluebook_citation
-from ..utils.embeddings import GoogleEmbeddingsClient
+from ..utils.embeddings import OpenAIEmbeddingsClient
 from .base import BaseDocumentProcessor, ProcessedChunk
 
 
@@ -667,10 +667,10 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
     def __init__(
         self,
         court_listener_token: Optional[str] = None,
-        gemini_api_key: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
         target_chunk_size: int = 600,
         max_chunk_size: int = 800,
-        embeddings_client: Optional[GoogleEmbeddingsClient] = None,
+        embeddings_client: Optional[OpenAIEmbeddingsClient] = None,
         db_client: Optional[QdrantDBClient] = None,
         logger: Optional[logging.Logger] = None,
     ):
@@ -678,7 +678,7 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
 
         Args:
             court_listener_token: Court Listener API token
-            gemini_api_key: Google Gemini API key
+            openai_api_key: OpenAI API key
             target_chunk_size: Target size for chunks in tokens
             max_chunk_size: Maximum allowed chunk size in tokens
             embeddings_client: Client for generating embeddings
@@ -687,9 +687,9 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
         """
         super().__init__(embeddings_client, db_client, logger)
         self.court_listener = CourtListenerClient(court_listener_token)
-        self.gemini_generator = GeminiMetadataGenerator(gemini_api_key)
+        self.gpt5_generator = GPT5MetadataGenerator(openai_api_key)
         self.chunker = SCOTUSOpinionChunker(
-            target_chunk_size, max_chunk_size, gemini_api_key
+            target_chunk_size, max_chunk_size, openai_api_key
         )
 
     def process_document(self, document_id: str) -> List[ProcessedChunk]:
@@ -804,7 +804,7 @@ class SCOTUSOpinionProcessor(BaseDocumentProcessor):
 
         # Step 5: Extract legal metadata (only once for the entire opinion)
         try:
-            legal_metadata = self.gemini_generator.extract_legal_metadata(plain_text)
+            legal_metadata = self.gpt5_generator.extract_legal_metadata(plain_text)
 
             # Log Gemini metadata extraction result
             if self.logger:

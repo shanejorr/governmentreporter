@@ -32,7 +32,7 @@ from typing import Any, Dict, List, Optional
 
 from ..database import QdrantDBClient
 from ..utils import get_logger
-from ..utils.embeddings import GoogleEmbeddingsClient
+from ..utils.embeddings import OpenAIEmbeddingsClient
 
 
 @dataclass
@@ -125,7 +125,7 @@ class BaseDocumentProcessor(ABC):
 
     def __init__(
         self,
-        embeddings_client: Optional[GoogleEmbeddingsClient] = None,
+        embeddings_client: Optional[OpenAIEmbeddingsClient] = None,
         db_client: Optional[QdrantDBClient] = None,
         logger: Optional[logging.Logger] = None,
     ):
@@ -137,7 +137,7 @@ class BaseDocumentProcessor(ABC):
         instances. This approach improves testability and flexibility.
 
         Args:
-            embeddings_client (Optional[GoogleEmbeddingsClient]): Client for generating
+            embeddings_client (Optional[OpenAIEmbeddingsClient]): Client for generating
                 vector embeddings from text. If None, creates a new instance with
                 default configuration. The embeddings are used for semantic search
                 in the RAG system.
@@ -172,7 +172,7 @@ class BaseDocumentProcessor(ABC):
             )
             ```
         """
-        self.embeddings_client = embeddings_client or GoogleEmbeddingsClient()
+        self.embeddings_client = embeddings_client or OpenAIEmbeddingsClient()
         self.db_client = db_client or QdrantDBClient()
         self.logger = logger or get_logger(__name__)
 

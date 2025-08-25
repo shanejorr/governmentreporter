@@ -1,8 +1,8 @@
-"""Gemini AI-powered metadata generation for legal documents.
+"""GPT-5 AI-powered metadata generation for legal documents.
 
 This module implements intelligent metadata extraction from legal documents,
-specifically designed for US Supreme Court opinions. It uses Google's Gemini 2.5
-Flash-Lite model to analyze legal text and extract structured information like
+specifically designed for US Supreme Court opinions. It uses OpenAI's GPT-5-nano
+model to analyze legal text and extract structured information like
 legal topics, constitutional provisions, statutes, and case outcomes.
 
 The extracted metadata serves multiple purposes in the GovernmentReporter system:
@@ -12,14 +12,14 @@ The extracted metadata serves multiple purposes in the GovernmentReporter system
 4. Provides context for LLM interactions with legal documents
 
 Python Learning Notes:
-- This module demonstrates advanced API integration with Google's generative AI
+- This module demonstrates advanced API integration with OpenAI's AI services
 - Shows error handling patterns for external API calls
 - Illustrates JSON parsing and data validation techniques
 - Uses type hints extensively for better code documentation
 - Implements the strategy pattern with different prompt templates
 
 Key Design Patterns:
-- Factory pattern: Model creation is handled by the genai library
+- Factory pattern: Model creation is handled by the OpenAI library
 - Template method pattern: Prompt creation is separated from execution
 - Error handling: Graceful degradation when AI extraction fails
 
@@ -32,15 +32,38 @@ Integration with GovernmentReporter:
 
 import json
 from typing import Any, Dict, List, Optional
+from pydantic import BaseModel
 
-import google.generativeai as genai
+from openai import OpenAI
 
 from ..utils import get_logger
-from ..utils.config import get_google_gemini_api_key
+from ..utils.config import get_openai_api_key
 
 
-class GeminiMetadataGenerator:
-    """Generate metadata for legal documents using Google's Gemini 2.5 Flash-Lite.
+class LegalMetadata(BaseModel):
+    """Pydantic model for structured legal metadata output.
+    
+    This model defines the schema for legal metadata extraction using
+    OpenAI's structured output feature. Each field is carefully designed
+    to capture specific legal information from Supreme Court opinions.
+    
+    Python Learning Notes:
+    - Pydantic BaseModel provides automatic validation and serialization
+    - Optional[str] means the field can be a string or None
+    - List[str] indicates a list of strings (array in JSON)
+    - The model automatically converts to/from JSON format
+    """
+    legal_topics: List[str]
+    key_legal_questions: List[str]
+    constitutional_provisions: List[str]
+    statutes_interpreted: List[str]
+    holding: Optional[str]
+    procedural_outcome: Optional[str]
+    vote_breakdown: Optional[str]
+
+
+class GPT5MetadataGenerator:
+    """Generate metadata for legal documents using OpenAI's GPT-5-nano.
 
     This class provides AI-powered analysis of legal documents to extract structured
     metadata that enhances search and categorization capabilities. It specifically
@@ -56,28 +79,29 @@ class GeminiMetadataGenerator:
     - Shows how to integrate with external AI APIs safely
 
     Attributes:
-        api_key (str): Google Gemini API key for authentication
-        model (genai.GenerativeModel): Configured Gemini model instance
+        api_key (str): OpenAI API key for authentication
+        client (OpenAI): Configured OpenAI client instance
+        model (str): Model identifier (gpt-5-nano)
 
     Example Usage:
         # Basic usage with auto-detected API key
-        generator = GeminiMetadataGenerator()
+        generator = GPT5MetadataGenerator()
         metadata = generator.extract_legal_metadata(opinion_text)
 
         # Usage with explicit API key
-        generator = GeminiMetadataGenerator(api_key="your-key-here")
+        generator = GPT5MetadataGenerator(api_key="your-key-here")
         metadata = generator.extract_legal_metadata(opinion_text)
 
     Integration Points:
-        - Uses utils.config.get_google_gemini_api_key() for API key management
+        - Uses utils.config.get_openai_api_key() for API key management
         - Returns metadata compatible with Qdrant storage format
         - Designed to work with document text from the APIs module
     """
 
     def __init__(self, api_key: Optional[str] = None):
-        """Initialize the Gemini metadata generator.
+        """Initialize the GPT-5 metadata generator.
 
-        Sets up the connection to Google's Gemini API and configures the model
+        Sets up the connection to OpenAI's API and configures the model
         for legal document analysis. The initialization includes API key
         management and model selection.
 
@@ -85,10 +109,10 @@ class GeminiMetadataGenerator:
         - Uses Optional[str] type hint to indicate api_key can be None
         - Demonstrates the "or" operator for default value assignment
         - Shows how to configure external APIs in Python classes
-        - The genai.configure() call sets up global API authentication
+        - The OpenAI() call creates a client for API interaction
 
         Args:
-            api_key (Optional[str]): Google Gemini API key for authentication.
+            api_key (Optional[str]): OpenAI API key for authentication.
                 If None, the key will be automatically retrieved from the
                 environment using the config utility. This allows for flexible
                 deployment where keys can be injected or detected.
@@ -98,20 +122,21 @@ class GeminiMetadataGenerator:
             AuthenticationError: If the provided API key is invalid
 
         Note:
-            The Gemini 2.5 Flash-Lite model is specifically chosen for its
-            balance of performance and cost-effectiveness for metadata extraction
-            tasks. It provides sufficient capability for legal text analysis
-            while being more economical than larger models.
+            The GPT-5-nano model is specifically chosen for its balance of
+            performance and cost-effectiveness for metadata extraction tasks.
+            It provides sufficient capability for legal text analysis while
+            being more economical than larger models.
         """
-        self.api_key = api_key or get_google_gemini_api_key()
+        self.api_key = api_key or get_openai_api_key()
         self.logger = get_logger(__name__)
 
-        genai.configure(api_key=self.api_key)
-
-        # Use Gemini 2.5 Flash-Lite as specified
-        self.model = genai.GenerativeModel("gemini-2.5-flash-lite")
+        # Initialize OpenAI client
+        self.client = OpenAI(api_key=self.api_key)
+        
+        # Use GPT-5-nano as specified
+        self.model = "gpt-5-nano"
         self.logger.info(
-            "GeminiMetadataGenerator initialized with gemini-2.5-flash-lite model"
+            "GPT5MetadataGenerator initialized with gpt-5-nano model"
         )
 
     def extract_legal_metadata(self, plain_text: str) -> Dict[str, Any]:
@@ -119,19 +144,18 @@ class GeminiMetadataGenerator:
 
         This method performs intelligent analysis of legal text to extract structured
         metadata that enhances document searchability and categorization. It uses
-        advanced prompt engineering to guide the AI model in identifying specific
-        legal concepts and information.
+        the GPT-5 Responses API with structured outputs for consistent results.
 
         The extraction process follows these steps:
         1. Create a specialized prompt for legal analysis
-        2. Send the text to Gemini 2.5 Flash-Lite for processing
-        3. Parse and validate the JSON response
+        2. Send the text to GPT-5-nano for processing with minimal reasoning
+        3. Parse and validate the structured response
         4. Return structured metadata or fallback values on error
 
         Python Learning Notes:
-        - Demonstrates exception handling with try/except blocks
-        - Shows JSON parsing and validation patterns
-        - Uses string manipulation to clean API responses
+        - Demonstrates use of OpenAI's new Responses API
+        - Shows structured output with Pydantic models
+        - Uses exception handling with try/except blocks
         - Implements graceful degradation (returns partial data on failure)
         - Type hints show the method contract clearly
 
@@ -155,10 +179,10 @@ class GeminiMetadataGenerator:
 
         Raises:
             ValueError: If plain_text is empty or None
-            APIError: If the Gemini API returns an error (rare, handled internally)
+            APIError: If the OpenAI API returns an error (rare, handled internally)
 
         Example:
-            generator = GeminiMetadataGenerator()
+            generator = GPT5MetadataGenerator()
             text = "In the matter of Brown v. Board of Education..."
             metadata = generator.extract_legal_metadata(text)
 
@@ -182,16 +206,21 @@ class GeminiMetadataGenerator:
         prompt = self._create_legal_metadata_prompt(plain_text)
 
         try:
-            response = self.model.generate_content(prompt)
+            # Use GPT-5's new Responses API with structured output
+            response = self.client.responses.parse(
+                model=self.model,
+                input=prompt,
+                text_format=LegalMetadata,
+                reasoning={"effort": "minimal"},  # Minimal reasoning for speed
+                text={"verbosity": "low"}  # Low verbosity for concise output
+            )
 
-            # Strip markdown code fences if present
-            response_text = response.text.strip()
-            if response_text.startswith("```json") and response_text.endswith("```"):
-                response_text = response_text[7:-3].strip()
-            elif response_text.startswith("```") and response_text.endswith("```"):
-                response_text = response_text[3:-3].strip()
-
-            metadata = json.loads(response_text)
+            # Extract the parsed metadata
+            if response.output_parsed:
+                metadata = response.output_parsed.model_dump()
+            else:
+                # If parsing failed, try to get raw output
+                metadata = json.loads(response.output_text)
 
             # Validate and clean the response
             return self._validate_legal_metadata(metadata)
@@ -213,8 +242,8 @@ class GeminiMetadataGenerator:
         """Create a specialized prompt for extracting legal metadata from Supreme Court opinions.
 
         This method constructs a detailed prompt that guides the AI model to extract
-        specific legal information in a structured format. The prompt uses advanced
-        prompt engineering techniques to ensure consistent, high-quality extraction.
+        specific legal information in a structured format. The prompt is designed
+        for the GPT-5 Responses API input format.
 
         Key prompt engineering strategies used:
         1. Role specification: Establishes the AI as a "legal expert"
@@ -224,10 +253,10 @@ class GeminiMetadataGenerator:
         5. Error handling: Specifies fallback values for missing information
 
         Python Learning Notes:
-        - Uses f-string formatting to inject variables into multiline strings
+        - Returns a simple string prompt for the Responses API
+        - Uses f-string formatting to inject variables
         - Demonstrates string slicing with plain_text[:20000] to limit length
-        - Shows how to structure prompts for consistent AI responses
-        - Triple-quoted strings (''') allow for multiline text blocks
+        - Clear instructions ensure consistent AI responses
 
         Args:
             plain_text (str): The Supreme Court opinion text to analyze.
@@ -237,30 +266,17 @@ class GeminiMetadataGenerator:
 
         Returns:
             str: A comprehensive prompt string formatted for optimal AI
-                extraction of legal metadata. The prompt includes:
-                - Clear instructions for legal analysis
-                - Specific JSON schema requirements
-                - Examples of proper legal citation formats
-                - Guidelines for handling ambiguous or missing information
+                extraction of legal metadata. The prompt includes clear
+                instructions for legal analysis and specific requirements.
 
         Design Notes:
             The 20,000 character limit is chosen to:
-            - Stay well within Gemini API token limits
+            - Stay well within GPT-5 token limits
             - Capture the most important parts of legal opinions (intro, holding)
             - Balance thoroughness with API cost considerations
             - Ensure consistent processing times
-
-        Prompt Structure:
-            1. Role and context setting
-            2. Specific field definitions with examples
-            3. Format requirements (JSON, lowercase fields)
-            4. Citation format specifications (Bluebook style)
-            5. Error handling instructions
-            6. The actual text to analyze
-            7. Final instruction for JSON output
         """
-        return f"""
-You are a legal expert analyzing a US Supreme Court opinion. Extract the following metadata from the provided text and return it as a JSON object with exactly these fields:
+        return f"""You are a legal expert analyzing a US Supreme Court opinion. Extract the following metadata from the provided text and return it as a structured JSON object with exactly these fields:
 
 1. "legal_topics": Array of primary areas of law addressed in this case (e.g., "Constitutional Law", "Administrative Law", "First Amendment", "Commerce Clause", "Due Process", "Civil Rights")
 2. "key_legal_questions": Array of 2-4 specific legal questions that the court addressed in this case
@@ -271,10 +287,7 @@ You are a legal expert analyzing a US Supreme Court opinion. Extract the followi
 7. "vote_breakdown": The voting breakdown of the justices (e.g., "9-0", "7-2", "6-3", "5-4", "Unanimous", "Per curiam"). Extract from the opinion header or conclusion.
 
 Requirements:
-- Return ONLY a valid JSON object with these exact field names
-- All field names must be in lowercase
-- For constitutional_provisions and statutes_interpreted, be very precise with citations
-- Use legal bluebook format when citing statutes and constitutional provisions
+- Be very precise with citations using legal bluebook format
 - Only include actual legal citations, not general references
 - If information cannot be determined, use empty arrays for lists or null for strings
 - The holding should be a concise statement of what the court decided
@@ -282,10 +295,7 @@ Requirements:
 - For vote_breakdown, prefer numerical format (e.g., "9-0") over descriptive terms when both are available
 
 Supreme Court Opinion Text:
-{plain_text[:20000]}  # Limit text to avoid token limits
-
-Return the JSON object:
-"""
+{plain_text[:20000]}"""
 
     def _validate_legal_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and clean the extracted legal metadata from AI response.

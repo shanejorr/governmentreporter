@@ -98,13 +98,13 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
-import google.generativeai as genai
+# Removed: google.generativeai import (no longer needed)
 
 from ..apis.federal_register import FederalRegisterClient
 from ..database import QdrantDBClient
-from ..metadata.gemini_generator import GeminiMetadataGenerator
+from ..metadata.gpt5_generator import GPT5MetadataGenerator
 from ..utils import get_logger
-from ..utils.embeddings import GoogleEmbeddingsClient
+from ..utils.embeddings import OpenAIEmbeddingsClient
 from .base import BaseDocumentProcessor, ProcessedChunk
 
 
@@ -746,9 +746,9 @@ class ExecutiveOrderChunker:
 class ExecutiveOrderMetadataGenerator:
     """Generate metadata for Executive Orders using Gemini."""
 
-    def __init__(self, gemini_api_key: Optional[str] = None):
+    def __init__(self, openai_api_key: Optional[str] = None):
         """Initialize the metadata generator."""
-        self.gemini_generator = GeminiMetadataGenerator(gemini_api_key)
+        self.gpt5_generator = GPT5MetadataGenerator(openai_api_key)
         self.logger = get_logger(__name__)
 
     def extract_executive_order_metadata(self, text: str) -> Dict[str, Any]:
@@ -763,11 +763,16 @@ class ExecutiveOrderMetadataGenerator:
         prompt = self._create_metadata_prompt(text)
 
         try:
-            # Use the existing Gemini generator's model
-            response = self.gemini_generator.model.generate_content(prompt)
+            # Use the GPT-5 responses API
+            response = self.gpt5_generator.client.responses.create(
+                model=self.gpt5_generator.model,
+                input=prompt,
+                reasoning={"effort": "minimal"},
+                text={"verbosity": "low"}
+            )
 
-            # Strip markdown code fences if present
-            response_text = response.text.strip()
+            # Get the response text
+            response_text = response.output_text.strip()
             if response_text.startswith("```json") and response_text.endswith("```"):
                 response_text = response_text[7:-3].strip()
             elif response_text.startswith("```") and response_text.endswith("```"):
@@ -871,17 +876,17 @@ class ExecutiveOrderProcessor(BaseDocumentProcessor):
 
     def __init__(
         self,
-        gemini_api_key: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
         target_chunk_size: int = 300,
         max_chunk_size: int = 400,
-        embeddings_client: Optional[GoogleEmbeddingsClient] = None,
+        embeddings_client: Optional[OpenAIEmbeddingsClient] = None,
         db_client: Optional[QdrantDBClient] = None,
         logger: Optional[logging.Logger] = None,
     ):
         """Initialize the processor with API clients.
 
         Args:
-            gemini_api_key: Google Gemini API key
+            openai_api_key: OpenAI API key
             target_chunk_size: Target size for chunks in tokens
             max_chunk_size: Maximum allowed chunk size in tokens
             embeddings_client: Client for generating embeddings
@@ -890,9 +895,9 @@ class ExecutiveOrderProcessor(BaseDocumentProcessor):
         """
         super().__init__(embeddings_client, db_client, logger)
         self.federal_register = FederalRegisterClient()
-        self.metadata_generator = ExecutiveOrderMetadataGenerator(gemini_api_key)
+        self.metadata_generator = ExecutiveOrderMetadataGenerator(openai_api_key)
         self.chunker = ExecutiveOrderChunker(
-            target_chunk_size, max_chunk_size, gemini_api_key
+            target_chunk_size, max_chunk_size, openai_api_key
         )
         self.logger = logger or get_logger(__name__)
 

@@ -54,8 +54,8 @@ GovernmentReporter creates a Qdrant vector database storing semantic embeddings 
 - **Package Manager**: uv (modern Python package manager)
 - **Vector Database**: Qdrant (embeddings + metadata only)
 - **AI Services**:
-  - Google Gemini 2.5 Flash-Lite API for metadata generation
-  - Google text-embedding-004 for semantic embeddings
+  - OpenAI GPT-5-nano for metadata generation
+  - OpenAI text-embedding-3-small for semantic embeddings
 - **Government APIs**:
   - CourtListener API (Supreme Court opinions)
   - Federal Register API (Executive Orders)
@@ -69,7 +69,7 @@ GovernmentReporter creates a Qdrant vector database storing semantic embeddings 
    - **Intelligent Chunking**:
      - **SCOTUS Opinions**: Break down by opinion type (syllabus, majority, concurring, dissenting), legal sections (I, II, III) and subsections (A, B, C), justice attribution
      - **Executive Orders**: Break down by header, sections (Sec. 1, Sec. 2), subsections, and signature blocks
-   - **Rich Metadata Extraction**: Use Gemini 2.5 Flash-Lite to extract:
+   - **Rich Metadata Extraction**: Use GPT-5-nano to extract:
      - Legal/policy topics and key questions
      - Constitutional provisions and statutes cited
      - Court holdings and policy summaries
@@ -91,7 +91,7 @@ GovernmentReporter creates a Qdrant vector database storing semantic embeddings 
 
 - Python 3.11+
 - uv package manager
-- Google Gemini API key
+- OpenAI API key
 - CourtListener API token (free registration required)
 
 ## Installation
@@ -116,13 +116,13 @@ GovernmentReporter creates a Qdrant vector database storing semantic embeddings 
    ```bash
    # Create .env file with required API keys
    cat > .env << EOF
-   GOOGLE_GEMINI_API_KEY="your-gemini-api-key-here"
+   OPENAI_API_KEY="your-openai-api-key-here"
    COURT_LISTENER_API_TOKEN="your-courtlistener-token-here"
    EOF
    ```
 
    **Get API Keys:**
-   - **Google Gemini API**: Get key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+   - **OpenAI API**: Get key from [OpenAI Platform](https://platform.openai.com/api-keys)
    - **CourtListener API**: Free registration at [CourtListener](https://www.courtlistener.com/api/)
 
 ## Usage
@@ -260,11 +260,11 @@ The system follows a structured processing pipeline:
    - Executive Orders: Split by header → sections → subsections → tail (300/400 tokens)
 
 3. **Metadata Extraction**:
-   - Use Gemini 2.5 Flash-Lite to extract rich legal/policy metadata
+   - Use GPT-5-nano to extract rich legal/policy metadata
    - Generate bluebook citations and structured metadata
 
 4. **Embedding Generation**:
-   - Google text-embedding-004 for semantic embeddings
+   - OpenAI text-embedding-3-small for semantic embeddings
    - Each chunk gets its own embedding vector
 
 5. **Storage**:
@@ -391,7 +391,7 @@ GovernmentReporter automatically identifies and chunks Supreme Court opinions us
 2. **Opinion Type Detection**: Use regex patterns to identify different opinion types
 3. **Section Parsing**: Detect Roman numeral sections and lettered subsections
 4. **Intelligent Chunking**: Target 600 tokens, max 800 tokens while preserving legal structure
-5. **Metadata Extraction**: Use Gemini 2.5 Flash-Lite for rich legal metadata
+5. **Metadata Extraction**: Use GPT-5-nano for rich legal metadata
 6. **Citation Formatting**: Build proper bluebook citations from cluster data
 7. **Embedding Generation**: Create semantic embeddings for each chunk
 8. **Database Storage**: Store chunks with complete metadata in Qdrant
@@ -401,7 +401,7 @@ GovernmentReporter automatically identifies and chunks Supreme Court opinions us
 2. **Structure Detection**: Identify header, sections, subsections, and tail blocks
 3. **HTML Cleaning**: Remove markup and extract clean text
 4. **Intelligent Chunking**: Target 300 tokens, max 400 tokens with sentence overlap
-5. **Metadata Extraction**: Use Gemini 2.5 Flash-Lite for policy metadata
+5. **Metadata Extraction**: Use GPT-5-nano for policy metadata
 6. **API Metadata**: Extract signing date, president, agencies from API response
 7. **Embedding Generation**: Create semantic embeddings for each chunk
 8. **Database Storage**: Store chunks with complete metadata in Qdrant
@@ -428,7 +428,7 @@ The system is configured through environment variables in `.env`:
 
 ```bash
 # Required API keys
-GOOGLE_GEMINI_API_KEY="your-gemini-api-key"
+OPENAI_API_KEY="your-openai-api-key"
 COURT_LISTENER_API_TOKEN="your-courtlistener-token"
 
 # Optional (planned for future use)
