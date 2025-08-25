@@ -10,19 +10,19 @@ Key Components:
     QdrantDBClient: Main client class for Qdrant operations
 
 Architecture Overview:
-    The database module implements a metadata-only storage approach where:
+    The database module implements a storage approach where:
     1. Document embeddings are stored for semantic search
     2. Metadata is stored for filtering and context
+    3. Text data is also stores
 
     This approach ensures:
     - Fresh, up-to-date document content
-    - Efficient storage usage
     - Fast semantic search capabilities
     - Scalable document management
 
 Integration Points:
     - APIs Module: Provides fresh document content during retrieval
-    - Metadata Module: Generates rich metadata using Gemini 2.5 Flash-Lite
+    - Metadata Module: Generates rich metadata using OpenAI GPT-5-nano
     - Utils Module: Shared utilities for data processing
 
 Python Learning Notes:
@@ -42,7 +42,7 @@ Example Usage:
     db.store_scotus_opinion(
         opinion_id="scotus_2024_001",
         plain_text="Supreme Court opinion text...",
-        embedding=[0.1, 0.2, 0.3, ...],  # 768-dimensional vector
+        embedding=[0.1, 0.2, 0.3, ...],  # 1536-dimensional vector
         metadata={"case_name": "Sample v. Example", "year": 2024}
     )
 """
