@@ -419,7 +419,6 @@ class QdrantDBClient:
 
         return None
 
-
     def semantic_search(
         self,
         query_embedding: List[float],
@@ -440,6 +439,8 @@ class QdrantDBClient:
             limit (int, optional): Maximum number of results to return. Defaults to 10.
             score_threshold (Optional[float]): Minimum similarity score threshold.
                 Only results with scores above this threshold will be returned.
+                For Supreme Court opinions start with .77
+                For executive orders and legislative documents start with .8
             filter_conditions (Optional[Dict[str, Any]]): Metadata filters to apply.
                 Example: {"year": 2024, "opinion_type": "majority"}
 
