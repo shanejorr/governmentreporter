@@ -17,8 +17,6 @@ The GovernmentReporter system provides:
 Package Structure:
     - apis/: Government API client implementations (CourtListener, Federal Register)
     - database/: Qdrant vector database integration
-    - metadata/: AI-powered metadata generation using Gemini
-    - processors/: Document processing pipelines with hierarchical chunking
     - utils/: Shared utilities for configuration, embeddings, and citations
 
 This package serves as the entry point for all GovernmentReporter functionality.
