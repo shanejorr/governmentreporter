@@ -21,7 +21,6 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 - `uv run pytest tests/test_file.py::test_function` - Run single test
 
 ### Running the Application
-- `uv run python main.py` - Run main entry point
 - `uv run python -m governmentreporter.server` - Start MCP server
 
 ## Architecture
@@ -29,7 +28,6 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 ### Core Components
 - **APIs Module** (`src/governmentreporter/apis/`): Government API clients (CourtListener, Federal Register, Congress.gov)
 - **Database Module** (`src/governmentreporter/database/`): Qdrant integration for vector storage
-- **Metadata Module** (`src/governmentreporter/metadata/`): Document metadata generation using GPT-5-nano API
 - **Utils Module** (`src/governmentreporter/utils/`): Shared utilities and helpers
 
 ### Data Flow
@@ -41,11 +39,20 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 - **OpenAI API**: GPT-5-nano for metadata generation, text-embedding-3-small for embeddings
 - **Government APIs**: CourtListener, Federal Register, Congress.gov for document retrieval
 
+### Example API formatting
+- **CourtListener (For court opinions)**:
+  - Opinions Endpoint: `scratch/opinions_endpoint.json`
+  - Opinions Cluster Endpoint: `scratch/cluster_endpoint.json`
+- **Federal Register API (for federal executive orders)**:
+  - Metadata: `scratch/executive_order_metadata.json`
+  - Order Text (from "raw_text_url" key in `scratch/executive_order_metadata.json`): `scratch/executive_order_text.txt`
+
 ## Key Implementation Notes
 
-- The codebase is in early development - most modules contain only directory structure
-- Uses metadata-only storage approach (embeddings + metadata, not full text)
-- Designed for macOS with 16GB+ RAM
+- The codebase is in early development
+- VSCode is the IDE used for development
+- Ensure robust logging
+- It is OK to make breaking changes. The application has not been deployed.
 - MCP protocol integration for LLM compatibility
 - Real-time document retrieval ensures fresh government data
 - I am an intermediate Python programmer. If I ask you to do something and you do not think it is the best approach please say so. If I ask a question please answer truthfully. Do not simply agree with me.
@@ -53,6 +60,5 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 
 ## Dependencies
 
-- Python 3.11+ (specified in pyproject.toml)
-- Core: qdrant-client, mcp, openai, ollama, httpx, requests, beautifulsoup4, feedparser
-- Dev: black, isort, mypy, pytest
+- Python 3.11+
+- all dependencies are in `pyproject.toml`
