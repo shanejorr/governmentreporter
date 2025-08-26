@@ -13,13 +13,15 @@ GovernmentReporter creates a Qdrant vector database storing semantic embeddings 
 - **Opinion Type Separation**: Automatically identifies syllabus, majority, concurring, and dissenting opinions
 - **Section-Level Granularity**: Chunks opinions by legal sections (I, II, III) and subsections (A, B, C)
 - **Justice Attribution**: Concurring and dissenting opinions properly attributed to specific justices
-- **Smart Token Management**: Target 600 tokens, max 800 tokens per chunk while preserving paragraph integrity
+- **Smart Token Management**: Min 500, target 600, max 800 tokens per chunk with 15% sliding window overlap
+- **Overlap Strategy**: Sliding window with 15% overlap for context continuity within sections
 
 **Executive Orders:**
 - **Structural Chunking**: Separates header, sections (Sec. 1, Sec. 2), subsections, and signature blocks
 - **Section Detection**: Automatically identifies numbered sections and lettered subsections
-- **Overlap Strategy**: Adds sentence overlap between chunks for context preservation
-- **Compact Chunking**: Target 300 tokens, max 400 tokens per chunk for policy documents
+- **Section Boundary Preservation**: Never creates overlap across section boundaries - each section chunked independently
+- **Compact Chunking**: Min 240, target 340, max 400 tokens per chunk with 10% sliding window overlap
+- **Intra-Section Overlap**: 10% overlap applied only within same section, preserving regulatory structure
 
 ### 📊 Rich Legal Metadata
 **Supreme Court Opinions:**

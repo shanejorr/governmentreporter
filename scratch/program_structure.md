@@ -122,16 +122,26 @@ This module provides document processing capabilities for transforming raw gover
 - **Validation**: Ensures data integrity with type checking and constraints
 
 #### `chunking.py` - Hierarchical Document Chunking
-- **Purpose**: Intelligently splits documents by their natural structure
+- **Purpose**: Intelligently splits documents by their natural structure with configurable overlap
+- **Configurations**:
+  - `ChunkingConfig`: Dataclass for per-document-type chunking parameters
+  - `SCOTUS_CFG`: Min 500, target 600, max 800 tokens, 15% overlap ratio
+  - `EO_CFG`: Min 240, target 340, max 400 tokens, 10% overlap ratio
+  - Environment overrides supported (e.g., `RAG_SCOTUS_TARGET_TOKENS`)
 - **Key Functions**:
   - `chunk_supreme_court_opinion()`: Splits SCOTUS opinions by type, sections, and paragraphs
     - Detects syllabus, majority, concurring, dissenting opinions
     - Parses Roman numeral sections (I, II, III) and subsections (A, B, C)
-    - Target 600 tokens, max 800 tokens per chunk
+    - Uses sliding window with 15% overlap within sections
   - `chunk_executive_order()`: Splits EOs by header, sections, subsections, tail
     - Identifies numbered sections (Sec. 1, Sec. 2) and lettered subsections
     - Preserves section titles and structure
-    - Target 300 tokens, max 400 tokens with overlap
+    - NEVER creates overlap across section boundaries
+    - 10% overlap applied only within same section
+  - `chunk_text_with_tokens()`: Core sliding window implementation
+    - Configurable min/target/max tokens and overlap
+    - Merges small remainder chunks when < min_tokens
+    - Adds `chunk_token_count` metadata for debugging
 
 #### `llm_extraction.py` - AI-Powered Metadata Generation
 - **Purpose**: Uses GPT-5-nano to extract rich metadata from document text
