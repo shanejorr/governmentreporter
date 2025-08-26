@@ -1,0 +1,29 @@
+{
+  "Document_creation": {
+    "method": "Document.__init__()",
+    "result": {
+      "id": "test_doc_001",
+      "title": "Sample Legal Document",
+      "date": "2024-01-15",
+      "type": "Test Document",
+      "source": "Example API",
+      "content": "This is sample content for testing the Document class.",
+      "metadata": {
+        "author": "John Doe",
+        "pages": 10
+      },
+      "url": "https://example.com/doc"
+    }
+  },
+  "validate_date_format": {
+    "method": "GovernmentAPIClient.validate_date_format()",
+    "result": {
+      "2024-01-15": true,
+      "2024-1-15": false,
+      "01/15/2024": false,
+      "2024-13-45": true,
+      "invalid": false,
+      "": false
+    }
+  }
+}

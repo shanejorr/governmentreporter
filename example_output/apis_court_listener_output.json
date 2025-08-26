@@ -1,0 +1,6 @@
+{
+  "api_token_missing": {
+    "method": "All CourtListenerClient methods",
+    "error": "COURT_LISTENER_API_TOKEN not set in environment variables"
+  }
+}

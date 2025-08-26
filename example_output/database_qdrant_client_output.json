@@ -1,0 +1,70 @@
+{
+  "list_collections_initial": {
+    "method": "QdrantDBClient.list_collections()",
+    "result": []
+  },
+  "get_or_create_collection": {
+    "method": "QdrantDBClient.get_or_create_collection()",
+    "result": true
+  },
+  "list_collections_after_create": {
+    "method": "QdrantDBClient.list_collections()",
+    "result": [
+      "test_collection"
+    ]
+  },
+  "store_document": {
+    "method": "QdrantDBClient.store_document()",
+    "result": "Document stored successfully"
+  },
+  "get_document_by_id": {
+    "method": "QdrantDBClient.get_document_by_id()",
+    "result": {
+      "id": "test_doc_001",
+      "document_preview": "This is a test document for the RAG system....",
+      "metadata": {
+        "title": "Test Document",
+        "date": "2024-01-15",
+        "type": "test",
+        "author": "Test System"
+      }
+    }
+  },
+  "semantic_search": {
+    "method": "QdrantDBClient.semantic_search()",
+    "result": {
+      "count": 1,
+      "results": [
+        {
+          "id": "test_doc_001",
+          "score": 1.0000001093922497,
+          "document_preview": "This is a test document for the RAG system....",
+          "metadata": {
+            "title": "Test Document",
+            "date": "2024-01-15",
+            "type": "test",
+            "author": "Test System"
+          }
+        }
+      ]
+    }
+  },
+  "get_collection_info": {
+    "method": "QdrantDBClient.get_collection_info()",
+    "result": {
+      "vectors_count": null,
+      "points_count": 1,
+      "indexed_vectors_count": 0,
+      "segments_count": 1,
+      "config": "params=CollectionParams(vectors=VectorParams(size=1536, distance=<Distance.COSINE: 'Cosine'>, hnsw_config=None, quantization_config=None, on_disk=None, datatype=None, multivector_config=None), shard_number=None, sharding_method=None, replication_factor=None, write_consistency_factor=None, read_fan_out_factor=None, on_disk_payload=None, sparse_vectors=None) hnsw_config=HnswConfig(m=16, ef_construct=100, full_scan_threshold=10000, max_indexing_threads=0, on_disk=None, payload_m=None) optimizer_config=OptimizersConfig(deleted_threshold=0.2, vacuum_min_vector_number=1000, default_segment_number=0, max_segment_size=None, memmap_threshold=None, indexing_threshold=20000, flush_interval_sec=5, max_optimization_threads=1) wal_config=WalConfig(wal_capacity_mb=32, wal_segments_ahead=0) quantization_config=None strict_mode_config=None"
+    }
+  },
+  "batch_upsert": {
+    "method": "QdrantDBClient.batch_upsert()",
+    "result": "Successfully batch upserted 2 documents"
+  },
+  "delete_collection": {
+    "method": "QdrantDBClient.delete_collection()",
+    "result": true
+  }
+}

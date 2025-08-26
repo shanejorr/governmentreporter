@@ -1,0 +1,47 @@
+2025-08-26 18:23:27 - src.governmentreporter.processors.llm_extraction - ERROR - Failed to extract SCOTUS metadata: Expecting value: line 1 column 1 (char 0)
+2025-08-26 18:23:36 - src.governmentreporter.processors.llm_extraction - ERROR - Failed to extract SCOTUS metadata: Expecting value: line 1 column 1 (char 0)
+2025-08-26 18:23:44 - src.governmentreporter.processors.llm_extraction - ERROR - Failed to extract Executive Order metadata: Expecting value: line 1 column 1 (char 0)
+{
+  "generate_scotus_llm_fields_with_syllabus": {
+    "method": "generate_scotus_llm_fields() with syllabus",
+    "result": {
+      "plain_language_summary": "Unable to generate summary.",
+      "holding_plain": "Unable to extract holding.",
+      "outcome_simple": "Unable to determine outcome.",
+      "issue_plain": "Unable to extract issue.",
+      "reasoning": "Unable to extract reasoning.",
+      "constitution_cited": [],
+      "federal_statutes_cited": [],
+      "federal_regulations_cited": [],
+      "cases_cited": [],
+      "topics_or_policy_areas": [
+        "legal",
+        "court decision"
+      ]
+    }
+  },
+  "generate_scotus_llm_fields_no_syllabus": {
+    "method": "generate_scotus_llm_fields() without syllabus",
+    "result": {
+      "plain_language_summary": "Unable to generate summary.",
+      "topics_count": 2,
+      "total_citations": 0
+    }
+  },
+  "generate_eo_llm_fields": {
+    "method": "generate_eo_llm_fields()",
+    "result": {
+      "plain_language_summary": "Unable to generate summary.",
+      "agencies_impacted": [],
+      "constitution_cited": [],
+      "federal_statutes_cited": [],
+      "federal_regulations_cited": [],
+      "cases_cited": [],
+      "topics_or_policy_areas": [
+        "federal policy",
+        "executive action"
+      ],
+      "summary_starts_with_action_verb": false
+    }
+  }
+}

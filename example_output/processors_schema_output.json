@@ -1,0 +1,161 @@
+{
+  "SharedMetadata_creation": {
+    "method": "SharedMetadata.__init__()",
+    "result": {
+      "document_id": "test_doc_001",
+      "title": "Test Document",
+      "publication_date": "2024-01-15",
+      "year": 2024,
+      "source": "Test Source",
+      "type": "Test Type",
+      "url": "https://example.com/doc",
+      "citation_bluebook": "123 Test 456 (2024)",
+      "plain_language_summary": "This is a test document for demonstration purposes.",
+      "constitution_cited": [
+        "U.S. Const. amend. I"
+      ],
+      "federal_statutes_cited": [
+        "42 U.S.C. \u00a7 1983"
+      ],
+      "federal_regulations_cited": [
+        "14 C.F.R. \u00a7 91.817"
+      ],
+      "cases_cited": [
+        "Brown v. Board, 347 U.S. 483 (1954)"
+      ],
+      "topics_or_policy_areas": [
+        "civil rights",
+        "education",
+        "constitutional law",
+        "equal protection",
+        "segregation"
+      ]
+    }
+  },
+  "ChunkMetadata_creation": {
+    "method": "ChunkMetadata.__init__()",
+    "result": {
+      "chunk_id": "test_doc_001_chunk_0",
+      "chunk_index": 0,
+      "section_label": "Test Section"
+    }
+  },
+  "SupremeCourtMetadata_creation": {
+    "method": "SupremeCourtMetadata.__init__()",
+    "result": {
+      "document_id": "scotus_001",
+      "title": "Brown v. Board of Education",
+      "publication_date": "1954-05-17",
+      "year": 1954,
+      "source": "CourtListener",
+      "type": "Supreme Court Opinion",
+      "url": "https://example.com/opinion",
+      "citation_bluebook": "347 U.S. 483 (1954)",
+      "plain_language_summary": "The Court held that separate educational facilities are inherently unequal.",
+      "constitution_cited": [
+        "U.S. Const. amend. XIV, \u00a7 1"
+      ],
+      "federal_statutes_cited": [],
+      "federal_regulations_cited": [],
+      "cases_cited": [
+        "Plessy v. Ferguson, 163 U.S. 537 (1896)"
+      ],
+      "topics_or_policy_areas": [
+        "civil rights",
+        "education",
+        "equal protection",
+        "racial segregation",
+        "constitutional law"
+      ],
+      "case_name": "Brown v. Board of Education",
+      "opinion_type": "majority",
+      "holding_plain": "Separate educational facilities are inherently unequal and violate the Equal Protection Clause.",
+      "outcome_simple": "Petitioners won - segregation in public schools declared unconstitutional.",
+      "issue_plain": "Does racial segregation in public schools violate the Equal Protection Clause?",
+      "reasoning": "The Court found that segregation generates a feeling of inferiority that affects children's motivation to learn and deprives them of equal educational opportunities."
+    }
+  },
+  "ExecutiveOrderMetadata_creation": {
+    "method": "ExecutiveOrderMetadata.__init__()",
+    "result": {
+      "document_id": "eo_14304",
+      "title": "Leading the World in Supersonic Flight",
+      "publication_date": "2025-01-15",
+      "year": 2025,
+      "source": "Federal Register",
+      "type": "Executive Order",
+      "url": "https://example.com/eo",
+      "citation_bluebook": "90 FR 5000",
+      "plain_language_summary": "Establishes new requirements for federal agencies to advance supersonic flight technology.",
+      "constitution_cited": [],
+      "federal_statutes_cited": [
+        "49 U.S.C. \u00a7 106"
+      ],
+      "federal_regulations_cited": [
+        "14 C.F.R. \u00a7 91.817"
+      ],
+      "cases_cited": [],
+      "topics_or_policy_areas": [
+        "aviation",
+        "transportation",
+        "technology",
+        "federal regulation",
+        "supersonic flight"
+      ],
+      "eo_number": "14304",
+      "agencies_impacted": [
+        "Department of Transportation",
+        "Federal Aviation Administration",
+        "NASA"
+      ]
+    }
+  },
+  "QdrantPayload_creation": {
+    "method": "QdrantPayload.__init__()",
+    "result": {
+      "id": "test_chunk_001",
+      "text": "This is sample chunk text for testing the Qdrant payload structure.",
+      "metadata": {
+        "document_id": "test_doc_001",
+        "title": "Test Document",
+        "section_label": "Test Section",
+        "chunk_index": 0
+      }
+    }
+  },
+  "create_scotus_chunk_metadata": {
+    "method": "create_scotus_chunk_metadata()",
+    "result": {
+      "field_count": 23,
+      "has_document_fields": true,
+      "has_chunk_fields": true,
+      "sample_fields": {
+        "document_id": "scotus_001",
+        "title": "Brown v. Board of Education",
+        "publication_date": "1954-05-17",
+        "year": 1954,
+        "source": "CourtListener"
+      }
+    }
+  },
+  "create_eo_chunk_metadata": {
+    "method": "create_eo_chunk_metadata()",
+    "result": {
+      "field_count": 19,
+      "has_document_fields": true,
+      "has_chunk_fields": true,
+      "has_eo_specific": true,
+      "sample_fields": {
+        "document_id": "eo_14304",
+        "title": "Leading the World in Supersonic Flight",
+        "publication_date": "2025-01-15",
+        "year": 2025,
+        "source": "Federal Register"
+      }
+    }
+  },
+  "pydantic_validation": {
+    "method": "Pydantic validation testing",
+    "result": "Validation failed as expected: 1 validation error for SharedMetadata\ntopics_or_policy_areas\n  List should have at least 5 items after validation, not 3 [type=too_short, input_value=['only', 'three', 'topics'], input_type=list]\n    For further information visit https://errors.pydantic.dev/2.8/v/too_short"
+  }
+}
