@@ -172,7 +172,8 @@ class TestChunkTextWithTokens:
         """Test that short documents return single chunk."""
         text = "This is a very short document."
         chunks = chunk_text_with_tokens(
-            text, "Test Section",
+            text=text,
+            section_label="Test Section",
             min_tokens=100,
             target_tokens=200,
             max_tokens=300,
@@ -189,7 +190,8 @@ class TestChunkTextWithTokens:
         long_text = " ".join(["Word" + str(i) for i in range(500)])
         
         chunks = chunk_text_with_tokens(
-            long_text, "Test Section",
+            text=long_text,
+            section_label="Test Section",
             min_tokens=50,
             target_tokens=100,
             max_tokens=150,
@@ -210,7 +212,8 @@ class TestChunkTextWithTokens:
         long_text = " ".join(["Word" + str(i) for i in range(500)])
         
         chunks = chunk_text_with_tokens(
-            long_text, "Test Section",
+            text=long_text,
+            section_label="Test Section",
             min_tokens=50,
             target_tokens=100,
             max_tokens=150,
@@ -230,7 +233,8 @@ class TestChunkTextWithTokens:
         text = " ".join(["Word" + str(i) for i in range(150)])
         
         chunks = chunk_text_with_tokens(
-            text, "Test Section",
+            text=text,
+            section_label="Test Section",
             min_tokens=40,
             target_tokens=50,
             max_tokens=70,
@@ -407,10 +411,12 @@ class TestEdgeCases:
     def test_empty_document(self):
         """Test handling of empty document."""
         chunks = chunk_text_with_tokens(
-            "", "Empty",
+            text="",
+            section_label="Empty",
             min_tokens=100,
             target_tokens=200,
-            max_tokens=300
+            max_tokens=300,
+            overlap_tokens=0
         )
         assert len(chunks) == 1
         assert chunks[0][0] == ""
@@ -421,7 +427,8 @@ class TestEdgeCases:
         long_sentence = " ".join(["word" + str(i) for i in range(500)]) + "."
         
         chunks = chunk_text_with_tokens(
-            long_sentence, "Long",
+            text=long_sentence,
+            section_label="Long",
             min_tokens=50,
             target_tokens=100,
             max_tokens=150,

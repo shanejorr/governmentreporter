@@ -27,12 +27,6 @@ Chunking Configurations:
         - MAX_TOKENS: 400
         - OVERLAP_RATIO: 0.10 (10%)
 
-Python Learning Notes:
-    - Regular expressions for pattern matching in text
-    - Generator functions for memory-efficient processing
-    - Type hints with Tuple for complex return types
-    - List comprehensions for efficient data transformation
-    - Dataclasses for configuration management
 """
 
 import os
@@ -61,10 +55,6 @@ class ChunkingConfig:
         max_tokens: Maximum tokens per chunk (hard limit)
         overlap_ratio: Fraction of target_tokens to overlap (0.0 to 1.0)
     
-    Python Learning Notes:
-        - @dataclass decorator auto-generates __init__ and other methods
-        - Type hints ensure correct types are used
-        - Immutable by default for safety
     """
     min_tokens: int
     target_tokens: int
@@ -93,10 +83,6 @@ def _load_config(prefix: str, defaults: Dict[str, Any]) -> ChunkingConfig:
     Returns:
         ChunkingConfig with environment overrides applied
     
-    Python Learning Notes:
-        - os.environ.get() safely retrieves environment variables
-        - int() and float() convert string env vars to numbers
-        - **kwargs unpacks dictionary into function arguments
     """
     min_tokens = int(os.environ.get(f"{prefix}_MIN_TOKENS", defaults["min_tokens"]))
     target_tokens = int(os.environ.get(f"{prefix}_TARGET_TOKENS", defaults["target_tokens"]))
@@ -141,10 +127,6 @@ def overlap_tokens(cfg: ChunkingConfig) -> int:
     Returns:
         Number of tokens to overlap between chunks
     
-    Python Learning Notes:
-        - max() ensures non-negative result
-        - int() converts float to integer
-        - Simple pure function with no side effects
     """
     return max(0, int(cfg.target_tokens * cfg.overlap_ratio))
 
@@ -178,21 +160,15 @@ def count_tokens(text: str, encoding_name: str = "cl100k_base") -> int:
     """
     Count the number of tokens in text using OpenAI's tiktoken.
 
-    This function uses the same tokenizer as OpenAI's models to ensure
-    accurate token counting for chunking purposes. The cl100k_base encoding
-    is used by GPT-3.5-turbo and GPT-4 models.
+    Uses the cl100k_base encoding (GPT-3.5-turbo and GPT-4 models).
+    Falls back to 4 chars/token approximation if tiktoken fails.
 
     Args:
-        text (str): The text to count tokens for
-        encoding_name (str): The tiktoken encoding to use (default: cl100k_base)
+        text: The text to count tokens for
+        encoding_name: The tiktoken encoding to use (default: cl100k_base)
 
     Returns:
-        int: Number of tokens in the text
-
-    Python Learning Notes:
-        - tiktoken is OpenAI's fast tokenizer library
-        - Encoding determines how text is split into tokens
-        - Different models may use different encodings
+        Number of tokens in the text
     """
     try:
         encoding = tiktoken.get_encoding(encoding_name)
@@ -207,20 +183,15 @@ def normalize_whitespace(text: str) -> str:
     """
     Normalize whitespace in text while preserving paragraph structure.
     
-    This function:
-        - Strips leading/trailing whitespace
-        - Reduces multiple blank lines to single blank lines
-        - Preserves single paragraph breaks
+    - Strips leading/trailing whitespace
+    - Reduces multiple blank lines to double newlines (paragraph breaks)
+    - Preserves single paragraph breaks
     
     Args:
         text: Text to normalize
     
     Returns:
         Text with normalized whitespace
-    
-    Python Learning Notes:
-        - re.sub() performs regex replacement
-        - r'\n\s*\n+' matches multiple newlines with optional whitespace
     """
     # Strip leading/trailing whitespace
     text = text.strip()
@@ -231,93 +202,13 @@ def normalize_whitespace(text: str) -> str:
     return text
 
 
-def split_into_sentences(text: str) -> List[str]:
-    """
-    Split text into sentences while preserving legal citations.
-
-    This function intelligently splits text into sentences, handling the
-    complexities of legal text including citations, abbreviations, and
-    special formatting.
-
-    Legal Text Challenges:
-        - Citations like "347 U.S. 483" shouldn't be split
-        - Abbreviations like "U.S.C." shouldn't end sentences
-        - Section references like "Sec. 2(a)" should stay together
-
-    Args:
-        text (str): The text to split into sentences
-
-    Returns:
-        List[str]: List of sentences
-
-    Python Learning Notes:
-        - Regular expressions handle complex pattern matching
-        - Negative lookbehind (?<!) prevents false matches
-        - re.split() splits text while preserving delimiters
-    """
-    # Protect common legal abbreviations from being sentence endings
-    abbreviations = [
-        r"U\.S\.C\.",
-        r"C\.F\.R\.",
-        r"U\.S\.",
-        r"v\.",
-        r"Fed\.",
-        r"F\.",
-        r"Sec\.",
-        r"§",
-        r"cl\.",
-        r"art\.",
-        r"amend\.",
-        r"Inc\.",
-        r"Corp\.",
-        r"Co\.",
-        r"Ltd\.",
-        r"No\.",
-        r"Id\.",
-        r"Ibid\.",
-        r"et al\.",
-        r"e\.g\.",
-        r"i\.e\.",
-        r"cf\.",
-        r"App\.",
-        r"Cir\.",
-        r"Dist\.",
-    ]
-
-    # Build pattern to protect abbreviations
-    abbrev_pattern = "|".join(f"(?<={abbr})" for abbr in abbreviations)
-
-    # Split on sentence endings, but not after abbreviations
-    # This regex looks for periods, exclamation marks, or question marks
-    # followed by whitespace and a capital letter (start of new sentence)
-    sentence_pattern = r"(?<=[.!?])\s+(?=[A-Z])"
-
-    # First, protect abbreviations by replacing their periods temporarily
-    protected_text = text
-    for i, abbr in enumerate(abbreviations):
-        protected_text = re.sub(abbr, f"__ABBR_{i}__", protected_text)
-
-    # Split into sentences
-    sentences = re.split(sentence_pattern, protected_text)
-
-    # Restore abbreviations
-    result_sentences = []
-    for sentence in sentences:
-        for i, abbr in enumerate(abbreviations):
-            sentence = sentence.replace(f"__ABBR_{i}__", abbr.replace("\\", ""))
-        if sentence.strip():  # Only add non-empty sentences
-            result_sentences.append(sentence.strip())
-
-    return result_sentences if result_sentences else [text]
-
-
 def chunk_text_with_tokens(
     text: str,
     section_label: str,
-    min_tokens: Optional[int] = None,
-    target_tokens: Optional[int] = None,
-    max_tokens: Optional[int] = None,
-    overlap_tokens: Optional[int] = None
+    min_tokens: int,
+    target_tokens: int,
+    max_tokens: int,
+    overlap_tokens: int
 ) -> List[Tuple[str, Dict[str, Any]]]:
     """
     Chunk text using sliding window with configurable overlap.
@@ -331,30 +222,17 @@ def chunk_text_with_tokens(
     Args:
         text: The text to chunk
         section_label: Label for this section (e.g., "Syllabus", "Sec. 2")
-        min_tokens: Minimum tokens per chunk (default: 220)
-        target_tokens: Target window size (default: 270)
-        max_tokens: Maximum tokens per chunk (default: 320)
-        overlap_tokens: Number of tokens to overlap (default: 0)
+        min_tokens: Minimum tokens per chunk
+        target_tokens: Target window size for sliding window
+        max_tokens: Maximum tokens per chunk
+        overlap_tokens: Number of tokens to overlap between chunks
     
     Returns:
         List of (chunk_text, metadata) tuples where metadata includes:
             - section_label: The section this chunk belongs to
             - chunk_token_count: Actual token count for debugging
     
-    Python Learning Notes:
-        - Optional parameters with None defaults
-        - Dictionary metadata for extensibility
-        - Sliding window algorithm implementation
     """
-    # Default values for backward compatibility
-    if min_tokens is None:
-        min_tokens = 220
-    if target_tokens is None:
-        target_tokens = 270
-    if max_tokens is None:
-        max_tokens = 320
-    if overlap_tokens is None:
-        overlap_tokens = 0
     
     # Ensure forward progress
     if overlap_tokens >= target_tokens:
@@ -384,10 +262,10 @@ def chunk_text_with_tokens(
     # Calculate step size (how much to advance the window)
     step_size = max(1, target_tokens - overlap_tokens)
     
-    # Use character approximation (roughly 4 chars per token)
-    char_per_token_approx = 4
-    window_size_chars = target_tokens * char_per_token_approx
-    step_size_chars = step_size * char_per_token_approx
+    # Character approximation for efficiency (roughly 4 chars per token)
+    CHARS_PER_TOKEN = 4
+    window_size_chars = target_tokens * CHARS_PER_TOKEN
+    step_size_chars = step_size * CHARS_PER_TOKEN
     
     start_pos = 0
     
@@ -460,7 +338,7 @@ def chunk_text_with_tokens(
         # Advance window
         if overlap_tokens > 0 and end_pos < text_length:
             # Move back by overlap amount
-            overlap_chars = overlap_tokens * char_per_token_approx
+            overlap_chars = overlap_tokens * CHARS_PER_TOKEN
             start_pos = max(start_pos + step_size_chars, end_pos - overlap_chars)
         else:
             start_pos = end_pos
@@ -525,11 +403,6 @@ def chunk_supreme_court_opinion(
         print(f"Found {len(chunks)} chunks")
         print(f"Syllabus: {syllabus[:100]}...")
 
-    Python Learning Notes:
-        - re.MULTILINE flag makes ^ match line starts
-        - re.IGNORECASE makes pattern case-insensitive
-        - Named groups in regex improve readability
-        - Tuple unpacking for multiple return values
     """
     chunks = []
     syllabus_text = None
@@ -725,10 +598,6 @@ def chunk_executive_order(text: str) -> List[Tuple[str, Dict[str, Any]]]:
             print(f"Section: {metadata['section_label']}")
             print(f"Tokens: {metadata['chunk_token_count']}")
 
-    Python Learning Notes:
-        - re.finditer() returns an iterator of match objects
-        - match.group(1) gets the first captured group
-        - List slicing for extracting text portions
     """
     chunks = []
     
