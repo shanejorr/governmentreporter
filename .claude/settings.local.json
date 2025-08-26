@@ -27,6 +27,9 @@
       "Bash(git pull:*)",
       "Bash(git push:*)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "/private/tmp"
+    ]
   }
 }
