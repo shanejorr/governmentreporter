@@ -32,7 +32,7 @@ Python Learning Notes:
     - Context managers and resource cleanup patterns
 
 Example Usage:
-    # Initialize client
+    # Initialize client (db_path is required)
     client = QdrantDBClient(db_path="./vector_db")
 
     # Store a document with embedding
@@ -89,7 +89,7 @@ class QdrantDBClient:
         - Public methods provide the interface other code can use
 
     Example:
-        # Create a new client instance
+        # Create a new client instance (db_path is required)
         db_client = QdrantDBClient(db_path="./government_docs_db")
 
         # The client is now ready to store and retrieve documents
@@ -97,7 +97,7 @@ class QdrantDBClient:
         print(f"Available collections: {collections}")
     """
 
-    def __init__(self, db_path: str = "./qdrant_db") -> None:
+    def __init__(self, db_path: str) -> None:
         """
         Initialize Qdrant client with persistent storage.
 
@@ -106,19 +106,21 @@ class QdrantDBClient:
         is configured for local development with optimal settings.
 
         Args:
-            db_path (str, optional): Path to the Qdrant database directory.
-                Defaults to "./qdrant_db". The directory will be created
-                if it doesn't exist.
+            db_path (str): Path to the Qdrant database directory.
+                This parameter is required. The directory will be created
+                if it doesn't exist. For local development, you can use
+                "./qdrant_db" to create a database in the current directory.
 
         Returns:
             None: Constructor methods don't return values
 
         Raises:
+            TypeError: If db_path is not provided
             qdrant_client.errors.QdrantException: If the database cannot be initialized
             PermissionError: If the db_path directory cannot be created or accessed
 
         Python Learning Notes:
-            - Default parameter values (= "./qdrant_db") provide fallbacks
+            - Required parameters have no default value
             - Type hints (str, -> None) document expected types
             - The -> None annotation means this method doesn't return a value
             - self.client creates an instance attribute accessible to all methods
@@ -129,8 +131,8 @@ class QdrantDBClient:
             - Local storage mode for development and privacy
 
         Example:
-            # Use default database path
-            client1 = QdrantDBClient()
+            # Create client with local database path
+            client1 = QdrantDBClient(db_path="./qdrant_db")
 
             # Use custom path for production
             client2 = QdrantDBClient(db_path="/var/lib/government_docs/qdrant")
@@ -138,6 +140,10 @@ class QdrantDBClient:
             # Both clients are now ready to use
             print(f"Client initialized with {len(client1.list_collections())} collections")
         """
+        if not db_path:
+            raise TypeError(
+                "db_path parameter is required. You can create a local database with './qdrant_db'"
+            )
         self.logger = get_logger(__name__)
         self.client = QdrantClient(path=db_path)
         self.logger.info("QdrantDBClient initialized with database path: %s", db_path)
@@ -271,7 +277,7 @@ class QdrantDBClient:
             All Python basic types are supported natively.
 
         Example:
-            client = QdrantDBClient()
+            client = QdrantDBClient(db_path="./qdrant_db")
 
             # Store a Supreme Court opinion
             client.store_document(
@@ -367,7 +373,7 @@ class QdrantDBClient:
             - Payload contains all stored metadata
 
         Example:
-            client = QdrantDBClient()
+            client = QdrantDBClient(db_path="./qdrant_db")
 
             # Retrieve a specific document
             opinion = client.get_document_by_id("dobbs_v_jackson_2022")
@@ -633,7 +639,7 @@ class QdrantDBClient:
             - Empty databases have no collections initially
 
         Example:
-            client = QdrantDBClient()
+            client = QdrantDBClient(db_path="./qdrant_db")
 
             # List all collections
             collections = client.list_collections()

@@ -35,7 +35,7 @@ Python Learning Notes:
 Example Usage:
     from governmentreporter.database import QdrantDBClient
 
-    # Create database client
+    # Create database client (db_path is required)
     db = QdrantDBClient(db_path="./my_qdrant_db")
 
     # Store a document with embeddings

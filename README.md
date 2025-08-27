@@ -67,9 +67,25 @@ GovernmentReporter creates a Qdrant vector database storing semantic embeddings 
 ### Core Modules
 
 - **APIs Module** (`src/governmentreporter/apis/`): Government API clients
+  - `base.py`: Abstract base classes for API clients
+  - `court_listener.py`: CourtListener API for SCOTUS opinions
+  - `federal_register.py`: Federal Register API for Executive Orders
+
 - **Database Module** (`src/governmentreporter/database/`): Qdrant vector storage
-- **Processors Module** (`src/governmentreporter/processors/`): Document chunking and metadata extraction
-- **Utils Module** (`src/governmentreporter/utils/`): Citations, config, and logging
+  - `qdrant_client.py`: Core vector database operations
+  - `ingestion.py`: High-performance batch ingestion utilities
+
+- **Processors Module** (`src/governmentreporter/processors/`): Document processing
+  - `chunking.py`: Hierarchical document chunking algorithms
+  - `embeddings.py`: OpenAI embedding generation with batch support
+  - `llm_extraction.py`: GPT-5-nano metadata extraction
+  - `schema.py`: Pydantic data validation models
+  - `build_payloads.py`: Processing orchestration
+
+- **Utils Module** (`src/governmentreporter/utils/`): Shared utilities
+  - `citations.py`: Bluebook citation formatting
+  - `config.py`: Environment variable and credential management
+  - `monitoring.py`: Performance monitoring with progress tracking
 
 ## Data Flow
 
@@ -155,13 +171,15 @@ The system follows a structured processing pipeline powered by the processors mo
    - Orchestrates chunking and metadata extraction
    - Creates Qdrant-ready payloads with standardized structure
 
-5. **Embedding Generation**:
+5. **Embedding Generation** (Processors Module - `embeddings.py`):
    - OpenAI text-embedding-3-small for semantic embeddings
-   - Each chunk gets its own embedding vector
+   - Batch processing for efficiency with retry logic
+   - Each chunk gets its own 1536-dimensional embedding vector
 
-6. **Storage** (Database Module):
-   - Store chunk embeddings + metadata in Qdrant
-   - Batch operations for efficiency
+6. **Storage** (Database Module - `ingestion.py`):
+   - Batch ingestion with progress tracking via `QdrantIngestionClient`
+   - Duplicate detection and deterministic chunk IDs
+   - Performance monitoring with `PerformanceMonitor` from utils
 
 7. **Search & Retrieval**:
    - User query converted to embedding

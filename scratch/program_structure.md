@@ -16,17 +16,20 @@ src/governmentreporter/
 │   └── federal_register.py     # Federal Register API client (Executive Orders)
 ├── database/                    # Vector database integration
 │   ├── __init__.py
-│   └── qdrant_client.py        # Qdrant vector database operations
+│   ├── qdrant_client.py        # Qdrant vector database operations
+│   └── ingestion.py            # Specialized ingestion client with batch operations
 ├── processors/                  # Document processing and transformation
 │   ├── __init__.py             # Package exports and documentation
 │   ├── build_payloads.py       # Main orchestration for document processing
 │   ├── chunking.py             # Hierarchical document chunking algorithms
+│   ├── embeddings.py           # OpenAI embedding generation utilities
 │   ├── llm_extraction.py       # GPT-5-nano metadata extraction
 │   └── schema.py               # Pydantic models for metadata validation
 └── utils/                       # Shared utilities and helpers
     ├── __init__.py             # Package initializer with logging setup
     ├── citations.py            # Bluebook citation formatting
-    └── config.py               # Environment variable management
+    ├── config.py               # Environment variable management
+    └── monitoring.py           # Performance monitoring and progress tracking
 ```
 
 ## Core Data Flow
@@ -108,6 +111,22 @@ This module provides client implementations for various government data sources.
   - `list_collections()`: Lists available collections
   - `delete_collection()`: Removes collections
 
+#### `ingestion.py` - Specialized Ingestion Client
+- **Purpose**: High-performance batch ingestion of documents into Qdrant
+- **Inheritance**: Uses QdrantDBClient for core operations
+- **Key Features**:
+  - Collection initialization with proper vector configuration
+  - Duplicate detection to avoid redundant storage
+  - Batch upsert operations with progress callbacks
+  - Deterministic ID generation for document chunks
+  - Collection statistics and monitoring
+- **Primary Methods**:
+  - `ensure_collection_exists()`: Creates collections with cosine distance metric
+  - `document_exists()`: Checks for existing documents before insertion
+  - `batch_upsert_documents()`: Efficient bulk insertion with progress tracking
+  - `_generate_chunk_id()`: Creates consistent MD5-based chunk IDs
+  - `get_collection_stats()`: Returns collection metrics and status
+
 ### 3. Processors Module (`src/governmentreporter/processors/`)
 
 This module provides document processing capabilities for transforming raw government documents into structured, searchable chunks with rich metadata.
@@ -142,6 +161,18 @@ This module provides document processing capabilities for transforming raw gover
     - Configurable min/target/max tokens and overlap
     - Merges small remainder chunks when < min_tokens
     - Adds `chunk_token_count` metadata for debugging
+
+#### `embeddings.py` - OpenAI Embedding Generation
+- **Purpose**: Generates vector embeddings from text using OpenAI's models
+- **Key Features**:
+  - Uses text-embedding-3-small model (1536 dimensions)
+  - Batch processing for efficiency
+  - Retry logic with exponential backoff
+  - Fallback to individual generation on batch failures
+- **Primary Methods**:
+  - `generate_embedding()`: Creates single text embedding with retries
+  - `generate_batch_embeddings()`: Efficient batch embedding generation
+- **Error Handling**: Falls back to zero vectors on complete failure
 
 #### `llm_extraction.py` - AI-Powered Metadata Generation
 - **Purpose**: Uses GPT-5-nano to extract rich metadata from document text
@@ -183,6 +214,21 @@ This module provides document processing capabilities for transforming raw gover
   - Handles Court Listener's citation data structure
   - Validates and formats volume, reporter, page, and year
 
+#### `monitoring.py` - Performance Monitoring
+- **Purpose**: Tracks and reports on batch operation performance
+- **Key Features**:
+  - Real-time progress bars with ETA calculation
+  - Success/failure rate tracking
+  - Throughput and timing statistics
+  - Human-readable duration formatting
+- **Primary Methods**:
+  - `start()`: Initializes monitoring session
+  - `record_document()`: Tracks individual document processing
+  - `get_statistics()`: Returns comprehensive performance metrics
+  - `print_progress()`: Displays visual progress bar with ETA
+  - `_format_duration()`: Converts seconds to readable format (2h 15m 30s)
+- **Metrics Tracked**: Elapsed time, documents processed/failed, success rate, throughput
+
 #### `__init__.py` - Package Initialization and Logging
 - **Purpose**: Centralized logging configuration and utility imports
 - **Key Functions**:
@@ -202,13 +248,16 @@ GovernmentReporter Package
     ├── Processors Module
     │   ├── Schema (data validation)
     │   ├── Chunking (document splitting)
+    │   ├── Embeddings (vector generation)
     │   ├── LLM Extraction (metadata generation)
     │   └── Build Payloads (orchestration)
     ├── Database Module
-    │   └── QdrantDBClient (vector storage)
+    │   ├── QdrantDBClient (vector storage)
+    │   └── QdrantIngestionClient (batch ingestion)
     └── Utils Module
         ├── Config (credentials)
         ├── Citations (formatting)
+        ├── Monitoring (performance tracking)
         └── Logging (operation tracking)
 ```
 
@@ -222,8 +271,9 @@ GovernmentReporter Package
    - **LLM Extraction** generates metadata
    - **Schema** validates all data
    - **Build Payloads** orchestrates and returns payloads
-4. **Embedding generation** (external, uses OpenAI API)
-5. **QdrantDBClient** stores chunks + embeddings + metadata
+4. **EmbeddingGenerator** creates vector embeddings via OpenAI API
+5. **QdrantIngestionClient** batch stores chunks + embeddings + metadata
+6. **PerformanceMonitor** tracks ingestion progress and statistics
 
 #### Document Retrieval Flow:
 1. Query embedding generated (external)
@@ -237,7 +287,7 @@ GovernmentReporter Package
 config.py provides credentials to:
     ├── court_listener.py (needs Court Listener token)
     ├── llm_extraction.py (needs OpenAI key for GPT-5-nano)
-    └── (external) Embedding generation (needs OpenAI key)
+    └── embeddings.py (needs OpenAI key for text-embedding-3-small)
 ```
 
 ### 4. Module Interactions
