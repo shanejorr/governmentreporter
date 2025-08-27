@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs with access to US federal government publications through RAG. The system stores semantic embeddings and metadata in Qdrant, then retrieves current document text on-demand from government APIs.
 
+`scratch/program_structure.md` contains the project's structure, which uses the modern `src/` layout.
+`README.md` contains more information about the project.
+
+
 ## Development Commands
 
 ### Package Management
