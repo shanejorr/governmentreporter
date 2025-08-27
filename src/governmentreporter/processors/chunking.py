@@ -20,7 +20,7 @@ Chunking Configurations:
         - TARGET_TOKENS: 600
         - MAX_TOKENS: 800
         - OVERLAP_RATIO: 0.15 (15%)
-    
+
     Executive Orders:
         - MIN_TOKENS: 240
         - TARGET_TOKENS: 340
@@ -32,11 +32,11 @@ Chunking Configurations:
 import os
 import re
 from dataclasses import dataclass
-from typing import Dict, List, Literal, Optional, Tuple, Any
+from typing import Any, Dict, List, Literal, Optional, Tuple
+
 import tiktoken
 
 from ..utils import get_logger
-
 
 logger = get_logger(__name__)
 
@@ -45,22 +45,23 @@ logger = get_logger(__name__)
 class ChunkingConfig:
     """
     Configuration for document chunking.
-    
+
     This dataclass encapsulates the chunking parameters for different document types,
     allowing flexible configuration while maintaining type safety.
-    
+
     Attributes:
         min_tokens: Minimum tokens per chunk (avoid tiny chunks)
         target_tokens: Target window size for sliding window
         max_tokens: Maximum tokens per chunk (hard limit)
         overlap_ratio: Fraction of target_tokens to overlap (0.0 to 1.0)
-    
+
     """
+
     min_tokens: int
     target_tokens: int
     max_tokens: int
     overlap_ratio: float
-    
+
     def __post_init__(self):
         """Validate configuration after initialization."""
         if self.min_tokens <= 0 or self.target_tokens <= 0 or self.max_tokens <= 0:
@@ -75,42 +76,42 @@ class ChunkingConfig:
 def _load_config(prefix: str, defaults: Dict[str, Any]) -> ChunkingConfig:
     """
     Load configuration with environment variable overrides.
-    
+
     Args:
         prefix: Environment variable prefix (e.g., "RAG_SCOTUS")
         defaults: Default configuration values
-    
+
     Returns:
         ChunkingConfig with environment overrides applied
-    
+
     """
     min_tokens = int(os.environ.get(f"{prefix}_MIN_TOKENS", defaults["min_tokens"]))
-    target_tokens = int(os.environ.get(f"{prefix}_TARGET_TOKENS", defaults["target_tokens"]))
+    target_tokens = int(
+        os.environ.get(f"{prefix}_TARGET_TOKENS", defaults["target_tokens"])
+    )
     max_tokens = int(os.environ.get(f"{prefix}_MAX_TOKENS", defaults["max_tokens"]))
-    overlap_ratio = float(os.environ.get(f"{prefix}_OVERLAP_RATIO", defaults["overlap_ratio"]))
-    
+    overlap_ratio = float(
+        os.environ.get(f"{prefix}_OVERLAP_RATIO", defaults["overlap_ratio"])
+    )
+
     return ChunkingConfig(
         min_tokens=min_tokens,
         target_tokens=target_tokens,
         max_tokens=max_tokens,
-        overlap_ratio=overlap_ratio
+        overlap_ratio=overlap_ratio,
     )
 
 
 # Module-level configurations
-SCOTUS_CFG = _load_config("RAG_SCOTUS", {
-    "min_tokens": 500,
-    "target_tokens": 600,
-    "max_tokens": 800,
-    "overlap_ratio": 0.15
-})
+SCOTUS_CFG = _load_config(
+    "RAG_SCOTUS",
+    {"min_tokens": 500, "target_tokens": 600, "max_tokens": 800, "overlap_ratio": 0.15},
+)
 
-EO_CFG = _load_config("RAG_EO", {
-    "min_tokens": 240,
-    "target_tokens": 340,
-    "max_tokens": 400,
-    "overlap_ratio": 0.10
-})
+EO_CFG = _load_config(
+    "RAG_EO",
+    {"min_tokens": 240, "target_tokens": 340, "max_tokens": 400, "overlap_ratio": 0.10},
+)
 
 # Log configurations at module load
 logger.debug("SCOTUS chunking config: %s", SCOTUS_CFG)
@@ -120,13 +121,13 @@ logger.debug("EO chunking config: %s", EO_CFG)
 def overlap_tokens(cfg: ChunkingConfig) -> int:
     """
     Calculate the number of overlap tokens from configuration.
-    
+
     Args:
         cfg: Chunking configuration
-    
+
     Returns:
         Number of tokens to overlap between chunks
-    
+
     """
     return max(0, int(cfg.target_tokens * cfg.overlap_ratio))
 
@@ -134,16 +135,16 @@ def overlap_tokens(cfg: ChunkingConfig) -> int:
 def get_chunking_config(doc_type: Literal["scotus", "eo"]) -> ChunkingConfig:
     """
     Get the chunking configuration for a document type.
-    
+
     Args:
         doc_type: Document type identifier
-    
+
     Returns:
         Appropriate ChunkingConfig for the document type
-    
+
     Raises:
         ValueError: If doc_type is not recognized
-    
+
     Example:
         config = get_chunking_config("scotus")
         print(f"SCOTUS uses {config.target_tokens} target tokens")
@@ -182,23 +183,23 @@ def count_tokens(text: str, encoding_name: str = "cl100k_base") -> int:
 def normalize_whitespace(text: str) -> str:
     """
     Normalize whitespace in text while preserving paragraph structure.
-    
+
     - Strips leading/trailing whitespace
     - Reduces multiple blank lines to double newlines (paragraph breaks)
     - Preserves single paragraph breaks
-    
+
     Args:
         text: Text to normalize
-    
+
     Returns:
         Text with normalized whitespace
     """
     # Strip leading/trailing whitespace
     text = text.strip()
-    
+
     # Reduce multiple blank lines to double newline (paragraph break)
-    text = re.sub(r'\n\s*\n+', '\n\n', text)
-    
+    text = re.sub(r"\n\s*\n+", "\n\n", text)
+
     return text
 
 
@@ -208,17 +209,17 @@ def chunk_text_with_tokens(
     min_tokens: int,
     target_tokens: int,
     max_tokens: int,
-    overlap_tokens: int
+    overlap_tokens: int,
 ) -> List[Tuple[str, Dict[str, Any]]]:
     """
     Chunk text using sliding window with configurable overlap.
-    
+
     This function implements a sliding window chunker that:
         - Creates chunks of approximately target_tokens size
         - Maintains overlap_tokens between adjacent chunks
         - Respects min_tokens and max_tokens boundaries
         - Merges small remainder chunks when possible
-    
+
     Args:
         text: The text to chunk
         section_label: Label for this section (e.g., "Syllabus", "Sec. 2")
@@ -226,115 +227,118 @@ def chunk_text_with_tokens(
         target_tokens: Target window size for sliding window
         max_tokens: Maximum tokens per chunk
         overlap_tokens: Number of tokens to overlap between chunks
-    
+
     Returns:
         List of (chunk_text, metadata) tuples where metadata includes:
             - section_label: The section this chunk belongs to
             - chunk_token_count: Actual token count for debugging
-    
+
     """
-    
+
     # Ensure forward progress
     if overlap_tokens >= target_tokens:
         logger.warning(
             "overlap_tokens (%d) >= target_tokens (%d), clamping to %d",
-            overlap_tokens, target_tokens, target_tokens - 1
+            overlap_tokens,
+            target_tokens,
+            target_tokens - 1,
         )
         overlap_tokens = max(0, target_tokens - 1)
-    
+
     # Normalize whitespace
     text = normalize_whitespace(text)
-    
+
     # Handle short documents
     total_tokens = count_tokens(text)
     if total_tokens <= max(min_tokens, target_tokens):
-        metadata = {
-            "section_label": section_label,
-            "chunk_token_count": total_tokens
-        }
+        metadata = {"section_label": section_label, "chunk_token_count": total_tokens}
         return [(text, metadata)]
-    
+
     # Split into tokens for sliding window
     # We'll work with character positions for simplicity
     chunks = []
     text_length = len(text)
-    
+
     # Calculate step size (how much to advance the window)
     step_size = max(1, target_tokens - overlap_tokens)
-    
+
     # Character approximation for efficiency (roughly 4 chars per token)
     CHARS_PER_TOKEN = 4
     window_size_chars = target_tokens * CHARS_PER_TOKEN
     step_size_chars = step_size * CHARS_PER_TOKEN
-    
+
     start_pos = 0
-    
+
     while start_pos < text_length:
         # Calculate end position for this chunk
         end_pos = min(start_pos + window_size_chars, text_length)
-        
+
         # Extract chunk text
         chunk_text = text[start_pos:end_pos]
-        
+
         # Try to end at sentence boundary if not at document end
         if end_pos < text_length:
             # Look for sentence ending near the end
-            last_period = chunk_text.rfind('. ')
-            last_question = chunk_text.rfind('? ')
-            last_exclaim = chunk_text.rfind('! ')
-            
+            last_period = chunk_text.rfind(". ")
+            last_question = chunk_text.rfind("? ")
+            last_exclaim = chunk_text.rfind("! ")
+
             # Find the latest sentence ending
             sentence_end = max(last_period, last_question, last_exclaim)
-            
+
             # If we found a sentence ending in the last 20% of the chunk, use it
             if sentence_end > len(chunk_text) * 0.8:
-                chunk_text = chunk_text[:sentence_end + 2]  # Include punctuation and space
+                chunk_text = chunk_text[
+                    : sentence_end + 2
+                ]  # Include punctuation and space
                 end_pos = start_pos + len(chunk_text)
-        
+
         # Count actual tokens
         chunk_token_count = count_tokens(chunk_text)
-        
+
         # Check if this is the last potential chunk
         remaining_text = text[end_pos:].strip()
         remaining_tokens = count_tokens(remaining_text) if remaining_text else 0
-        
+
         # If remainder is too small and we have chunks, merge with last chunk
         if remaining_tokens > 0 and remaining_tokens < min_tokens and chunks:
             # Merge remainder into current chunk
             chunk_text = text[start_pos:].strip()
             chunk_token_count = count_tokens(chunk_text)
-            
+
             # Only add if combined size is reasonable
-            if chunk_token_count <= max_tokens * 1.2:  # Allow 20% overflow for final chunk
+            if (
+                chunk_token_count <= max_tokens * 1.2
+            ):  # Allow 20% overflow for final chunk
                 metadata = {
                     "section_label": section_label,
-                    "chunk_token_count": chunk_token_count
+                    "chunk_token_count": chunk_token_count,
                 }
                 chunks.append((normalize_whitespace(chunk_text), metadata))
             else:
                 # Too large when merged, keep as separate chunks
                 metadata = {
                     "section_label": section_label,
-                    "chunk_token_count": chunk_token_count
+                    "chunk_token_count": chunk_token_count,
                 }
                 chunks.append((normalize_whitespace(chunk_text), metadata))
-                
+
                 # Add remainder as final chunk despite being small
                 if remaining_text:
                     metadata = {
                         "section_label": section_label,
-                        "chunk_token_count": remaining_tokens
+                        "chunk_token_count": remaining_tokens,
                     }
                     chunks.append((normalize_whitespace(remaining_text), metadata))
             break
-        
+
         # Add current chunk
         metadata = {
             "section_label": section_label,
-            "chunk_token_count": chunk_token_count
+            "chunk_token_count": chunk_token_count,
         }
         chunks.append((normalize_whitespace(chunk_text), metadata))
-        
+
         # Advance window
         if overlap_tokens > 0 and end_pos < text_length:
             # Move back by overlap amount
@@ -342,11 +346,11 @@ def chunk_text_with_tokens(
             start_pos = max(start_pos + step_size_chars, end_pos - overlap_chars)
         else:
             start_pos = end_pos
-        
+
         # Ensure we make progress
         if start_pos <= end_pos - window_size_chars:
             start_pos = end_pos
-    
+
     return chunks
 
 
@@ -406,13 +410,16 @@ def chunk_supreme_court_opinion(
     """
     chunks = []
     syllabus_text = None
-    
+
     # Calculate overlap for SCOTUS documents
     ov = overlap_tokens(SCOTUS_CFG)
-    
+
     logger.debug(
         "Chunking SCOTUS opinion with config: min=%d, target=%d, max=%d, overlap=%d",
-        SCOTUS_CFG.min_tokens, SCOTUS_CFG.target_tokens, SCOTUS_CFG.max_tokens, ov
+        SCOTUS_CFG.min_tokens,
+        SCOTUS_CFG.target_tokens,
+        SCOTUS_CFG.max_tokens,
+        ov,
     )
 
     # Section detection patterns
@@ -473,11 +480,12 @@ def chunk_supreme_court_opinion(
     if not sections:
         logger.warning("No section markers found in Supreme Court opinion")
         chunk_results = chunk_text_with_tokens(
-            text, "Opinion",
+            text,
+            "Opinion",
             min_tokens=SCOTUS_CFG.min_tokens,
             target_tokens=SCOTUS_CFG.target_tokens,
             max_tokens=SCOTUS_CFG.max_tokens,
-            overlap_tokens=ov
+            overlap_tokens=ov,
         )
         for chunk_text, metadata in chunk_results:
             chunks.append((chunk_text, metadata))
@@ -518,22 +526,24 @@ def chunk_supreme_court_opinion(
 
                 # Chunk the subsection with SCOTUS config
                 chunk_results = chunk_text_with_tokens(
-                    subsection_text, subsection_label,
+                    subsection_text,
+                    subsection_label,
                     min_tokens=SCOTUS_CFG.min_tokens,
                     target_tokens=SCOTUS_CFG.target_tokens,
                     max_tokens=SCOTUS_CFG.max_tokens,
-                    overlap_tokens=ov
+                    overlap_tokens=ov,
                 )
                 for chunk_text, metadata in chunk_results:
                     chunks.append((chunk_text, metadata))
         else:
             # No subsections, chunk the entire section
             chunk_results = chunk_text_with_tokens(
-                section_text, section_label,
+                section_text,
+                section_label,
                 min_tokens=SCOTUS_CFG.min_tokens,
                 target_tokens=SCOTUS_CFG.target_tokens,
                 max_tokens=SCOTUS_CFG.max_tokens,
-                overlap_tokens=ov
+                overlap_tokens=ov,
             )
             for chunk_text, metadata in chunk_results:
                 chunks.append((chunk_text, metadata))
@@ -600,13 +610,16 @@ def chunk_executive_order(text: str) -> List[Tuple[str, Dict[str, Any]]]:
 
     """
     chunks = []
-    
+
     # Calculate overlap for EO documents
     ov = overlap_tokens(EO_CFG)
-    
+
     logger.debug(
         "Chunking Executive Order with config: min=%d, target=%d, max=%d, overlap=%d",
-        EO_CFG.min_tokens, EO_CFG.target_tokens, EO_CFG.max_tokens, ov
+        EO_CFG.min_tokens,
+        EO_CFG.target_tokens,
+        EO_CFG.max_tokens,
+        ov,
     )
 
     # Pattern to match section headers
@@ -624,11 +637,12 @@ def chunk_executive_order(text: str) -> List[Tuple[str, Dict[str, Any]]]:
         if preamble_text:
             # Chunk the preamble with EO config
             chunk_results = chunk_text_with_tokens(
-                preamble_text, "Preamble",
+                preamble_text,
+                "Preamble",
                 min_tokens=EO_CFG.min_tokens,
                 target_tokens=EO_CFG.target_tokens,
                 max_tokens=EO_CFG.max_tokens,
-                overlap_tokens=ov
+                overlap_tokens=ov,
             )
             for chunk_text, metadata in chunk_results:
                 chunks.append((chunk_text, metadata))
@@ -703,33 +717,36 @@ def chunk_executive_order(text: str) -> List[Tuple[str, Dict[str, Any]]]:
 
                         # Chunk the subparagraph with EO config
                         chunk_results = chunk_text_with_tokens(
-                            subpara_text, subsection_label,
+                            subpara_text,
+                            subsection_label,
                             min_tokens=EO_CFG.min_tokens,
                             target_tokens=EO_CFG.target_tokens,
                             max_tokens=EO_CFG.max_tokens,
-                            overlap_tokens=ov
+                            overlap_tokens=ov,
                         )
                         for chunk_text, metadata in chunk_results:
                             chunks.append((chunk_text, metadata))
                 else:
                     # No subparagraphs, chunk the subsection
                     chunk_results = chunk_text_with_tokens(
-                        subsection_text, subsection_label,
+                        subsection_text,
+                        subsection_label,
                         min_tokens=EO_CFG.min_tokens,
                         target_tokens=EO_CFG.target_tokens,
                         max_tokens=EO_CFG.max_tokens,
-                        overlap_tokens=ov
+                        overlap_tokens=ov,
                     )
                     for chunk_text, metadata in chunk_results:
                         chunks.append((chunk_text, metadata))
         else:
             # No subsections, chunk the entire section independently
             chunk_results = chunk_text_with_tokens(
-                section_text, section_label,
+                section_text,
+                section_label,
                 min_tokens=EO_CFG.min_tokens,
                 target_tokens=EO_CFG.target_tokens,
                 max_tokens=EO_CFG.max_tokens,
-                overlap_tokens=ov
+                overlap_tokens=ov,
             )
             for chunk_text, metadata in chunk_results:
                 chunks.append((chunk_text, metadata))
@@ -738,11 +755,12 @@ def chunk_executive_order(text: str) -> List[Tuple[str, Dict[str, Any]]]:
     if not chunks:
         logger.warning("No section markers found in Executive Order")
         chunk_results = chunk_text_with_tokens(
-            text, "Executive Order",
+            text,
+            "Executive Order",
             min_tokens=EO_CFG.min_tokens,
             target_tokens=EO_CFG.target_tokens,
             max_tokens=EO_CFG.max_tokens,
-            overlap_tokens=ov
+            overlap_tokens=ov,
         )
         for chunk_text, metadata in chunk_results:
             chunks.append((chunk_text, metadata))
@@ -791,7 +809,9 @@ if __name__ == "__main__":
     if syllabus:
         print(f"Syllabus extracted: {syllabus[:50]}...")
     for i, (chunk_text, metadata) in enumerate(chunks[:3]):
-        print(f"Chunk {i}: {metadata['section_label']} - {metadata.get('chunk_token_count', 'N/A')} tokens")
+        print(
+            f"Chunk {i}: {metadata['section_label']} - {metadata.get('chunk_token_count', 'N/A')} tokens"
+        )
 
     # Example Executive Order
     sample_eo = """
@@ -815,4 +835,6 @@ if __name__ == "__main__":
     chunks = chunk_executive_order(sample_eo)
     print(f"Generated {len(chunks)} chunks")
     for i, (chunk_text, metadata) in enumerate(chunks):
-        print(f"Chunk {i}: {metadata['section_label']} - {metadata.get('chunk_token_count', 'N/A')} tokens")
+        print(
+            f"Chunk {i}: {metadata['section_label']} - {metadata.get('chunk_token_count', 'N/A')} tokens"
+        )

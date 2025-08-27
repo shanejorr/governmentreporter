@@ -658,7 +658,9 @@ class FederalRegisterClient(GovernmentAPIClient):
 
                 # Extract only agency names if agencies field exists
                 if "agencies" in order and isinstance(order["agencies"], list):
-                    order["agencies"] = [agency.get("name", "") for agency in order["agencies"]]
+                    order["agencies"] = [
+                        agency.get("name", "") for agency in order["agencies"]
+                    ]
 
                 yield order
                 results_count += 1
@@ -761,11 +763,13 @@ class FederalRegisterClient(GovernmentAPIClient):
 
         response = self._make_request_with_retry(url)
         order_data = response.json()
-        
+
         # Extract only agency names if agencies field exists
         if "agencies" in order_data and isinstance(order_data["agencies"], list):
-            order_data["agencies"] = [agency.get("name", "") for agency in order_data["agencies"]]
-        
+            order_data["agencies"] = [
+                agency.get("name", "") for agency in order_data["agencies"]
+            ]
+
         return order_data
 
     def search_documents(
@@ -976,9 +980,13 @@ class FederalRegisterClient(GovernmentAPIClient):
         for order_data in results[:limit]:  # Respect the limit parameter
             try:
                 # Extract only agency names if agencies field exists
-                if "agencies" in order_data and isinstance(order_data["agencies"], list):
-                    order_data["agencies"] = [agency.get("name", "") for agency in order_data["agencies"]]
-                
+                if "agencies" in order_data and isinstance(
+                    order_data["agencies"], list
+                ):
+                    order_data["agencies"] = [
+                        agency.get("name", "") for agency in order_data["agencies"]
+                    ]
+
                 # Get the document number
                 document_number = order_data.get("document_number")
                 if not document_number:
@@ -1012,7 +1020,9 @@ class FederalRegisterClient(GovernmentAPIClient):
                     document = Document(
                         id=document_number,
                         title=order_data.get("title", "Unknown Executive Order"),
-                        date=order_data.get("publication_date", order_data.get("signing_date", "")),
+                        date=order_data.get(
+                            "publication_date", order_data.get("signing_date", "")
+                        ),
                         type="Executive Order",
                         source="Federal Register",
                         content="",  # Executive orders don't have abstracts
@@ -1034,7 +1044,9 @@ class FederalRegisterClient(GovernmentAPIClient):
                         partial_doc = Document(
                             id=document_number,
                             title=order_data.get("title", "Unknown Executive Order"),
-                            date=order_data.get("publication_date", order_data.get("signing_date", "")),
+                            date=order_data.get(
+                                "publication_date", order_data.get("signing_date", "")
+                            ),
                             type="Executive Order",
                             source="Federal Register",
                             content="",  # Executive orders don't have abstracts

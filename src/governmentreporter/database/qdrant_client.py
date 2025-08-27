@@ -57,14 +57,8 @@ import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import (
-    Distance,
-    FieldCondition,
-    Filter,
-    MatchValue,
-    PointStruct,
-    VectorParams,
-)
+from qdrant_client.models import (Distance, FieldCondition, Filter, MatchValue,
+                                  PointStruct, VectorParams)
 
 from ..utils import get_logger
 

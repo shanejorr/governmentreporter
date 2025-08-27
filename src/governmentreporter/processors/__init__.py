@@ -35,14 +35,10 @@ Python Learning Notes:
 """
 
 from .build_payloads import build_payloads_from_document
-from .schema import (
-    SupremeCourtMetadata,
-    ExecutiveOrderMetadata,
-    ChunkMetadata,
-    QdrantPayload,
-)
-from .llm_extraction import generate_scotus_llm_fields, generate_eo_llm_fields
-from .chunking import chunk_supreme_court_opinion, chunk_executive_order
+from .chunking import chunk_executive_order, chunk_supreme_court_opinion
+from .llm_extraction import generate_eo_llm_fields, generate_scotus_llm_fields
+from .schema import (ChunkMetadata, ExecutiveOrderMetadata, QdrantPayload,
+                     SupremeCourtMetadata)
 
 __all__ = [
     # Main interface

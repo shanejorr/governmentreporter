@@ -23,11 +23,11 @@ Python Learning Notes:
 import json
 import re
 from typing import Any, Dict, List, Optional
+
 from openai import OpenAI
 
-from ..utils.config import get_openai_api_key
 from ..utils import get_logger
-
+from ..utils.config import get_openai_api_key
 
 logger = get_logger(__name__)
 

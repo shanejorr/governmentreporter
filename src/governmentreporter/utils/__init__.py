@@ -34,6 +34,7 @@ import yaml
 
 from .citations import build_bluebook_citation
 from .config import get_court_listener_token, get_openai_api_key
+
 # from .embeddings import OpenAIEmbeddingsClient  # Module removed
 
 # Global flag to track if logging has been configured

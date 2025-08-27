@@ -24,7 +24,6 @@ from typing import Any, Dict
 
 import pytest
 
-
 # Base directory for test data files
 SCRATCH_DIR = Path(__file__).parent.parent / "scratch"
 
@@ -32,64 +31,64 @@ SCRATCH_DIR = Path(__file__).parent.parent / "scratch"
 def load_json(filename: str) -> Dict[str, Any]:
     """
     Load JSON data from the scratch directory.
-    
+
     This helper function provides easy access to test fixture JSON files stored
     in the scratch/ directory. It handles file reading and JSON parsing with
     appropriate error handling.
-    
+
     Args:
         filename: Name of the JSON file in scratch/ directory (with or without .json extension)
-    
+
     Returns:
         Parsed JSON data as a Python dictionary
-        
+
     Raises:
         FileNotFoundError: If the specified file doesn't exist
         json.JSONDecodeError: If the file contains invalid JSON
-        
+
     Example:
         >>> data = load_json("opinions_endpoint")
         >>> assert data["id"] == 9973155
     """
-    if not filename.endswith('.json'):
-        filename += '.json'
-    
+    if not filename.endswith(".json"):
+        filename += ".json"
+
     filepath = SCRATCH_DIR / filename
-    
+
     if not filepath.exists():
         raise FileNotFoundError(f"Test fixture file not found: {filepath}")
-    
-    with open(filepath, 'r') as f:
+
+    with open(filepath, "r") as f:
         return json.load(f)
 
 
 def load_text(filename: str) -> str:
     """
     Load text content from the scratch directory.
-    
+
     This helper function provides easy access to test fixture text files stored
     in the scratch/ directory. It handles file reading with appropriate encoding
     and error handling.
-    
+
     Args:
         filename: Name of the text file in scratch/ directory (with extension)
-    
+
     Returns:
         File content as a string
-        
+
     Raises:
         FileNotFoundError: If the specified file doesn't exist
-        
+
     Example:
         >>> text = load_text("executive_order_text.txt")
         >>> assert "Executive Order" in text
     """
     filepath = SCRATCH_DIR / filename
-    
+
     if not filepath.exists():
         raise FileNotFoundError(f"Test fixture file not found: {filepath}")
-    
-    with open(filepath, 'r', encoding='utf-8') as f:
+
+    with open(filepath, "r", encoding="utf-8") as f:
         return f.read()
 
 
@@ -97,11 +96,11 @@ def load_text(filename: str) -> str:
 def opinions_payload() -> Dict[str, Any]:
     """
     Fixture providing Court Listener opinions endpoint JSON data.
-    
+
     Returns the full JSON response from scratch/opinions_endpoint.json representing
     a Supreme Court opinion from the Court Listener API. This is the primary test
     data for testing CourtListenerClient.get_opinion() and related methods.
-    
+
     Returns:
         Dictionary containing Court Listener opinion data with fields like:
         - id: Opinion ID (9973155)
@@ -109,7 +108,7 @@ def opinions_payload() -> Dict[str, Any]:
         - cluster: URL to cluster endpoint
         - author_id: Judge/Justice ID
         - date_created: Creation timestamp
-        
+
     Example Usage in Tests:
         def test_opinion_parsing(opinions_payload):
             assert opinions_payload["id"] == 9973155
@@ -175,7 +174,7 @@ Page Proof Pending Publication
      ASSOCIATION OF AMERICA, LTD., et al.
 certiorari to the united states court of appeals for
                   the fifth circuit
-      No. 22–448. Argued October 3, 2023—Decided May 16, 2024"""  # Truncated for brevity
+      No. 22–448. Argued October 3, 2023—Decided May 16, 2024""",  # Truncated for brevity
     }
 
 
@@ -183,19 +182,19 @@ certiorari to the united states court of appeals for
 def cluster_payload() -> Dict[str, Any]:
     """
     Fixture providing Court Listener cluster endpoint JSON data.
-    
+
     Returns the JSON response from scratch/cluster_endpoint.json representing
     Supreme Court case cluster data (metadata for a group of related opinions).
-    This is used for testing CourtListenerClient.get_opinion_cluster() and 
+    This is used for testing CourtListenerClient.get_opinion_cluster() and
     citation building functionality.
-    
+
     Returns:
         Dictionary containing Court Listener cluster data with fields like:
         - case_name: Full case name
         - citations: List of citation dictionaries
         - date_filed: Filing date
         - judges: Judge names
-        
+
     Example Usage in Tests:
         def test_cluster_citation(cluster_payload):
             citation = cluster_payload["citations"][0]
@@ -209,11 +208,11 @@ def cluster_payload() -> Dict[str, Any]:
 def eo_metadata_payload() -> Dict[str, Any]:
     """
     Fixture providing Federal Register executive order metadata JSON.
-    
+
     Returns the JSON response from scratch/executive_order_metadata.json representing
     an executive order from the Federal Register API. This is the primary test data
     for testing FederalRegisterClient methods.
-    
+
     Returns:
         Dictionary containing Federal Register executive order data with fields like:
         - document_number: Federal Register document ID
@@ -222,7 +221,7 @@ def eo_metadata_payload() -> Dict[str, Any]:
         - raw_text_url: URL to raw text content
         - president: President information
         - agencies: List of affected agencies
-        
+
     Example Usage in Tests:
         def test_eo_metadata(eo_metadata_payload):
             assert eo_metadata_payload["executive_order_number"] == "14304"
@@ -235,14 +234,14 @@ def eo_metadata_payload() -> Dict[str, Any]:
 def eo_raw_text() -> str:
     """
     Fixture providing executive order raw text content.
-    
+
     Returns the text content from scratch/executive_order_text.txt representing
     the raw text that would be returned from the Federal Register raw_text_url.
     This is used for testing text extraction and cleaning functionality.
-    
+
     Returns:
         String containing the full text of an executive order in HTML format
-        
+
     Example Usage in Tests:
         def test_text_extraction(eo_raw_text):
             assert "Executive Order 14304" in eo_raw_text
@@ -255,20 +254,20 @@ def eo_raw_text() -> str:
 def court_listener_client():
     """
     Fixture providing a configured CourtListenerClient instance.
-    
+
     Creates a CourtListenerClient with a test API token for use in tests.
     The client is configured but all network calls should be mocked using respx.
-    
+
     Returns:
         CourtListenerClient: Configured client instance
-        
+
     Example Usage in Tests:
         def test_client_config(court_listener_client):
             assert court_listener_client.api_key == "test-token"
             assert court_listener_client.base_url == "https://www.courtlistener.com/api/rest/v4"
     """
     from governmentreporter.apis.court_listener import CourtListenerClient
-    
+
     # Create client with test token
     return CourtListenerClient(token="test-token")
 
@@ -277,21 +276,21 @@ def court_listener_client():
 def federal_register_client():
     """
     Fixture providing a configured FederalRegisterClient instance.
-    
+
     Creates a FederalRegisterClient for use in tests. No authentication is required
     for the Federal Register API, so the client is created with default settings.
     All network calls should be mocked using respx.
-    
+
     Returns:
         FederalRegisterClient: Configured client instance
-        
+
     Example Usage in Tests:
         def test_client_config(federal_register_client):
             assert federal_register_client.api_key is None
             assert federal_register_client.base_url == "https://www.federalregister.gov/api/v1"
     """
     from governmentreporter.apis.federal_register import FederalRegisterClient
-    
+
     # Create client (no authentication needed)
     return FederalRegisterClient()
 
@@ -299,6 +298,7 @@ def federal_register_client():
 # Optional: Try to import schema module if it exists
 try:
     from governmentreporter.schema import *
+
     SCHEMA_AVAILABLE = True
 except ImportError:
     SCHEMA_AVAILABLE = False
@@ -308,14 +308,14 @@ except ImportError:
 def schema_module():
     """
     Fixture providing optional access to the schema module.
-    
+
     Attempts to import the governmentreporter.schema module and make it available
     for tests. If the module doesn't exist, tests using this fixture should skip
     gracefully using pytest.importorskip or similar mechanisms.
-    
+
     Returns:
         Module or None: The schema module if available, None otherwise
-        
+
     Example Usage in Tests:
         def test_with_schema(schema_module):
             if not SCHEMA_AVAILABLE:
@@ -324,5 +324,6 @@ def schema_module():
     """
     if SCHEMA_AVAILABLE:
         import governmentreporter.schema
+
         return governmentreporter.schema
     return None

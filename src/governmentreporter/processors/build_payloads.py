@@ -27,23 +27,17 @@ Python Learning Notes:
     - Defensive programming with validation
 """
 
-from typing import Any, Dict, List
-from datetime import datetime
 import re
+from datetime import datetime
+from typing import Any, Dict, List
 
 from ..apis.base import Document
 from ..utils import get_logger
 from ..utils.citations import build_bluebook_citation
-
-from .schema import (
-    SupremeCourtMetadata,
-    ExecutiveOrderMetadata,
-    ChunkMetadata,
-    QdrantPayload,
-)
-from .llm_extraction import generate_scotus_llm_fields, generate_eo_llm_fields
-from .chunking import chunk_supreme_court_opinion, chunk_executive_order
-
+from .chunking import chunk_executive_order, chunk_supreme_court_opinion
+from .llm_extraction import generate_eo_llm_fields, generate_scotus_llm_fields
+from .schema import (ChunkMetadata, ExecutiveOrderMetadata, QdrantPayload,
+                     SupremeCourtMetadata)
 
 logger = get_logger(__name__)
 

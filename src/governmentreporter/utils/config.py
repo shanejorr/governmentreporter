@@ -33,9 +33,9 @@ Python Learning Notes:
     - The pattern of checking "if not token" works because empty strings are falsy
 """
 
+import logging
 import os
 from typing import Optional
-import logging
 
 
 def get_court_listener_token() -> str:
