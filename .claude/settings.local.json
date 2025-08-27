@@ -25,7 +25,8 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:platform.openai.com)",
       "Bash(git pull:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "additionalDirectories": [

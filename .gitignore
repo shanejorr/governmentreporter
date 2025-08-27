@@ -49,11 +49,6 @@ uv.lock
 Icon?
 ._*
 
-# ChromaDB data (you may want to include this in git later)
-data/chromadb/
-data/raw/
-data/processed/
-
 # Environment variables
 .env
 .env.local
