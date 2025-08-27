@@ -34,6 +34,7 @@ venv.bak/
 
 # UV specific
 uv.lock
+.python-version
 
 # IDE
 .vscode/
@@ -84,3 +85,18 @@ dmypy.json
 
 # Binary files
 *.bin
+
+# Project-specific ignores
+# Qdrant database files
+qdrant_db/
+test_qdrant_db/
+
+# Raw data and processing files
+raw-data/
+processing_progress.json
+
+# Generated outputs
+example_output/
+
+# Error logs
+error_log.jsonl
