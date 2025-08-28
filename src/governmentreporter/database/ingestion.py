@@ -53,14 +53,14 @@ class QdrantIngestionClient:
         db_client (QdrantDBClient): Underlying Qdrant database client
 
     Example:
-        # Initialize client for Supreme Court opinions with default database path
-        client = QdrantIngestionClient("scotus_opinions", embedding_dimension=1536)
-        
-        # Initialize with custom database path
+        # Initialize client for Supreme Court opinions
+        client = QdrantIngestionClient("scotus_opinions", "./qdrant_db")
+
+        # Initialize with custom database path and embedding dimension
         client = QdrantIngestionClient(
-            "scotus_opinions", 
-            embedding_dimension=1536, 
-            db_path="/path/to/custom/qdrant_db"
+            "scotus_opinions",
+            "/path/to/custom/qdrant_db",
+            embedding_dimension=768
         )
 
         # Prepare documents and embeddings
@@ -86,7 +86,9 @@ class QdrantIngestionClient:
         - Callbacks allow customizable progress reporting
     """
 
-    def __init__(self, collection_name: str, embedding_dimension: int = 1536, db_path: str = "./qdrant_db"):
+    def __init__(
+        self, collection_name: str, db_path: str, embedding_dimension: int = 1536
+    ):
         """
         Initialize the Qdrant ingestion client.
 
@@ -99,12 +101,12 @@ class QdrantIngestionClient:
             collection_name (str): Name of the Qdrant collection to use.
                 Collections are created if they don't exist. Names should be
                 descriptive (e.g., "scotus_opinions", "executive_orders").
+            db_path (str): Path to the Qdrant database directory.
+                Can be absolute or relative path. The directory will be created
+                if it doesn't exist. This parameter is required.
             embedding_dimension (int): Dimension of embedding vectors.
                 Default is 1536 for text-embedding-3-small. Must match the
                 dimension of embeddings you'll be storing.
-            db_path (str): Path to the Qdrant database directory.
-                Default is "./qdrant_db". Can be absolute or relative path.
-                The directory will be created if it doesn't exist.
 
         Raises:
             Exception: If collection creation or connection fails
@@ -350,6 +352,46 @@ class QdrantIngestionClient:
 
         return id_hash
 
+    def _extract_vector_config(self, vectors_config) -> Dict[str, Any]:
+        """
+        Extract vector configuration from Qdrant collection info.
+
+        Handles both VectorParams object and dictionary configurations.
+
+        Args:
+            vectors_config: Vector configuration from Qdrant collection info
+
+        Returns:
+            Dict[str, Any]: Dictionary with vector_size and distance
+        """
+        try:
+            if hasattr(vectors_config, "size") and hasattr(vectors_config, "distance"):
+                # VectorParams object
+                return {
+                    "vector_size": vectors_config.size,
+                    "distance": vectors_config.distance,
+                }
+            elif isinstance(vectors_config, dict):
+                # Dictionary configuration
+                default_config = (
+                    next(iter(vectors_config.values())) if vectors_config else None
+                )
+                if (
+                    default_config
+                    and hasattr(default_config, "size")
+                    and hasattr(default_config, "distance")
+                ):
+                    return {
+                        "vector_size": default_config.size,
+                        "distance": default_config.distance,
+                    }
+
+            # Fallback for unknown configuration types
+            return {"vector_size": "unknown", "distance": "unknown"}
+
+        except Exception:
+            return {"vector_size": "unknown", "distance": "unknown"}
+
     def get_collection_stats(self) -> Dict[str, Any]:
         """
         Get statistics about the collection.
@@ -393,10 +435,7 @@ class QdrantIngestionClient:
                 "vectors_count": info.vectors_count or 0,
                 "indexed_vectors": info.indexed_vectors_count or 0,
                 "status": info.status,
-                "config": {
-                    "vector_size": info.config.params.vectors.size,
-                    "distance": info.config.params.vectors.distance,
-                },
+                "config": self._extract_vector_config(info.config.params.vectors),
             }
         except Exception as e:
             logger.error(f"Error getting collection stats: {e}")

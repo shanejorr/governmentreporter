@@ -30,12 +30,10 @@ from progress_tracker import ProcessingStatus, ProgressTracker
 
 from governmentreporter.apis.court_listener import CourtListenerClient
 from governmentreporter.database.ingestion import QdrantIngestionClient
-from governmentreporter.processors.build_payloads import \
-    build_payloads_from_document
+from governmentreporter.processors.build_payloads import build_payloads_from_document
 from governmentreporter.processors.embeddings import EmbeddingGenerator
 from governmentreporter.utils.config import get_court_listener_token
-from governmentreporter.utils.monitoring import (PerformanceMonitor,
-                                                 setup_logging)
+from governmentreporter.utils.monitoring import PerformanceMonitor, setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +57,7 @@ class SCOTUSIngester:
         batch_size: int = 100,
         dry_run: bool = False,
         progress_db: str = "scotus_ingestion.db",
+        qdrant_db_path: str = "./qdrant_db",
     ):
         """
         Initialize the SCOTUS ingester.
@@ -69,6 +68,7 @@ class SCOTUSIngester:
             batch_size: Number of documents to process in each batch
             dry_run: If True, don't actually store documents
             progress_db: Path to SQLite database for progress tracking
+            qdrant_db_path: Path to Qdrant database directory
         """
         self.start_date = start_date
         self.end_date = end_date
@@ -79,7 +79,9 @@ class SCOTUSIngester:
         self.api_client = CourtListenerClient()
         self.progress_tracker = ProgressTracker(progress_db, "scotus")
         self.embedding_generator = EmbeddingGenerator()
-        self.qdrant_client = QdrantIngestionClient("supreme_court_opinions")
+        self.qdrant_client = QdrantIngestionClient(
+            "supreme_court_opinions", qdrant_db_path
+        )
         self.performance_monitor = PerformanceMonitor()
 
         # Reset any stuck documents from previous runs
@@ -372,6 +374,12 @@ def main():
     )
 
     parser.add_argument(
+        "--qdrant-db-path",
+        default="./qdrant_db",
+        help="Path to Qdrant database directory (default: ./qdrant_db)",
+    )
+
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Run without actually storing documents in Qdrant",
@@ -399,6 +407,7 @@ def main():
         batch_size=args.batch_size,
         dry_run=args.dry_run,
         progress_db=args.progress_db,
+        qdrant_db_path=args.qdrant_db_path,
     )
 
     try:
