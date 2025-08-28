@@ -53,8 +53,15 @@ class QdrantIngestionClient:
         db_client (QdrantDBClient): Underlying Qdrant database client
 
     Example:
-        # Initialize client for Supreme Court opinions
+        # Initialize client for Supreme Court opinions with default database path
         client = QdrantIngestionClient("scotus_opinions", embedding_dimension=1536)
+        
+        # Initialize with custom database path
+        client = QdrantIngestionClient(
+            "scotus_opinions", 
+            embedding_dimension=1536, 
+            db_path="/path/to/custom/qdrant_db"
+        )
 
         # Prepare documents and embeddings
         documents = [{"document_id": "123", "text": "...", "metadata": {...}}]
@@ -79,7 +86,7 @@ class QdrantIngestionClient:
         - Callbacks allow customizable progress reporting
     """
 
-    def __init__(self, collection_name: str, embedding_dimension: int = 1536):
+    def __init__(self, collection_name: str, embedding_dimension: int = 1536, db_path: str = "./qdrant_db"):
         """
         Initialize the Qdrant ingestion client.
 
@@ -95,6 +102,9 @@ class QdrantIngestionClient:
             embedding_dimension (int): Dimension of embedding vectors.
                 Default is 1536 for text-embedding-3-small. Must match the
                 dimension of embeddings you'll be storing.
+            db_path (str): Path to the Qdrant database directory.
+                Default is "./qdrant_db". Can be absolute or relative path.
+                The directory will be created if it doesn't exist.
 
         Raises:
             Exception: If collection creation or connection fails
@@ -106,7 +116,7 @@ class QdrantIngestionClient:
         """
         self.collection_name = collection_name
         self.embedding_dimension = embedding_dimension
-        self.db_client = QdrantDBClient(db_path="./qdrant_db")
+        self.db_client = QdrantDBClient(db_path=db_path)
         self.ensure_collection_exists()
 
     def ensure_collection_exists(self) -> None:
