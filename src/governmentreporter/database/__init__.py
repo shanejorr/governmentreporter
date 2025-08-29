@@ -7,7 +7,8 @@ handles the storage and retrieval of document embeddings, metadata, and full
 text content for government documents.
 
 Key Components:
-    QdrantDBClient: Main client class for Qdrant operations
+    - QdrantDBClient: Main client class for Qdrant operations
+    - QdrantIngestionClient: Specialized client for bulk document ingestion with progress tracking
 
 Architecture Overview:
     The database module implements a storage approach where:
@@ -48,6 +49,7 @@ Example Usage:
     )
 """
 
+from .ingestion import QdrantIngestionClient
 from .qdrant_client import QdrantDBClient
 
-__all__ = ["QdrantDBClient"]
+__all__ = ["QdrantDBClient", "QdrantIngestionClient"]

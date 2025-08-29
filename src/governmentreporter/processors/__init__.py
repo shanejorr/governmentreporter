@@ -8,6 +8,7 @@ The processors package includes:
     - schema: Pydantic models for metadata validation
     - llm_extraction: GPT-5-nano powered metadata generation
     - chunking: Section-aware text chunking algorithms
+    - embeddings: OpenAI text-embedding generation for semantic search
     - build_payloads: Main orchestration for document processing
 
 Primary Interface:
@@ -36,6 +37,7 @@ Python Learning Notes:
 
 from .build_payloads import build_payloads_from_document
 from .chunking import chunk_executive_order, chunk_supreme_court_opinion
+from .embeddings import OpenAIEmbeddingClient
 from .llm_extraction import generate_eo_llm_fields, generate_scotus_llm_fields
 from .schema import (ChunkMetadata, ExecutiveOrderMetadata, QdrantPayload,
                      SupremeCourtMetadata)
@@ -54,4 +56,6 @@ __all__ = [
     # Chunking
     "chunk_supreme_court_opinion",
     "chunk_executive_order",
+    # Embeddings
+    "OpenAIEmbeddingClient",
 ]
