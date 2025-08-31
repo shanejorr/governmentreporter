@@ -49,18 +49,16 @@ class QdrantIngestionClient:
 
     Attributes:
         collection_name (str): Name of the Qdrant collection to use
-        embedding_dimension (int): Dimension of embedding vectors (default: 1536)
         db_client (QdrantDBClient): Underlying Qdrant database client
 
     Example:
         # Initialize client for Supreme Court opinions
         client = QdrantIngestionClient("scotus_opinions", "./qdrant_db")
 
-        # Initialize with custom database path and embedding dimension
+        # Initialize with custom database path
         client = QdrantIngestionClient(
             "scotus_opinions",
-            "/path/to/custom/qdrant_db",
-            embedding_dimension=768
+            "/path/to/custom/qdrant_db"
         )
 
         # Prepare documents and embeddings
@@ -86,16 +84,14 @@ class QdrantIngestionClient:
         - Callbacks allow customizable progress reporting
     """
 
-    def __init__(
-        self, collection_name: str, db_path: str, embedding_dimension: int = 1536
-    ):
+    def __init__(self, collection_name: str, db_path: str):
         """
         Initialize the Qdrant ingestion client.
 
-        Creates or connects to a Qdrant collection configured for the specified
-        embedding dimension. The collection uses cosine distance for similarity
-        matching, which works well for normalized embeddings from models like
-        text-embedding-3-small.
+        Creates or connects to a Qdrant collection configured for OpenAI's
+        text-embedding-3-small model (1536 dimensions). The collection uses
+        cosine distance for similarity matching, which works well for
+        normalized embeddings from this model.
 
         Args:
             collection_name (str): Name of the Qdrant collection to use.
@@ -104,9 +100,6 @@ class QdrantIngestionClient:
             db_path (str): Path to the Qdrant database directory.
                 Can be absolute or relative path. The directory will be created
                 if it doesn't exist. This parameter is required.
-            embedding_dimension (int): Dimension of embedding vectors.
-                Default is 1536 for text-embedding-3-small. Must match the
-                dimension of embeddings you'll be storing.
 
         Raises:
             Exception: If collection creation or connection fails
@@ -117,7 +110,6 @@ class QdrantIngestionClient:
             - Default parameters provide sensible defaults
         """
         self.collection_name = collection_name
-        self.embedding_dimension = embedding_dimension
         self.db_client = QdrantDBClient(db_path=db_path)
         self.ensure_collection_exists()
 
@@ -127,7 +119,7 @@ class QdrantIngestionClient:
 
         Sets up the collection with:
             - Cosine distance metric for similarity (best for normalized vectors)
-            - Proper vector dimension matching the embedding model
+            - 1536-dimensional vectors for OpenAI text-embedding-3-small model
             - Optimized indexing parameters for search performance
 
         This method is idempotent - it's safe to call multiple times as it
@@ -151,7 +143,7 @@ class QdrantIngestionClient:
                 self.db_client.client.create_collection(
                     collection_name=self.collection_name,
                     vectors_config=VectorParams(
-                        size=self.embedding_dimension,
+                        size=1536,  # OpenAI text-embedding-3-small dimension
                         distance=Distance.COSINE,  # Best for semantic similarity
                     ),
                 )
