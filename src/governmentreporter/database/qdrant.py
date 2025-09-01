@@ -5,18 +5,6 @@ This module provides a clean, simple interface to Qdrant for storing and
 retrieving documents with their embeddings. It handles all aspects of
 document management including storage, retrieval, and semantic search.
 
-The client is designed for clarity and maintainability, with straightforward
-methods that do one thing well. It uses consistent patterns throughout and
-avoids unnecessary abstractions.
-
-Key Design Principles:
-    - Single responsibility: One class handles all Qdrant operations
-    - Clear method names that describe what they do
-    - Consistent ID generation using document_id directly
-    - Simple data structures with clear schemas
-    - Comprehensive error handling with helpful messages
-    - No unnecessary abstractions or inheritance
-
 Python Learning Notes:
     - Qdrant is a vector database optimized for similarity search
     - Embeddings are numerical representations of text
