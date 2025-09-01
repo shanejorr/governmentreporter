@@ -207,14 +207,15 @@ class QdrantPayload(BaseModel):
     This schema represents the final structure that gets stored in Qdrant.
     It combines the chunk text with all relevant metadata for retrieval.
 
-    The payload structure is designed to work with QdrantDBClient.batch_upsert(),
-    which expects documents in this exact format. The metadata gets unpacked
-    into Qdrant's payload storage for filtering and retrieval.
+    The payload structure is designed to work with QdrantClient's Document dataclass.
+    After adding embeddings, these payloads can be converted to Document objects
+    for storage. The metadata gets stored in Qdrant's payload for filtering and retrieval.
 
     Usage:
         payload = QdrantPayload(
             id="scotus_2024_001_chunk_0",
             text="The Court held that...",
+            embedding=[],  # Will be filled after generation
             metadata={...}  # All metadata fields as a dictionary
         )
 
@@ -229,6 +230,10 @@ class QdrantPayload(BaseModel):
         description="Unique identifier for the chunk (used as Qdrant point ID)"
     )
     text: str = Field(description="The actual text content of the chunk")
+    embedding: list = Field(
+        default_factory=list,
+        description="Vector embedding (initially empty, filled after generation)"
+    )
     metadata: dict = Field(
         description="Combined metadata including document-level, LLM-generated, and chunk-level fields"
     )

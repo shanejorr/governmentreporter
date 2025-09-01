@@ -27,7 +27,11 @@ Example Usage:
     payloads = build_payloads_from_document(doc)
 
     # Ready for Qdrant storage
-    # qdrant_client.batch_upsert(payloads, embeddings, "collection")
+    # from governmentreporter.database.qdrant import QdrantClient, Document
+    # client = QdrantClient(db_path="./qdrant_db")
+    # documents = [Document(id=p["id"], text=p["text"], embedding=e, metadata=p["metadata"])
+    #              for p, e in zip(payloads, embeddings)]
+    # client.store_documents_batch(documents, "collection")
 
 Python Learning Notes:
     - __all__ controls what's exported with "from processors import *"
@@ -37,7 +41,7 @@ Python Learning Notes:
 
 from .build_payloads import build_payloads_from_document
 from .chunking import chunk_executive_order, chunk_supreme_court_opinion
-from .embeddings import OpenAIEmbeddingClient
+from .embeddings import EmbeddingGenerator
 from .llm_extraction import generate_eo_llm_fields, generate_scotus_llm_fields
 from .schema import (ChunkMetadata, ExecutiveOrderMetadata, QdrantPayload,
                      SupremeCourtMetadata)
@@ -57,5 +61,5 @@ __all__ = [
     "chunk_supreme_court_opinion",
     "chunk_executive_order",
     # Embeddings
-    "OpenAIEmbeddingClient",
+    "EmbeddingGenerator",
 ]

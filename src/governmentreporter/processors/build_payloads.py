@@ -36,8 +36,12 @@ from ..utils import get_logger
 from ..utils.citations import build_bluebook_citation
 from .chunking import chunk_executive_order, chunk_supreme_court_opinion
 from .llm_extraction import generate_eo_llm_fields, generate_scotus_llm_fields
-from .schema import (ChunkMetadata, ExecutiveOrderMetadata, QdrantPayload,
-                     SupremeCourtMetadata)
+from .schema import (
+    ChunkMetadata,
+    ExecutiveOrderMetadata,
+    QdrantPayload,
+    SupremeCourtMetadata,
+)
 
 logger = get_logger(__name__)
 
@@ -230,10 +234,11 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
                        Must have non-empty content and valid type/source
 
     Returns:
-        List[Dict[str, Any]]: List of chunk payloads ready for
-                             QdrantDBClient.batch_upsert(). Each dict contains:
+        List[Dict[str, Any]]: List of chunk payloads ready for conversion to
+                             QdrantClient Document objects. Each dict contains:
                              - id: Unique chunk identifier
                              - text: Chunk text content
+                             - embedding: Empty list (to be filled by caller after generation)
                              - metadata: Combined metadata dictionary
 
     Raises:
@@ -256,7 +261,22 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
             print(f"Metadata keys: {payload['metadata'].keys()}")
 
         # Pass to Qdrant (with embeddings)
-        # qdrant_client.batch_upsert(payloads, embeddings, "scotus_opinions")
+        # from governmentreporter.database.qdrant import QdrantClient, Document
+        # client = QdrantClient(db_path="./qdrant_db")
+        # 
+        # # Convert payloads to Document objects with embeddings
+        # documents = []
+        # for payload, embedding in zip(payloads, embeddings):
+        #     doc = Document(
+        #         id=payload["id"],
+        #         text=payload["text"],
+        #         embedding=embedding,
+        #         metadata=payload["metadata"]
+        #     )
+        #     documents.append(doc)
+        # 
+        # # Store documents in batch
+        # success_count, failed_ids = client.store_documents_batch(documents, "scotus_opinions")
 
     Python Learning Notes:
         - Early validation with clear error messages
@@ -324,12 +344,14 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
                 )
 
                 # Combine all metadata
-                combined_metadata = {**full_doc_metadata, **chunk_metadata.dict()}
+                combined_metadata = {**full_doc_metadata, **chunk_metadata.model_dump()}
 
-                # Create Qdrant payload
+                # Create Qdrant Document-compatible payload
+                # Note: embedding will be added by the caller after generation
                 payload = {
                     "id": chunk_id,
                     "text": chunk_text,
+                    "embedding": [],  # Placeholder - will be filled by caller
                     "metadata": combined_metadata,
                 }
 
@@ -371,12 +393,14 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
                 )
 
                 # Combine all metadata
-                combined_metadata = {**full_doc_metadata, **chunk_metadata.dict()}
+                combined_metadata = {**full_doc_metadata, **chunk_metadata.model_dump()}
 
-                # Create Qdrant payload
+                # Create Qdrant Document-compatible payload
+                # Note: embedding will be added by the caller after generation
                 payload = {
                     "id": chunk_id,
                     "text": chunk_text,
+                    "embedding": [],  # Placeholder - will be filled by caller
                     "metadata": combined_metadata,
                 }
 
@@ -397,7 +421,7 @@ def validate_payload(payload: Dict[str, Any]) -> bool:
     Validate that a payload meets Qdrant requirements.
 
     This helper function ensures payloads have the required structure
-    and fields for QdrantDBClient.batch_upsert().
+    and fields for QdrantClient's Document dataclass.
 
     Validation checks:
         - Required fields: id, text, metadata
@@ -417,7 +441,7 @@ def validate_payload(payload: Dict[str, Any]) -> bool:
         - Dictionary iteration with items()
     """
     # Check required fields
-    if not all(key in payload for key in ["id", "text", "metadata"]):
+    if not all(key in payload for key in ["id", "text", "embedding", "metadata"]):
         return False
 
     # Check id and text are non-empty strings
@@ -429,6 +453,10 @@ def validate_payload(payload: Dict[str, Any]) -> bool:
 
     # Check metadata is a dictionary
     if not isinstance(payload["metadata"], dict):
+        return False
+
+    # Check embedding is a list (can be empty initially)
+    if not isinstance(payload["embedding"], list):
         return False
 
     # Check metadata values are JSON-serializable
@@ -457,11 +485,11 @@ if __name__ == "__main__":
         source="CourtListener",
         content="""
         SYLLABUS
-        
+
         Held: The Constitution requires a warrant for digital searches.
-        
+
         JUSTICE ROBERTS delivered the opinion of the Court.
-        
+
         The Fourth Amendment protects against unreasonable searches.
         Digital devices contain vast amounts of personal information.
         We hold that a warrant is generally required.
@@ -497,11 +525,11 @@ if __name__ == "__main__":
         source="Federal Register",
         content="""
         Executive Order 99999
-        
+
         By the authority vested in me as President, I hereby order:
-        
+
         Section 1. Purpose. This order establishes test requirements.
-        
+
         Sec. 2. Policy. All agencies shall implement test policies.
         """,
         metadata={"presidential_document_number": "99999", "citation": "90 FR 10000"},
@@ -523,5 +551,9 @@ if __name__ == "__main__":
 
     print("\n\nExample: Ready for Qdrant storage")
     print("# In actual usage:")
+    print("# from governmentreporter.database.qdrant import QdrantClient, Document")
+    print("# client = QdrantClient(db_path='./qdrant_db')")
     print("# embeddings = generate_embeddings([p['text'] for p in payloads])")
-    print("# qdrant_client.batch_upsert(payloads, embeddings, 'collection_name')")
+    print("# documents = [Document(id=p['id'], text=p['text'], embedding=e, metadata=p['metadata'])")
+    print("#              for p, e in zip(payloads, embeddings)]")
+    print("# client.store_documents_batch(documents, 'collection_name')")
