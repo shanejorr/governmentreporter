@@ -36,12 +36,8 @@ from ..utils import get_logger
 from ..utils.citations import build_bluebook_citation
 from .chunking import chunk_executive_order, chunk_supreme_court_opinion
 from .llm_extraction import generate_eo_llm_fields, generate_scotus_llm_fields
-from .schema import (
-    ChunkMetadata,
-    ExecutiveOrderMetadata,
-    QdrantPayload,
-    SupremeCourtMetadata,
-)
+from .schema import (ChunkMetadata, ExecutiveOrderMetadata, QdrantPayload,
+                     SupremeCourtMetadata)
 
 logger = get_logger(__name__)
 
@@ -105,24 +101,26 @@ def normalize_scotus_metadata(doc: Document) -> Dict[str, Any]:
     # Extract case name (may be in metadata from cluster)
     case_name = metadata.get("case_name", doc.title)
 
-    # Build Bluebook citation if cluster data available
-    citation_bluebook = None
-    if "cluster_data" in metadata:
-        citation_bluebook = build_bluebook_citation(metadata["cluster_data"])
-    elif "citations" in metadata:
-        # Fallback: try to build from citations list
-        citations = metadata.get("citations", [])
-        if citations and isinstance(citations, list):
-            # Find official U.S. reporter citation
-            for cite in citations:
-                if isinstance(cite, dict) and cite.get("type") == 1:
-                    volume = cite.get("volume", "")
-                    reporter = cite.get("reporter", "")
-                    page = cite.get("page", "")
-                    if volume and reporter and page:
-                        year = extract_year_from_date(doc.date)
-                        citation_bluebook = f"{volume} {reporter} {page} ({year})"
-                        break
+    # Build Bluebook citation - multiple strategies
+    citation_bluebook = metadata.get("citation")  # May already be built
+
+    if not citation_bluebook:
+        if "cluster_data" in metadata:
+            citation_bluebook = build_bluebook_citation(metadata["cluster_data"])
+        elif "citations" in metadata:
+            # Try to build from citations list
+            citations = metadata.get("citations", [])
+            if citations and isinstance(citations, list):
+                # Find official U.S. reporter citation
+                for cite in citations:
+                    if isinstance(cite, dict) and cite.get("type") == 1:
+                        volume = cite.get("volume", "")
+                        reporter = cite.get("reporter", "")
+                        page = cite.get("page", "")
+                        if volume and reporter and page:
+                            year = extract_year_from_date(doc.date)
+                            citation_bluebook = f"{volume} {reporter} {page} ({year})"
+                            break
 
     # Extract opinion type if available
     opinion_type = metadata.get("type", None)
@@ -137,6 +135,9 @@ def normalize_scotus_metadata(doc: Document) -> Dict[str, Any]:
         }
         opinion_type = type_mapping.get(opinion_type, opinion_type)
 
+    # Use absolute_url if available, otherwise download_url
+    url = doc.url or metadata.get("absolute_url", metadata.get("download_url", ""))
+
     return {
         "document_id": doc.id,
         "title": doc.title,
@@ -144,10 +145,14 @@ def normalize_scotus_metadata(doc: Document) -> Dict[str, Any]:
         "year": extract_year_from_date(doc.date),
         "source": doc.source,  # Should be "CourtListener"
         "type": doc.type,  # Should be "Supreme Court Opinion"
-        "url": doc.url or metadata.get("download_url", ""),
+        "url": url,
         "citation_bluebook": citation_bluebook,
         "case_name": case_name,
         "opinion_type": opinion_type,
+        "judges": metadata.get("judges", ""),
+        "author_str": metadata.get("author_str", ""),
+        "per_curiam": metadata.get("per_curiam", False),
+        "joined_by_str": metadata.get("joined_by_str", ""),
     }
 
 
@@ -178,9 +183,11 @@ def normalize_eo_metadata(doc: Document) -> Dict[str, Any]:
     """
     metadata = doc.metadata or {}
 
-    # Extract EO number
-    eo_number = metadata.get(
-        "presidential_document_number", metadata.get("executive_order_number", "")
+    # Extract EO number - check multiple possible field names
+    eo_number = (
+        metadata.get("executive_order_number")
+        or metadata.get("presidential_document_number")
+        or ""
     )
 
     # Build Federal Register citation
@@ -195,16 +202,26 @@ def normalize_eo_metadata(doc: Document) -> Dict[str, Any]:
     # Get the HTML URL (preferred) or PDF URL
     url = doc.url or metadata.get("html_url", metadata.get("pdf_url", ""))
 
+    # Extract president info if available
+    president_info = metadata.get("president", "")
+    if isinstance(president_info, dict):
+        president_name = president_info.get("name", "")
+    else:
+        president_name = str(president_info) if president_info else ""
+
     return {
         "document_id": doc.id,
         "title": doc.title,
         "publication_date": doc.date,
         "year": extract_year_from_date(doc.date),
-        "source": doc.source,  # Should be "Federal Register"
+        "source": doc.source,  # Should be "FederalRegister"
         "type": doc.type,  # Should be "Executive Order"
         "url": url,
         "citation_bluebook": citation_bluebook,
         "eo_number": eo_number,
+        "president": president_name,
+        "agencies": metadata.get("agencies", []),
+        "signing_date": metadata.get("signing_date", doc.date),
     }
 
 
@@ -263,7 +280,7 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
         # Pass to Qdrant (with embeddings)
         # from governmentreporter.database.qdrant import QdrantClient, Document
         # client = QdrantClient(db_path="./qdrant_db")
-        # 
+        #
         # # Convert payloads to Document objects with embeddings
         # documents = []
         # for payload, embedding in zip(payloads, embeddings):
@@ -274,7 +291,7 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
         #         metadata=payload["metadata"]
         #     )
         #     documents.append(doc)
-        # 
+        #
         # # Store documents in batch
         # success_count, failed_ids = client.store_documents_batch(documents, "scotus_opinions")
 
@@ -292,17 +309,20 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
     if not doc.content:
         raise ValueError(f"Document {doc.id} has no content to process")
 
-    # Detect document type
+    # Detect document type - handle both with and without space in source names
     is_scotus = (
         doc.type == "Supreme Court Opinion"
         or doc.source == "CourtListener"
         or "scotus" in doc.type.lower()
+        or "court" in doc.source.lower()
     )
 
     is_eo = (
         doc.type == "Executive Order"
-        or doc.source == "Federal Register"
+        or doc.source == "FederalRegister"
+        or doc.source == "Federal Register"  # Handle both formats
         or "executive" in doc.type.lower()
+        or "federal" in doc.source.lower()
     )
 
     if not (is_scotus or is_eo):
@@ -554,6 +574,8 @@ if __name__ == "__main__":
     print("# from governmentreporter.database.qdrant import QdrantClient, Document")
     print("# client = QdrantClient(db_path='./qdrant_db')")
     print("# embeddings = generate_embeddings([p['text'] for p in payloads])")
-    print("# documents = [Document(id=p['id'], text=p['text'], embedding=e, metadata=p['metadata'])")
+    print(
+        "# documents = [Document(id=p['id'], text=p['text'], embedding=e, metadata=p['metadata'])"
+    )
     print("#              for p, e in zip(payloads, embeddings)]")
     print("# client.store_documents_batch(documents, 'collection_name')")

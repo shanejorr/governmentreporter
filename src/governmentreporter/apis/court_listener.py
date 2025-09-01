@@ -455,7 +455,7 @@ class CourtListenerClient(GovernmentAPIClient):
         if end_date:
             params["date_created__lte"] = end_date
 
-        documents = []
+        documents: List[Document] = []
 
         with httpx.Client(timeout=30.0) as client:
             while url and len(documents) < limit:
@@ -622,29 +622,46 @@ class CourtListenerClient(GovernmentAPIClient):
         cluster_url = opinion_data.get("cluster")
         case_name = "Unknown Case"
         citation = None
+        date_filed = None
 
         if cluster_url:
             try:
                 cluster_data = self.get_opinion_cluster(cluster_url)
                 case_name = cluster_data.get("case_name", "Unknown Case")
                 citation = build_bluebook_citation(cluster_data)
+                # Get the actual filing date from cluster
+                date_filed = cluster_data.get("date_filed")
                 # Add cluster metadata to the opinion metadata
                 metadata["case_name"] = case_name
                 metadata["citation"] = citation
+                metadata["cluster_data"] = cluster_data
+                metadata["date_filed"] = date_filed
+                metadata["judges"] = cluster_data.get("judges", "")
+                metadata["citations"] = cluster_data.get("citations", [])
             except Exception as e:
                 self.logger.warning(
                     f"Failed to fetch cluster data for opinion {document_id}: {str(e)}"
                 )
 
+        # Use date_filed from cluster if available, otherwise fall back to date_created
+        final_date = date_filed or metadata.get("date", "")
+        if final_date and "T" in final_date:
+            # Parse ISO format date if needed
+            try:
+                parsed_date = datetime.fromisoformat(final_date.replace("Z", "+00:00"))
+                final_date = parsed_date.strftime("%Y-%m-%d")
+            except (ValueError, AttributeError):
+                pass
+
         return Document(
             id=document_id,
             title=case_name,
-            date=metadata["date"] or "",
+            date=final_date,
             type="Supreme Court Opinion",
             source="CourtListener",
-            content=metadata["plain_text"],
+            content=metadata.get("plain_text", ""),
             metadata=metadata,
-            url=metadata.get("download_url"),
+            url=metadata.get("absolute_url") or metadata.get("download_url"),
         )
 
     def get_document_text(self, document_id: str) -> str:
@@ -668,7 +685,8 @@ class CourtListenerClient(GovernmentAPIClient):
         Returns:
             Dict with extracted metadata
         """
-        # Parse the date_created field
+        # Parse the date_created field for filing date
+        # Note: The API provides date_created, but we should look for date_filed from cluster
         date_str = opinion_data.get("date_created", "")
         try:
             date_created = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
@@ -679,13 +697,22 @@ class CourtListenerClient(GovernmentAPIClient):
         return {
             "id": opinion_data.get("id"),
             "resource_uri": opinion_data.get("resource_uri"),
+            "absolute_url": opinion_data.get("absolute_url"),
             "cluster_id": opinion_data.get("cluster_id"),
+            "cluster": opinion_data.get("cluster"),
             "date": formatted_date,
             "plain_text": opinion_data.get("plain_text", ""),
             "author_id": opinion_data.get("author_id"),
+            "author": opinion_data.get("author"),
+            "author_str": opinion_data.get("author_str", ""),
+            "per_curiam": opinion_data.get("per_curiam", False),
+            "joined_by": opinion_data.get("joined_by", []),
+            "joined_by_str": opinion_data.get("joined_by_str", ""),
             "type": opinion_data.get("type"),
+            "sha1": opinion_data.get("sha1"),
             "page_count": opinion_data.get("page_count"),
             "download_url": opinion_data.get("download_url"),
+            "local_path": opinion_data.get("local_path"),
         }
 
     def get_opinion_cluster(self, cluster_url: str) -> Dict[str, Any]:

@@ -667,7 +667,13 @@ class FederalRegisterClient(GovernmentAPIClient):
 
             # Check if there are more pages
             total_pages = data.get("total_pages", 1)
-            current_page = params["page"]
+            current_page = params.get("page", 1)  # Get page with default
+
+            # Ensure current_page is an int for comparison and increment
+            if isinstance(current_page, str):
+                current_page = int(current_page)
+            elif not isinstance(current_page, int):
+                current_page = 1
 
             self.logger.info(
                 f"Processed page {current_page}/{total_pages}, "
@@ -677,7 +683,7 @@ class FederalRegisterClient(GovernmentAPIClient):
             if current_page >= total_pages:
                 break
 
-            params["page"] += 1
+            params["page"] = current_page + 1
 
     def get_executive_order(self, document_number: str) -> Dict[str, Any]:
         """
@@ -1021,10 +1027,10 @@ class FederalRegisterClient(GovernmentAPIClient):
                         id=document_number,
                         title=order_data.get("title", "Unknown Executive Order"),
                         date=order_data.get(
-                            "publication_date", order_data.get("signing_date", "")
+                            "signing_date", order_data.get("publication_date", "")
                         ),
                         type="Executive Order",
-                        source="Federal Register",
+                        source="FederalRegister",  # Match expected source name without space
                         content="",  # Executive orders don't have abstracts
                         metadata={
                             **order_data,  # Include all search result data
@@ -1045,10 +1051,10 @@ class FederalRegisterClient(GovernmentAPIClient):
                             id=document_number,
                             title=order_data.get("title", "Unknown Executive Order"),
                             date=order_data.get(
-                                "publication_date", order_data.get("signing_date", "")
+                                "signing_date", order_data.get("publication_date", "")
                             ),
                             type="Executive Order",
-                            source="Federal Register",
+                            source="FederalRegister",  # Match expected source name without space
                             content="",  # Executive orders don't have abstracts
                             metadata={
                                 **order_data,
@@ -1160,12 +1166,17 @@ class FederalRegisterClient(GovernmentAPIClient):
         else:
             content = ""  # Executive orders don't have abstracts, use empty string as fallback
 
+        # Use signing_date as the primary date for executive orders
+        primary_date = order_data.get("signing_date") or order_data.get(
+            "publication_date", ""
+        )
+
         return Document(
             id=document_id,
             title=order_data.get("title", "Unknown Executive Order"),
-            date=order_data.get("publication_date", order_data.get("signing_date", "")),
+            date=primary_date,
             type="Executive Order",
-            source="Federal Register",
+            source="FederalRegister",  # Match expected source name without space
             content=content,
             metadata=order_data,
             url=order_data.get("html_url"),
@@ -1380,11 +1391,25 @@ class FederalRegisterClient(GovernmentAPIClient):
             "document_number": order_data.get("document_number"),
             "title": order_data.get("title", ""),
             "executive_order_number": order_data.get("executive_order_number"),
-            "signing_date": formatted_date,
+            "presidential_document_number": order_data.get(
+                "presidential_document_number"
+            ),
+            "executive_order_notes": order_data.get("executive_order_notes"),
+            "signing_date": formatted_date or order_data.get("signing_date", ""),
             "president": president_name,
             "citation": order_data.get("citation", ""),
             "html_url": order_data.get("html_url", ""),
+            "body_html_url": order_data.get("body_html_url", ""),
+            "full_text_xml_url": order_data.get("full_text_xml_url", ""),
+            "pdf_url": order_data.get("pdf_url", ""),
             "raw_text_url": order_data.get("raw_text_url", ""),
+            "json_url": order_data.get("json_url", ""),
             "publication_date": order_data.get("publication_date", ""),
+            "volume": order_data.get("volume"),
+            "start_page": order_data.get("start_page"),
+            "end_page": order_data.get("end_page"),
+            "page_length": order_data.get("page_length"),
             "agencies": agency_names,
+            "subtype": order_data.get("subtype", ""),
+            "type": order_data.get("type", ""),
         }
