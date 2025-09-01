@@ -214,7 +214,7 @@ def normalize_eo_metadata(doc: Document) -> Dict[str, Any]:
         "title": doc.title,
         "publication_date": doc.date,
         "year": extract_year_from_date(doc.date),
-        "source": doc.source,  # Should be "FederalRegister"
+        "source": doc.source,  # Should be "Federal Register"
         "type": doc.type,  # Should be "Executive Order"
         "url": url,
         "citation_bluebook": citation_bluebook,

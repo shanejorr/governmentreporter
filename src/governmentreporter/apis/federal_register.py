@@ -1030,7 +1030,7 @@ class FederalRegisterClient(GovernmentAPIClient):
                             "signing_date", order_data.get("publication_date", "")
                         ),
                         type="Executive Order",
-                        source="FederalRegister",  # Match expected source name without space
+                        source="Federal Register",
                         content="",  # Executive orders don't have abstracts
                         metadata={
                             **order_data,  # Include all search result data
@@ -1054,7 +1054,7 @@ class FederalRegisterClient(GovernmentAPIClient):
                                 "signing_date", order_data.get("publication_date", "")
                             ),
                             type="Executive Order",
-                            source="FederalRegister",  # Match expected source name without space
+                            source="Federal Register",
                             content="",  # Executive orders don't have abstracts
                             metadata={
                                 **order_data,
@@ -1176,7 +1176,7 @@ class FederalRegisterClient(GovernmentAPIClient):
             title=order_data.get("title", "Unknown Executive Order"),
             date=primary_date,
             type="Executive Order",
-            source="FederalRegister",  # Match expected source name without space
+            source="Federal Register",
             content=content,
             metadata=order_data,
             url=order_data.get("html_url"),
