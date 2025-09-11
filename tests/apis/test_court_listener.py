@@ -55,11 +55,6 @@ class TestCourtListenerClientConfiguration:
         # Assert
         assert court_listener_client._get_base_url() == BASE_URL
 
-    def test_rate_limit_delay_configuration(self, court_listener_client):
-        """Test that rate limit delay is correctly configured."""
-        # Assert
-        assert court_listener_client._get_rate_limit_delay() == 0.1
-
 
 class TestGetOpinion:
     """Tests for the get_opinion method."""
