@@ -26,7 +26,11 @@ import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from progress_tracker import ProcessingStatus, ProgressTracker
+# Handle both module and script execution
+try:
+    from .progress_tracker import ProgressTracker
+except ImportError:
+    from progress_tracker import ProgressTracker
 
 from governmentreporter.apis.court_listener import CourtListenerClient
 from governmentreporter.database.ingestion import QdrantIngestionClient
@@ -259,13 +263,13 @@ class SCOTUSIngester:
             logger.debug(f"Generated {len(payloads)} chunks for opinion {opinion_id}")
 
             # Generate embeddings for each chunk
-            chunk_texts = [p.chunk_metadata.text for p in payloads]
+            chunk_texts = [p["text"] for p in payloads]
             embeddings = self.embedding_generator.generate_batch_embeddings(chunk_texts)
 
             # Convert payloads to Qdrant format
             for payload, embedding in zip(payloads, embeddings):
-                # Convert Pydantic model to dict
-                doc_dict = payload.dict()
+                # Payload is already a dict
+                doc_dict = payload
                 doc_dict["document_id"] = opinion_id
                 doc_dict["ingested_at"] = datetime.now().isoformat()
 

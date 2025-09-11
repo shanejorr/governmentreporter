@@ -8,7 +8,6 @@ generates embeddings, and stores them in Qdrant for semantic search.
 
 The script supports:
 - Date range filtering for targeted ingestion
-- Resume capability through SQLite progress tracking
 - Batch processing for efficient API usage
 - Comprehensive error handling and logging
 - Performance monitoring and ETA calculation
@@ -28,7 +27,11 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from progress_tracker import ProcessingStatus, ProgressTracker
+# Handle both module and script execution
+try:
+    from .progress_tracker import ProgressTracker
+except ImportError:
+    from progress_tracker import ProgressTracker
 
 from governmentreporter.apis.base import Document
 from governmentreporter.apis.federal_register import FederalRegisterClient
@@ -301,8 +304,8 @@ class ExecutiveOrderIngester:
                 date=order_metadata.get(
                     "signing_date", order_metadata.get("publication_date", "")
                 ),
-                type="executive_order",
-                source="federal_register",
+                type="Executive Order",
+                source="Federal Register",
                 content=raw_text,
                 metadata={
                     "executive_order_number": order_metadata.get(
@@ -316,9 +319,7 @@ class ExecutiveOrderIngester:
                     "signing_date": order_metadata.get("signing_date"),
                     "publication_date": order_metadata.get("publication_date"),
                     "document_number": order_id,
-                    "agencies": [
-                        a.get("name") for a in order_metadata.get("agencies", [])
-                    ],
+                    "agencies": order_metadata.get("agencies", []),
                     "topics": order_metadata.get("topics", []),
                 },
                 url=order_metadata.get("html_url", ""),
@@ -334,13 +335,13 @@ class ExecutiveOrderIngester:
             logger.debug(f"Generated {len(payloads)} chunks for order {order_id}")
 
             # Generate embeddings for each chunk
-            chunk_texts = [p.chunk_metadata.text for p in payloads]
+            chunk_texts = [p["text"] for p in payloads]
             embeddings = self.embedding_generator.generate_batch_embeddings(chunk_texts)
 
             # Convert payloads to Qdrant format
             for payload, embedding in zip(payloads, embeddings):
-                # Convert Pydantic model to dict
-                doc_dict = payload.dict()
+                # Payload is already a dict
+                doc_dict = payload
                 doc_dict["document_id"] = order_id
                 doc_dict["ingested_at"] = datetime.now().isoformat()
 
