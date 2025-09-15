@@ -35,12 +35,12 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 - **Utils Module** (`src/governmentreporter/utils/`): Shared utilities and helpers
 
 ### Data Flow
-1. **Indexing**: Fetch documents → Generate embeddings → Create metadata with GPT-4o-mini → Store in Qdrant
+1. **Indexing**: Fetch documents → Generate embeddings → Create metadata with GPT-5-nano → Store in Qdrant
 2. **Querying**: Query embedding → Qdrant search → API retrieval → Return fresh content
 
 ### External Dependencies
 - **Qdrant**: Vector database for embeddings and metadata storage
-- **OpenAI API**: GPT-4o-mini for metadata generation, text-embedding-3-small for embeddings
+- **OpenAI API**: GPT-5-nano for metadata generation, text-embedding-3-small for embeddings
 - **Government APIs**: CourtListener, Federal Register, Congress.gov for document retrieval
 
 ### Example API formatting

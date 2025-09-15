@@ -1,8 +1,8 @@
 """
-LLM-based metadata extraction using GPT-4o-mini.
+LLM-based metadata extraction using GPT-5-nano.
 
 This module provides functions to extract structured metadata from legal documents
-using OpenAI's GPT-4o-mini model. It generates plain-language summaries, extracts
+using OpenAI's GPT-5-nano model. It generates plain-language summaries, extracts
 citations, and identifies key legal concepts to enhance retrieval capabilities.
 
 The module focuses on:
@@ -39,7 +39,7 @@ def generate_scotus_llm_fields(
     """
     Generate LLM-extracted metadata fields for Supreme Court opinions.
 
-    This function uses GPT-4o-mini to extract structured metadata from Supreme Court
+    This function uses GPT-5-nano to extract structured metadata from Supreme Court
     opinion text. It prioritizes the Syllabus (when available) for extracting
     holdings, outcomes, and issues, as the Syllabus provides official summaries
     prepared by the Court Reporter's office.
@@ -149,19 +149,19 @@ Focus on clarity for non-lawyers. Use everyday language while maintaining accura
             f"Extract metadata from this Supreme Court opinion:\n\n{analysis_content}"
         )
 
-        # Call GPT-4o-mini with JSON response format and retry logic
+        # Call GPT-5-nano with JSON response format and retry logic
         max_retries = 3
         for attempt in range(max_retries):
             try:
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-5-nano",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
                     response_format={"type": "json_object"},
-                    temperature=0.2,
-                    max_tokens=2000,
+                    reasoning_effort="low",  # GPT-5-nano requires this parameter
+                    max_completion_tokens=2000,
                 )
                 break  # Success, exit retry loop
             except RateLimitError as e:
@@ -262,7 +262,7 @@ def generate_eo_llm_fields(text: str) -> Dict[str, Any]:
     """
     Generate LLM-extracted metadata fields for Executive Orders.
 
-    This function uses GPT-4o-mini to extract structured metadata from Executive
+    This function uses GPT-5-nano to extract structured metadata from Executive
     Order text. It focuses on action-oriented summaries and regulatory impacts
     to help users understand what the order does and who it affects.
 
@@ -344,19 +344,19 @@ Focus on concrete actions and real-world impacts. Use everyday language for non-
         # User prompt with the Executive Order text
         user_prompt = f"Extract metadata from this Executive Order:\n\n{text}"
 
-        # Call GPT-4o-mini with JSON response format and retry logic
+        # Call GPT-5-nano with JSON response format and retry logic
         max_retries = 3
         for attempt in range(max_retries):
             try:
                 response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-5-nano",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
                     response_format={"type": "json_object"},
-                    temperature=0.2,
-                    max_tokens=1500,
+                    reasoning_effort="low",  # GPT-5-nano requires this parameter
+                    max_completion_tokens=1500,
                 )
                 break  # Success, exit retry loop
             except RateLimitError as e:
