@@ -657,7 +657,7 @@ class CourtListenerClient(GovernmentAPIClient):
             source="CourtListener",
             content=metadata.get("plain_text", ""),
             metadata=metadata,
-            url=metadata.get("absolute_url") or metadata.get("download_url"),
+            url=opinion_data.get("download_url", ""),
         )
 
     def get_document_text(self, document_id: str) -> str:
