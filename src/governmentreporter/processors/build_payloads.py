@@ -7,7 +7,7 @@ the metadata extraction, chunking, and payload assembly process.
 
 The module integrates:
     - Document objects from CourtListener and Federal Register APIs
-    - LLM-based metadata extraction using GPT-5-nano
+    - LLM-based metadata extraction using GPT-4o-mini
     - Section-aware chunking algorithms
     - Pydantic schemas for validation
     - Qdrant payload formatting
@@ -16,7 +16,7 @@ Process Flow:
     1. Receive Document from API client
     2. Extract document-level metadata from API fields
     3. Detect document type and route to appropriate chunker
-    4. Generate LLM fields using GPT-5-nano
+    4. Generate LLM fields using GPT-4o-mini
     5. Combine metadata at chunk level
     6. Return list of Qdrant-ready payloads
 
@@ -344,8 +344,24 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
                 logger.warning("No chunks generated for document %s", doc.id)
                 return []
 
-            # 3. Generate LLM metadata fields
-            llm_fields = generate_scotus_llm_fields(doc.content, syllabus)
+            # 3. Generate LLM metadata fields (optional - non-blocking)
+            try:
+                llm_fields = generate_scotus_llm_fields(doc.content, syllabus)
+            except Exception as e:
+                logger.warning("Failed to generate LLM fields for %s: %s", doc.id, str(e))
+                # Use empty LLM fields as fallback
+                llm_fields = {
+                    "plain_language_summary": "",
+                    "constitution_cited": [],
+                    "federal_statutes_cited": [],
+                    "federal_regulations_cited": [],
+                    "cases_cited": [],
+                    "topics_or_policy_areas": ["legal", "court decision"],
+                    "holding_plain": "",
+                    "outcome_simple": "",
+                    "issue_plain": "",
+                    "reasoning": "",
+                }
 
             # 4. Merge document and LLM metadata
             full_doc_metadata = {**doc_metadata, **llm_fields}
@@ -393,8 +409,21 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
                 logger.warning("No chunks generated for document %s", doc.id)
                 return []
 
-            # 3. Generate LLM metadata fields
-            llm_fields = generate_eo_llm_fields(doc.content)
+            # 3. Generate LLM metadata fields (optional - non-blocking)
+            try:
+                llm_fields = generate_eo_llm_fields(doc.content)
+            except Exception as e:
+                logger.warning("Failed to generate LLM fields for %s: %s", doc.id, str(e))
+                # Use empty LLM fields as fallback
+                llm_fields = {
+                    "plain_language_summary": "",
+                    "agencies_impacted": [],
+                    "constitution_cited": [],
+                    "federal_statutes_cited": [],
+                    "federal_regulations_cited": [],
+                    "cases_cited": [],
+                    "topics_or_policy_areas": ["federal policy", "executive action"],
+                }
 
             # 4. Merge document and LLM metadata
             full_doc_metadata = {**doc_metadata, **llm_fields}

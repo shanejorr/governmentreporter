@@ -13,8 +13,9 @@ Python Learning Notes:
 """
 
 import logging
+import uuid
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from qdrant_client import QdrantClient as QdrantBaseClient
 from qdrant_client.models import (
@@ -250,9 +251,13 @@ class QdrantClient:
             **(document.metadata or {}),
         }
 
-        # Create point
+        # Create point with UUID - store original ID in payload
+        # Generate deterministic UUID from document ID for consistency
+        point_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, document.id))
+        payload["original_id"] = document.id  # Store original ID in payload
+
         point = PointStruct(
-            id=document.id,  # Use document ID directly
+            id=point_uuid,  # Use UUID for Qdrant
             vector=document.embedding,
             payload=payload,
         )
@@ -337,9 +342,13 @@ class QdrantClient:
                     "text": doc.text,
                     **(doc.metadata or {}),
                 }
+                # Generate deterministic UUID from document ID
+                point_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, doc.id))
+                payload["original_id"] = doc.id  # Store original ID in payload
+
                 points.append(
                     PointStruct(
-                        id=doc.id,
+                        id=point_uuid,  # Use UUID for Qdrant
                         vector=doc.embedding,
                         payload=payload,
                     )
@@ -374,11 +383,11 @@ class QdrantClient:
         """
         Retrieve a document by its ID.
 
-        Directly retrieves a document using its ID as the Qdrant point ID.
+        Retrieves a document using its original ID (converts to UUID for lookup).
         Returns None if the document doesn't exist.
 
         Args:
-            document_id: ID of the document to retrieve
+            document_id: Original ID of the document to retrieve
             collection_name: Collection to search in
 
         Returns:
@@ -397,9 +406,12 @@ class QdrantClient:
             - Graceful handling of missing documents
         """
         try:
+            # Convert original ID to UUID for lookup
+            point_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, document_id))
+
             results = self.client.retrieve(
                 collection_name=collection_name,
-                ids=[document_id],
+                ids=[point_uuid],  # Use UUID for retrieval
                 with_payload=True,
                 with_vectors=True,
             )
@@ -420,8 +432,11 @@ class QdrantClient:
                     else:
                         vector = point.vector  # type: ignore
 
+            # Use original ID from payload if available, otherwise use point ID
+            doc_id = payload.pop("original_id", str(point.id))
+
             return Document(
-                id=str(point.id),  # Ensure ID is string
+                id=doc_id,  # Return original document ID
                 text=payload.pop("text", ""),
                 embedding=vector,
                 metadata=payload,  # Remaining fields are metadata
@@ -438,7 +453,7 @@ class QdrantClient:
         Efficient existence check without retrieving the full document.
 
         Args:
-            document_id: ID to check
+            document_id: Original ID to check
             collection_name: Collection to check in
 
         Returns:
@@ -449,9 +464,12 @@ class QdrantClient:
             - Boolean returns are clear and simple
         """
         try:
+            # Convert original ID to UUID for lookup
+            point_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, document_id))
+
             results = self.client.retrieve(
                 collection_name=collection_name,
-                ids=[document_id],
+                ids=[point_uuid],  # Use UUID for retrieval
                 with_payload=False,
                 with_vectors=False,
             )
@@ -542,8 +560,11 @@ class QdrantClient:
                         else:
                             vector = point.vector  # type: ignore
 
+                # Use original ID from payload if available
+                doc_id = payload.pop("original_id", str(point.id))
+
                 doc = Document(
-                    id=str(point.id),  # Ensure ID is string
+                    id=doc_id,  # Return original document ID
                     text=payload.pop("text", ""),
                     embedding=vector,
                     metadata=payload,
@@ -561,7 +582,7 @@ class QdrantClient:
         Delete a document from a collection.
 
         Args:
-            document_id: ID of document to delete
+            document_id: Original ID of document to delete
             collection_name: Collection to delete from
 
         Returns:
@@ -572,9 +593,12 @@ class QdrantClient:
             - Boolean return indicates success
         """
         try:
+            # Convert original ID to UUID for deletion
+            point_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, document_id))
+
             self.client.delete(
                 collection_name=collection_name,
-                points_selector=[document_id],
+                points_selector=[point_uuid],  # Use UUID for deletion
             )
             logger.debug(f"Deleted document {document_id} from {collection_name}")
             return True

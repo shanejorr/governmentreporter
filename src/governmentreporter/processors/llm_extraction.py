@@ -1,8 +1,8 @@
 """
-LLM-based metadata extraction using GPT-5-nano.
+LLM-based metadata extraction using GPT-4o-mini.
 
 This module provides functions to extract structured metadata from legal documents
-using OpenAI's GPT-5-nano model. It generates plain-language summaries, extracts
+using OpenAI's GPT-4o-mini model. It generates plain-language summaries, extracts
 citations, and identifies key legal concepts to enhance retrieval capabilities.
 
 The module focuses on:
@@ -38,7 +38,7 @@ def generate_scotus_llm_fields(
     """
     Generate LLM-extracted metadata fields for Supreme Court opinions.
 
-    This function uses GPT-5-nano to extract structured metadata from Supreme Court
+    This function uses GPT-4o-mini to extract structured metadata from Supreme Court
     opinion text. It prioritizes the Syllabus (when available) for extracting
     holdings, outcomes, and issues, as the Syllabus provides official summaries
     prepared by the Court Reporter's office.
@@ -148,20 +148,33 @@ Focus on clarity for non-lawyers. Use everyday language while maintaining accura
             f"Extract metadata from this Supreme Court opinion:\n\n{analysis_content}"
         )
 
-        # Call GPT-5-nano with JSON response format
+        # Call GPT-4o-mini with JSON response format
         response = client.chat.completions.create(
-            model="gpt-5-nano",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
             response_format={"type": "json_object"},
-            # temperature=0.2,  # GPT-5-nano only supports default temperature (1)
-            max_completion_tokens=2000,  # Use max_completion_tokens for GPT-5-nano
+            temperature=0.2,  # Lower temperature for more consistent output
+            max_tokens=2000,  # Token limit for response
         )
 
+        # Check if response has content
+        if not response.choices or not response.choices[0].message.content:
+            logger.error("Empty response from OpenAI API for SCOTUS metadata")
+            raise ValueError("Empty response from OpenAI API")
+
         # Parse the JSON response
-        result = json.loads(response.choices[0].message.content)
+        response_content = response.choices[0].message.content
+        logger.debug("OpenAI response length: %d characters", len(response_content))
+
+        try:
+            result = json.loads(response_content)
+        except json.JSONDecodeError as e:
+            logger.error("Failed to parse OpenAI JSON response: %s", str(e))
+            logger.debug("Response content: %s", response_content[:500])  # Log first 500 chars
+            raise
 
         # Ensure all required fields are present with defaults
         required_fields = {
@@ -204,7 +217,7 @@ Focus on clarity for non-lawyers. Use everyday language while maintaining accura
         return result
 
     except Exception as e:
-        logger.error("Failed to extract SCOTUS metadata: %s", str(e))
+        logger.error("Failed to extract SCOTUS metadata: %s", str(e), exc_info=True)
         # Return minimal valid metadata on error
         return {
             "plain_language_summary": "Unable to generate summary.",
@@ -224,7 +237,7 @@ def generate_eo_llm_fields(text: str) -> Dict[str, Any]:
     """
     Generate LLM-extracted metadata fields for Executive Orders.
 
-    This function uses GPT-5-nano to extract structured metadata from Executive
+    This function uses GPT-4o-mini to extract structured metadata from Executive
     Order text. It focuses on action-oriented summaries and regulatory impacts
     to help users understand what the order does and who it affects.
 
@@ -306,20 +319,33 @@ Focus on concrete actions and real-world impacts. Use everyday language for non-
         # User prompt with the Executive Order text
         user_prompt = f"Extract metadata from this Executive Order:\n\n{text}"
 
-        # Call GPT-5-nano with JSON response format
+        # Call GPT-4o-mini with JSON response format
         response = client.chat.completions.create(
-            model="gpt-5-nano",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
             response_format={"type": "json_object"},
-            # temperature=0.2,  # GPT-5-nano only supports default temperature (1)
-            max_completion_tokens=1500,  # Use max_completion_tokens for GPT-5-nano
+            temperature=0.2,  # Lower temperature for more consistent output
+            max_tokens=1500,  # Token limit for response
         )
 
+        # Check if response has content
+        if not response.choices or not response.choices[0].message.content:
+            logger.error("Empty response from OpenAI API for EO metadata")
+            raise ValueError("Empty response from OpenAI API")
+
         # Parse the JSON response
-        result = json.loads(response.choices[0].message.content)
+        response_content = response.choices[0].message.content
+        logger.debug("OpenAI response length: %d characters", len(response_content))
+
+        try:
+            result = json.loads(response_content)
+        except json.JSONDecodeError as e:
+            logger.error("Failed to parse OpenAI JSON response: %s", str(e))
+            logger.debug("Response content: %s", response_content[:500])  # Log first 500 chars
+            raise
 
         # Ensure all required fields are present with defaults
         required_fields = {
@@ -376,7 +402,7 @@ Focus on concrete actions and real-world impacts. Use everyday language for non-
         return result
 
     except Exception as e:
-        logger.error("Failed to extract Executive Order metadata: %s", str(e))
+        logger.error("Failed to extract Executive Order metadata: %s", str(e), exc_info=True)
         # Return minimal valid metadata on error
         return {
             "plain_language_summary": "Unable to generate summary.",
@@ -422,9 +448,12 @@ if __name__ == "__main__":
 
     # Test SCOTUS extraction
     print("Testing SCOTUS extraction with Syllabus...")
-    scotus_metadata = generate_scotus_llm_fields(sample_scotus, sample_syllabus)
-    print(f"Holding: {scotus_metadata['holding_plain']}")
-    print(f"Topics: {scotus_metadata['topics_or_policy_areas']}")
+    try:
+        scotus_metadata = generate_scotus_llm_fields(sample_scotus, sample_syllabus)
+        print(f"Holding: {scotus_metadata['holding_plain']}")
+        print(f"Topics: {scotus_metadata['topics_or_policy_areas']}")
+    except Exception as e:
+        print(f"Error: {e}")
 
     # Example Executive Order
     sample_eo = """
@@ -442,6 +471,9 @@ if __name__ == "__main__":
 
     # Test EO extraction
     print("\nTesting Executive Order extraction...")
-    eo_metadata = generate_eo_llm_fields(sample_eo)
-    print(f"Summary: {eo_metadata['plain_language_summary']}")
-    print(f"Agencies: {eo_metadata['agencies_impacted']}")
+    try:
+        eo_metadata = generate_eo_llm_fields(sample_eo)
+        print(f"Summary: {eo_metadata['plain_language_summary']}")
+        print(f"Agencies: {eo_metadata['agencies_impacted']}")
+    except Exception as e:
+        print(f"Error: {e}")
