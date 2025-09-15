@@ -22,9 +22,10 @@ Python Learning Notes:
 
 import json
 import re
+import time
 from typing import Any, Dict, List, Optional
 
-from openai import OpenAI
+from openai import OpenAI, RateLimitError, APIError
 
 from ..utils import get_logger
 from ..utils.config import get_openai_api_key
@@ -148,17 +149,41 @@ Focus on clarity for non-lawyers. Use everyday language while maintaining accura
             f"Extract metadata from this Supreme Court opinion:\n\n{analysis_content}"
         )
 
-        # Call GPT-5-nano with JSON response format
-        response = client.chat.completions.create(
-            model="gpt-5-nano",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            response_format={"type": "json_object"},
-            # temperature=0.2,  # GPT-5-nano may have specific parameter requirements
-            max_completion_tokens=2000,  # Use max_completion_tokens for GPT-5-nano
-        )
+        # Call GPT-5-nano with JSON response format and retry logic
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-5-nano",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    response_format={"type": "json_object"},
+                    # temperature=0.2,  # GPT-5-nano may have specific parameter requirements
+                    max_completion_tokens=2000,  # Use max_completion_tokens for GPT-5-nano
+                )
+                break  # Success, exit retry loop
+            except RateLimitError as e:
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                    logger.warning(
+                        "Rate limited on attempt %d/%d, waiting %ds: %s",
+                        attempt + 1, max_retries, wait_time, str(e)
+                    )
+                    time.sleep(wait_time)
+                    continue
+                raise  # Re-raise on final attempt
+            except APIError as e:
+                if attempt < max_retries - 1 and hasattr(e, 'status_code') and e.status_code in [502, 503, 504]:
+                    wait_time = 2 ** attempt
+                    logger.warning(
+                        "API error %d on attempt %d/%d, waiting %ds: %s",
+                        e.status_code, attempt + 1, max_retries, wait_time, str(e)
+                    )
+                    time.sleep(wait_time)
+                    continue
+                raise  # Re-raise on final attempt or non-retryable errors
 
         # Check if response has content
         if not response.choices or not response.choices[0].message.content:
@@ -319,17 +344,41 @@ Focus on concrete actions and real-world impacts. Use everyday language for non-
         # User prompt with the Executive Order text
         user_prompt = f"Extract metadata from this Executive Order:\n\n{text}"
 
-        # Call GPT-5-nano with JSON response format
-        response = client.chat.completions.create(
-            model="gpt-5-nano",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            response_format={"type": "json_object"},
-            # temperature=0.2,  # GPT-5-nano may have specific parameter requirements
-            max_completion_tokens=1500,  # Use max_completion_tokens for GPT-5-nano
-        )
+        # Call GPT-5-nano with JSON response format and retry logic
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-5-nano",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    response_format={"type": "json_object"},
+                    # temperature=0.2,  # GPT-5-nano may have specific parameter requirements
+                    max_completion_tokens=1500,  # Use max_completion_tokens for GPT-5-nano
+                )
+                break  # Success, exit retry loop
+            except RateLimitError as e:
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                    logger.warning(
+                        "Rate limited on attempt %d/%d, waiting %ds: %s",
+                        attempt + 1, max_retries, wait_time, str(e)
+                    )
+                    time.sleep(wait_time)
+                    continue
+                raise  # Re-raise on final attempt
+            except APIError as e:
+                if attempt < max_retries - 1 and hasattr(e, 'status_code') and e.status_code in [502, 503, 504]:
+                    wait_time = 2 ** attempt
+                    logger.warning(
+                        "API error %d on attempt %d/%d, waiting %ds: %s",
+                        e.status_code, attempt + 1, max_retries, wait_time, str(e)
+                    )
+                    time.sleep(wait_time)
+                    continue
+                raise  # Re-raise on final attempt or non-retryable errors
 
         # Check if response has content
         if not response.choices or not response.choices[0].message.content:

@@ -345,26 +345,34 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
                 return []
 
             # 3. Generate LLM metadata fields (optional - non-blocking)
+            llm_extraction_successful = True
             try:
                 llm_fields = generate_scotus_llm_fields(doc.content, syllabus)
             except Exception as e:
                 logger.warning("Failed to generate LLM fields for %s: %s", doc.id, str(e))
-                # Use empty LLM fields as fallback
+                llm_extraction_successful = False
+
+                # Use standardized fallback messages
                 llm_fields = {
-                    "plain_language_summary": "",
+                    "plain_language_summary": "Unable to generate summary.",
                     "constitution_cited": [],
                     "federal_statutes_cited": [],
                     "federal_regulations_cited": [],
                     "cases_cited": [],
-                    "topics_or_policy_areas": ["legal", "court decision"],
-                    "holding_plain": "",
-                    "outcome_simple": "",
-                    "issue_plain": "",
-                    "reasoning": "",
+                    "topics_or_policy_areas": ["supreme court", "legal opinion", "court decision"],
+                    "holding_plain": "Unable to extract holding.",
+                    "outcome_simple": "Unable to extract outcome.",
+                    "issue_plain": "Unable to extract issue.",
+                    "reasoning": "Unable to extract reasoning.",
                 }
 
             # 4. Merge document and LLM metadata
             full_doc_metadata = {**doc_metadata, **llm_fields}
+
+            # Add failure tracking if LLM extraction failed
+            if not llm_extraction_successful:
+                full_doc_metadata["llm_extraction_failed"] = True
+                full_doc_metadata["requires_reprocessing"] = True
 
             # 5. Create payload for each chunk
             payloads = []
@@ -410,23 +418,31 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
                 return []
 
             # 3. Generate LLM metadata fields (optional - non-blocking)
+            llm_extraction_successful = True
             try:
                 llm_fields = generate_eo_llm_fields(doc.content)
             except Exception as e:
                 logger.warning("Failed to generate LLM fields for %s: %s", doc.id, str(e))
-                # Use empty LLM fields as fallback
+                llm_extraction_successful = False
+
+                # Use standardized fallback messages
                 llm_fields = {
-                    "plain_language_summary": "",
+                    "plain_language_summary": "Unable to generate summary.",
                     "agencies_impacted": [],
                     "constitution_cited": [],
                     "federal_statutes_cited": [],
                     "federal_regulations_cited": [],
                     "cases_cited": [],
-                    "topics_or_policy_areas": ["federal policy", "executive action"],
+                    "topics_or_policy_areas": ["executive order", "federal policy", "presidential action"],
                 }
 
             # 4. Merge document and LLM metadata
             full_doc_metadata = {**doc_metadata, **llm_fields}
+
+            # Add failure tracking if LLM extraction failed
+            if not llm_extraction_successful:
+                full_doc_metadata["llm_extraction_failed"] = True
+                full_doc_metadata["requires_reprocessing"] = True
 
             # 5. Create payload for each chunk
             payloads = []
