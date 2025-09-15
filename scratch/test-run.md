@@ -87,21 +87,6 @@ uv run python scripts/ingestion/ingest_executive_orders.py \
 
 ### Supreme Court Opinions Ingestion
 
-#### Set Up API Token
-
-The CourtListener API requires authentication. Set your token first:
-
-```bash
-# Option 1: Export as environment variable (temporary)
-export COURT_LISTENER_API_TOKEN="your-token-here"
-
-# Option 2: Add to .env file (permanent)
-echo "COURT_LISTENER_API_TOKEN=your-token-here" >> .env
-
-# Verify it's set
-echo $COURT_LISTENER_API_TOKEN
-```
-
 #### Dry Run
 
 Test without storing:
@@ -192,7 +177,7 @@ Verify that document chunks were stored with embeddings and metadata.
 Create a test script or run this interactively:
 
 ```bash
-uv run python scratch/check_quadrant.py
+uv run python scratch/check_quadrant.py > scratch/check_quadrant.txt
 ```
 
 ---

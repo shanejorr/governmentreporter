@@ -100,3 +100,4 @@ example_output/
 
 # Error logs
 error_log.jsonl
+scratch/check_quadrant.txt
