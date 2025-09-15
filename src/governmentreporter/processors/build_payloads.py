@@ -33,7 +33,6 @@ from typing import Any, Dict, List
 
 from ..apis.base import Document
 from ..utils import get_logger
-from ..utils.citations import build_bluebook_citation
 from .chunking import chunk_executive_order, chunk_supreme_court_opinion
 from .llm_extraction import generate_eo_llm_fields, generate_scotus_llm_fields
 from .schema import (ChunkMetadata, ExecutiveOrderMetadata, QdrantPayload,
@@ -81,7 +80,6 @@ def normalize_scotus_metadata(doc: Document) -> Dict[str, Any]:
 
     Normalization includes:
         - Extracting case name from metadata
-        - Building Bluebook citations
         - Standardizing dates
         - Setting document type and source
 
@@ -100,27 +98,6 @@ def normalize_scotus_metadata(doc: Document) -> Dict[str, Any]:
 
     # Extract case name (may be in metadata from cluster)
     case_name = metadata.get("case_name", doc.title)
-
-    # Build Bluebook citation - multiple strategies
-    citation_bluebook = metadata.get("citation")  # May already be built
-
-    if not citation_bluebook:
-        if "cluster_data" in metadata:
-            citation_bluebook = build_bluebook_citation(metadata["cluster_data"])
-        elif "citations" in metadata:
-            # Try to build from citations list
-            citations = metadata.get("citations", [])
-            if citations and isinstance(citations, list):
-                # Find official U.S. reporter citation
-                for cite in citations:
-                    if isinstance(cite, dict) and cite.get("type") == 1:
-                        volume = cite.get("volume", "")
-                        reporter = cite.get("reporter", "")
-                        page = cite.get("page", "")
-                        if volume and reporter and page:
-                            year = extract_year_from_date(doc.date)
-                            citation_bluebook = f"{volume} {reporter} {page} ({year})"
-                            break
 
     # Extract opinion type if available
     opinion_type = metadata.get("type", None)
@@ -146,7 +123,6 @@ def normalize_scotus_metadata(doc: Document) -> Dict[str, Any]:
         "source": doc.source,  # Should be "CourtListener"
         "type": doc.type,  # Should be "Supreme Court Opinion"
         "url": url,
-        "citation_bluebook": citation_bluebook,
         "case_name": case_name,
         "opinion_type": opinion_type,
         "judges": metadata.get("judges", ""),
@@ -166,7 +142,6 @@ def normalize_eo_metadata(doc: Document) -> Dict[str, Any]:
 
     Normalization includes:
         - Extracting EO number
-        - Building FR citation
         - Standardizing dates
         - Setting document type and source
 
@@ -190,15 +165,6 @@ def normalize_eo_metadata(doc: Document) -> Dict[str, Any]:
         or ""
     )
 
-    # Build Federal Register citation
-    citation_bluebook = metadata.get("citation")
-    if not citation_bluebook:
-        # Try to build from volume and page
-        volume = metadata.get("volume")
-        start_page = metadata.get("start_page")
-        if volume and start_page:
-            citation_bluebook = f"{volume} FR {start_page}"
-
     # Get the HTML URL (preferred) or PDF URL
     url = doc.url or metadata.get("html_url", metadata.get("pdf_url", ""))
 
@@ -217,7 +183,6 @@ def normalize_eo_metadata(doc: Document) -> Dict[str, Any]:
         "source": doc.source,  # Should be "Federal Register"
         "type": doc.type,  # Should be "Executive Order"
         "url": url,
-        "citation_bluebook": citation_bluebook,
         "eo_number": eo_number,
         "president": president_name,
         "agencies": metadata.get("agencies", []),

@@ -31,7 +31,6 @@ from typing import Optional
 
 import yaml
 
-from .citations import build_bluebook_citation
 from .config import get_court_listener_token, get_openai_api_key
 from .monitoring import PerformanceMonitor
 
@@ -160,7 +159,6 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
 __all__ = [
     "get_court_listener_token",
     "get_openai_api_key",
-    "build_bluebook_citation",
     "PerformanceMonitor",
     "setup_logging",
     "get_logger",

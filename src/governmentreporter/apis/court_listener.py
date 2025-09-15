@@ -53,7 +53,6 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from ..utils import get_logger
-from ..utils.citations import build_bluebook_citation
 from ..utils.config import get_court_listener_token
 from .base import Document, GovernmentAPIClient
 
@@ -618,22 +617,19 @@ class CourtListenerClient(GovernmentAPIClient):
         opinion_data = self.get_opinion(int(document_id))
         metadata = self.extract_basic_metadata(opinion_data)
 
-        # Get cluster data for case name and citation
+        # Get cluster data for case name
         cluster_url = opinion_data.get("cluster")
         case_name = "Unknown Case"
-        citation = None
         date_filed = None
 
         if cluster_url:
             try:
                 cluster_data = self.get_opinion_cluster(cluster_url)
                 case_name = cluster_data.get("case_name", "Unknown Case")
-                citation = build_bluebook_citation(cluster_data)
                 # Get the actual filing date from cluster
                 date_filed = cluster_data.get("date_filed")
                 # Add cluster metadata to the opinion metadata
                 metadata["case_name"] = case_name
-                metadata["citation"] = citation
                 metadata["cluster_data"] = cluster_data
                 metadata["date_filed"] = date_filed
                 metadata["judges"] = cluster_data.get("judges", "")
@@ -780,7 +776,7 @@ class CourtListenerClient(GovernmentAPIClient):
 
         Integration Notes:
             - Used by get_document() to populate case names and citations
-            - Works with build_bluebook_citation() for formatted citations
+            - Provides raw citation data for processing
             - Provides metadata enrichment for Document objects
             - May be called frequently during bulk processing
 

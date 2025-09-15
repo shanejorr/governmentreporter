@@ -46,7 +46,6 @@ if any(col.name == "executive_orders" for col in collections):
             print(f'    source: {metadata.get("source")}')
             print(f'    type: {metadata.get("type")}')
             print(f'    url: {metadata.get("url")}')
-            print(f'    citation_bluebook: {metadata.get("citation_bluebook")}')
             print(f'    eo_number: {metadata.get("eo_number")}')
 
             # LLM-generated fields
@@ -98,7 +97,6 @@ if any(col.name == "supreme_court_opinions" for col in collections):
             print(f'    source: {metadata.get("source")}')
             print(f'    type: {metadata.get("type")}')
             print(f'    url: {metadata.get("url")}')
-            print(f'    citation_bluebook: {metadata.get("citation_bluebook")}')
             print(f'    opinion_type: {metadata.get("opinion_type")}')
 
             # LLM-generated fields

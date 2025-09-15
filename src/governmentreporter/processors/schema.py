@@ -37,7 +37,6 @@ class SharedMetadata(BaseModel):
         - Basic document identification and retrieval
         - Date-based filtering and sorting
         - Source tracking for provenance
-        - Citation formatting for legal references
         - Natural language search through LLM-generated summaries
 
     Python Learning Notes:
@@ -66,10 +65,6 @@ class SharedMetadata(BaseModel):
         description="Document type: 'Supreme Court Opinion' or 'Executive Order'"
     )
     url: str = Field(description="Canonical web URL for the full document")
-    citation_bluebook: Optional[str] = Field(
-        default=None,
-        description="Official Bluebook citation (e.g., '347 U.S. 483 (1954)' or '90 FR 24717')",
-    )
 
     # LLM-generated fields (populated by GPT-5-nano)
     plain_language_summary: str = Field(
