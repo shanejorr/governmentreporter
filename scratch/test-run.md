@@ -72,7 +72,7 @@ Once the dry run succeeds, run the actual ingestion:
 ```bash
 # Full ingestion - stores documents in Qdrant
 uv run python scripts/ingestion/ingest_executive_orders.py \
-  --start-date 2025-08-11 \
+  --start-date 2025-09-01 \
   --end-date 2025-09-11 \
   --batch-size 25 \
   --verbose
@@ -191,110 +191,8 @@ Verify that document chunks were stored with embeddings and metadata.
 
 Create a test script or run this interactively:
 
-```python
-# Save as check_qdrant.py or run with: uv run python -c "..."
-from governmentreporter.database.qdrant import QdrantClient
-
-# Initialize client
-client = QdrantClient('./qdrant_db')
-
-# List all collections
-collections = client.client.get_collections().collections
-print('=' * 60)
-print('QDRANT COLLECTIONS')
-print('=' * 60)
-
-for col in collections:
-    info = client.client.get_collection(col.name)
-    print(f'\nCollection: {col.name}')
-    print(f'  Documents: {info.points_count}')
-    print(f'  Vector size: {info.config.params.vectors.size}')
-    print(f'  Distance metric: {info.config.params.vectors.distance}')
-
-# Check Executive Orders collection
-print('\n' + '=' * 60)
-print('EXECUTIVE ORDERS SAMPLE')
-print('=' * 60)
-
-if any(col.name == 'executive_orders' for col in collections):
-    results = client.client.scroll(
-        collection_name='executive_orders',
-        limit=2,
-        with_payload=True,
-        with_vectors=False
-    )
-    
-    for i, point in enumerate(results[0], 1):
-        print(f'\nChunk {i}:')
-        print(f'  ID: {point.id}')
-        if point.payload.get('metadata'):
-            metadata = point.payload['metadata']
-            print(f'  Document ID: {metadata.get("document_id")}')
-            print(f'  Title: {metadata.get("title", "N/A")[:60]}...')
-            print(f'  Date: {metadata.get("publication_date")}')
-        if point.payload.get('text'):
-            print(f'  Text preview: {point.payload["text"][:100]}...')
-
-# Check Supreme Court Opinions collection  
-print('\n' + '=' * 60)
-print('SUPREME COURT OPINIONS SAMPLE')
-print('=' * 60)
-
-if any(col.name == 'supreme_court_opinions' for col in collections):
-    results = client.client.scroll(
-        collection_name='supreme_court_opinions',
-        limit=2,
-        with_payload=True,
-        with_vectors=False
-    )
-    
-    for i, point in enumerate(results[0], 1):
-        print(f'\nChunk {i}:')
-        print(f'  ID: {point.id}')
-        if point.payload.get('metadata'):
-            metadata = point.payload['metadata']
-            print(f'  Case: {metadata.get("case_name", "N/A")}')
-            print(f'  Citation: {metadata.get("citation_bluebook")}')
-            print(f'  Date: {metadata.get("publication_date")}')
-        if point.payload.get('text'):
-            print(f'  Text preview: {point.payload["text"][:100]}...')
-```
-
-#### Using Ingestion Client Stats
-
-A simpler way to check collection statistics:
-
-```python
-# Run with: uv run python -c "..."
-from governmentreporter.database.ingestion import QdrantIngestionClient
-
-print('=' * 60)
-print('COLLECTION STATISTICS')
-print('=' * 60)
-
-# Check Executive Orders
-try:
-    eo_client = QdrantIngestionClient('executive_orders', './qdrant_db')
-    eo_stats = eo_client.get_collection_stats()
-    print('\nExecutive Orders Collection:')
-    print(f'  Collection name: {eo_stats.get("collection_name")}')
-    print(f'  Total chunks: {eo_stats.get("total_documents", 0)}')
-    print(f'  Vector dimension: {eo_stats.get("vector_size", "N/A")}')
-    print(f'  Distance metric: {eo_stats.get("distance_metric", "N/A")}')
-except Exception as e:
-    print(f'\nExecutive Orders Collection: Error - {e}')
-
-# Check SCOTUS Opinions
-try:
-    scotus_client = QdrantIngestionClient('supreme_court_opinions', './qdrant_db')
-    scotus_stats = scotus_client.get_collection_stats()
-    print('\nSupreme Court Opinions Collection:')
-    print(f'  Collection name: {scotus_stats.get("collection_name")}')
-    print(f'  Total chunks: {scotus_stats.get("total_documents", 0)}')
-    print(f'  Vector dimension: {scotus_stats.get("vector_size", "N/A")}')
-    print(f'  Distance metric: {scotus_stats.get("distance_metric", "N/A")}')
-except Exception as e:
-    print(f'\nSupreme Court Opinions Collection: Error - {e}')
+```bash
+uv run python scratch/check_quadrant.py
 ```
 
 ---
@@ -308,7 +206,7 @@ After successful ingestion, you should see:
 - **Qdrant**: Collection should contain multiple chunks (usually 5-15 per order)
 - **Metadata**: Each chunk should have title, date, agencies, topics, and other fields
 
-### Supreme Court Opinions  
+### Supreme Court Opinions
 - **SQLite**: Status should show opinions as "completed"
 - **Qdrant**: Collection should contain multiple chunks (usually 10-50 per opinion)
 - **Metadata**: Each chunk should have case name, citation, date, and other legal metadata

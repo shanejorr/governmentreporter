@@ -161,14 +161,20 @@ class SCOTUSIngester:
         all_opinion_ids = []
 
         try:
-            # Use the list_scotus_opinions method with date filtering
-            opinions = self.api_client.list_scotus_opinions(
-                start_date=self.start_date, end_date=self.end_date
+            # Use search_documents method to fetch Supreme Court opinions
+            # Pass empty query to get all opinions in date range
+            # Set a high limit to get all available opinions
+            opinions = self.api_client.search_documents(
+                query="",  # Empty query to get all opinions
+                start_date=self.start_date,
+                end_date=self.end_date,
+                limit=10000,  # High limit to get all opinions
+                full_content=False  # Don't fetch full content, just IDs
             )
 
             for opinion in opinions:
-                # Extract opinion ID from the opinion data
-                opinion_id = str(opinion.get("id"))
+                # Extract opinion ID from the Document object
+                opinion_id = opinion.id
                 all_opinion_ids.append(opinion_id)
 
                 # Log progress every 100 opinions
