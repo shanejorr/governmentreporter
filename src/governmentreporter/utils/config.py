@@ -37,6 +37,13 @@ import logging
 import os
 from typing import Optional
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+# This must be called before any os.getenv() calls to ensure
+# variables from .env are available to the application
+load_dotenv()
+
 
 def get_court_listener_token() -> str:
     """Get Court Listener API token from environment variables.
