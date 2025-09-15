@@ -7,7 +7,7 @@ the metadata extraction, chunking, and payload assembly process.
 
 The module integrates:
     - Document objects from CourtListener and Federal Register APIs
-    - LLM-based metadata extraction using GPT-4o-mini
+    - LLM-based metadata extraction using GPT-5-nano
     - Section-aware chunking algorithms
     - Pydantic schemas for validation
     - Qdrant payload formatting
@@ -16,7 +16,7 @@ Process Flow:
     1. Receive Document from API client
     2. Extract document-level metadata from API fields
     3. Detect document type and route to appropriate chunker
-    4. Generate LLM fields using GPT-4o-mini
+    4. Generate LLM fields using GPT-5-nano
     5. Combine metadata at chunk level
     6. Return list of Qdrant-ready payloads
 

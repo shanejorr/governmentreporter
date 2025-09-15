@@ -104,9 +104,9 @@ def get_court_listener_token() -> str:
 def get_openai_api_key() -> str:
     """Get OpenAI API key from environment variables.
 
-    OpenAI provides advanced AI models including GPT-4 and text embedding models
+    OpenAI provides advanced AI models including GPT-5 and text embedding models
     that provide natural language processing capabilities. In GovernmentReporter,
-    GPT-4o-mini is used for metadata generation and text-embedding-3-small is used
+    GPT-5-nano is used for metadata generation and text-embedding-3-small is used
     for document embeddings.
 
     Integration with GovernmentReporter:
@@ -118,7 +118,7 @@ def get_openai_api_key() -> str:
         - High-quality text embeddings for vector search
 
         Specifically used by:
-        - LLM extraction functions in the metadata module for AI-powered analysis
+        - GPT5MetadataGenerator in the metadata module for AI-powered analysis
         - OpenAIEmbeddingsClient for generating document embeddings
         - Document processing pipelines for content understanding
 
