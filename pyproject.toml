@@ -5,9 +5,21 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "governmentreporter"
 version = "0.1.0"
-description = "Add your description here"
+description = "MCP server and Python library for semantic search of US government documents (Supreme Court opinions, Executive Orders) using hierarchical chunking and RAG"
 readme = "README.md"
 requires-python = ">=3.11"
+keywords = ["mcp", "model-context-protocol", "supreme-court", "executive-orders", "government", "legal", "rag", "semantic-search", "vector-database", "qdrant"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Legal Industry",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Indexing",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = [
     "beautifulsoup4>=4.13.4",
     "qdrant-client>=1.7.0",
@@ -19,6 +31,7 @@ dependencies = [
     "pyyaml>=6.0.2",
     "requests>=2.32.4",
     "tiktoken>=0.11.0",
+    "mcp>=1.0.0",
 ]
 
 [dependency-groups]
@@ -32,5 +45,5 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["governmentreporter", "governmentreporter.apis", "governmentreporter.database", "governmentreporter.processors", "governmentreporter.utils"]
+packages = ["governmentreporter", "governmentreporter.apis", "governmentreporter.database", "governmentreporter.processors", "governmentreporter.utils", "governmentreporter.server"]
 package-dir = {"" = "src"}

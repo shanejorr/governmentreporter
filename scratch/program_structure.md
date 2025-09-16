@@ -9,6 +9,7 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 ```
 src/governmentreporter/
 ├── __init__.py                 # Main package initialization
+├── server.py                   # MCP server entry point and main runner
 ├── apis/                        # Government API client implementations
 │   ├── __init__.py
 │   ├── base.py                 # Abstract base classes for API clients
@@ -25,6 +26,12 @@ src/governmentreporter/
 │   ├── embeddings.py           # OpenAI embedding generation utilities
 │   ├── llm_extraction.py       # GPT-5-nano metadata extraction
 │   └── schema.py               # Pydantic models for metadata validation
+├── server/                      # MCP server implementation for LLM integration
+│   ├── __init__.py             # Server module exports and version info
+│   ├── mcp_server.py           # Main MCP server class and lifecycle management
+│   ├── handlers.py             # Tool handlers for MCP requests (5 tools)
+│   ├── query_processor.py      # Result formatting optimized for LLM consumption
+│   └── config.py               # Server configuration with environment variables
 └── utils/                       # Shared utilities and helpers
     ├── __init__.py             # Package initializer with logging setup
     ├── citations.py            # Bluebook citation formatting
@@ -41,11 +48,18 @@ Government API → Fetch Documents → Chunk Documents → Extract Metadata
                                   Generate Embeddings → Store in Qdrant
 ```
 
-### 2. Query/Retrieval Pipeline  
+### 2. MCP Query/Retrieval Pipeline
 ```
-User Query → Generate Query Embedding → Search Qdrant → Retrieve Document IDs
-                                                      ↓
-                                            Fetch Fresh Content from APIs
+LLM Tool Call → MCP Server → Generate Query Embedding → Search Qdrant → Retrieve Chunks
+                    ↓                                                       ↓
+            Route to Handler                                         Format Results
+                    ↓                                                       ↓
+            Validate Arguments                                  Return to LLM Context
+```
+
+### 3. Optional Full Document Retrieval Pipeline
+```
+Chunk Results → Extract Document IDs → Fetch Fresh Content from APIs → Return Full Document
 ```
 
 ## Module Details
@@ -236,6 +250,96 @@ This module provides document processing capabilities for transforming raw gover
   - `get_logger()`: Returns configured logger instances
 - **Exports**: Makes key utilities available for import
 
+### 5. Server Module (`src/governmentreporter/server/`)
+
+This module implements the MCP (Model Context Protocol) server that enables LLMs to semantically search government documents and retrieve relevant chunks for context-aware responses.
+
+#### `mcp_server.py` - Main MCP Server Implementation
+- **Purpose**: Core MCP server that manages tool registration and request handling
+- **Key Components**:
+  - `GovernmentReporterMCP` class: Main server implementation
+    - Manages server lifecycle (initialize, start, shutdown)
+    - Registers 5 MCP tools for LLM interaction
+    - Handles async operations and graceful shutdown
+    - Provides connection management for Qdrant
+  - `create_and_run_server()`: Convenience function for server startup
+- **MCP Tools Registered**:
+  - `search_government_documents`: Cross-collection semantic search
+  - `search_scotus_opinions`: SCOTUS-specific search with legal filters
+  - `search_executive_orders`: Executive Order search with policy filters
+  - `get_document_by_id`: Retrieve specific document/chunk by ID
+  - `list_collections`: Show available collections and statistics
+
+#### `handlers.py` - Tool Handlers for MCP Requests
+- **Purpose**: Contains handler functions for each MCP tool exposed to LLMs
+- **Key Functions**:
+  - `handle_search_government_documents()`: Main semantic search across collections
+  - `handle_search_scotus_opinions()`: SCOTUS search with opinion type, justice, date filters
+  - `handle_search_executive_orders()`: EO search with president, agency, policy filters
+  - `handle_get_document_by_id()`: Document/chunk retrieval by ID
+  - `handle_list_collections()`: Collection information and statistics
+- **Features**:
+  - Generates query embeddings using existing `embeddings.py`
+  - Builds Qdrant filter conditions for metadata filtering
+  - Handles errors gracefully with informative messages
+  - Supports optional full document retrieval from APIs
+
+#### `query_processor.py` - Result Formatting for LLMs
+- **Purpose**: Formats search results from Qdrant for optimal LLM consumption
+- **Key Components**:
+  - `QueryProcessor` class: Main formatting engine
+    - `format_search_results()`: General search result formatting
+    - `format_scotus_results()`: SCOTUS-specific formatting with legal context
+    - `format_eo_results()`: Executive Order formatting with policy context
+    - `format_document_chunk()`: Single chunk formatting with metadata
+    - `format_collections_list()`: Collection information display
+- **Features**:
+  - Preserves document structure in formatted output
+  - Truncates long chunks to prevent context overflow
+  - Emphasizes relevant metadata for each document type
+  - Includes relevance scores and proper citations
+  - Optimized for LLM parsing and comprehension
+
+#### `config.py` - Server Configuration Management
+- **Purpose**: Configuration settings for the MCP server with environment variable support
+- **Key Components**:
+  - `ServerConfig` dataclass: Comprehensive server configuration
+    - Server identification (name, version)
+    - Collection mappings (document types to Qdrant collections)
+    - Search parameters (limits, defaults)
+    - Qdrant connection settings (host, port, API key)
+    - Embedding configuration (model, dimensions)
+    - Chunking configurations (SCOTUS and EO specific)
+    - Caching, rate limiting, and logging settings
+- **Features**:
+  - Environment variable overrides for all settings
+  - Validation of configuration parameters
+  - Default values matching existing chunking strategies
+  - Support for future expansion (Congress, Federal Register)
+
+#### `__init__.py` - Server Module Exports
+- **Purpose**: Module initialization and exports for the server package
+- **Exports**:
+  - Server classes: `GovernmentReporterMCP`, `ServerConfig`
+  - Handler functions: All 5 MCP tool handlers
+  - Utilities: `QueryProcessor`, `default_config`
+  - Helper: `create_and_run_server`
+
+### 6. Main Entry Points
+
+#### `server.py` - MCP Server Entry Point
+- **Purpose**: Command-line entry point for running the MCP server
+- **Key Functions**:
+  - `setup_logging()`: Configure logging for the server
+  - `main()`: Async main function that manages server lifecycle
+  - `run_server()`: Synchronous wrapper for async main
+- **Features**:
+  - Command-line executable (`python -m governmentreporter.server`)
+  - Signal handling for graceful shutdown (SIGINT, SIGTERM)
+  - Environment validation before startup
+  - Comprehensive logging of server status
+  - Error handling with informative messages
+
 ## Component Interactions
 
 ### 1. Module Hierarchy
@@ -254,11 +358,18 @@ GovernmentReporter Package
     ├── Database Module
     │   ├── QdrantDBClient (vector storage)
     │   └── QdrantIngestionClient (batch ingestion)
-    └── Utils Module
-        ├── Config (credentials)
-        ├── Citations (formatting)
-        ├── Monitoring (performance tracking)
-        └── Logging (operation tracking)
+    ├── Server Module
+    │   ├── GovernmentReporterMCP (main server)
+    │   ├── Tool Handlers (5 MCP tools)
+    │   ├── QueryProcessor (result formatting)
+    │   └── ServerConfig (configuration management)
+    ├── Utils Module
+    │   ├── Config (credentials)
+    │   ├── Citations (formatting)
+    │   ├── Monitoring (performance tracking)
+    │   └── Logging (operation tracking)
+    └── Entry Points
+        └── server.py (MCP server runner)
 ```
 
 ### 2. Data Flow Between Components
@@ -275,27 +386,41 @@ GovernmentReporter Package
 5. **QdrantIngestionClient** batch stores chunks + embeddings + metadata
 6. **PerformanceMonitor** tracks ingestion progress and statistics
 
-#### Document Retrieval Flow:
-1. Query embedding generated (external)
-2. **QdrantDBClient** performs semantic search on chunks
-3. Returns chunk IDs, metadata, and similarity scores
-4. **API Client** can fetch fresh full documents if needed
-5. Returns relevant chunks or complete documents
+#### Document Retrieval Flow (via MCP Server):
+1. **LLM** sends tool call request via MCP protocol
+2. **MCP Server** routes request to appropriate handler
+3. **Handler** validates arguments and generates query embedding
+4. **QdrantDBClient** performs semantic search on chunks with filters
+5. **QueryProcessor** formats results for LLM consumption
+6. **MCP Server** returns formatted chunks to LLM context window
+7. **Optional**: API Client fetches fresh full documents if requested
 
 ### 3. Configuration Dependencies
 ```
 config.py provides credentials to:
     ├── court_listener.py (needs Court Listener token)
     ├── llm_extraction.py (needs OpenAI key for GPT-5-nano)
-    └── embeddings.py (needs OpenAI key for text-embedding-3-small)
+    ├── embeddings.py (needs OpenAI key for text-embedding-3-small)
+    └── server module (needs OpenAI key for query embeddings)
+
+server/config.py provides server settings:
+    ├── Collection mappings (document types to Qdrant collections)
+    ├── Search parameters (limits, defaults)
+    ├── Qdrant connection settings (host, port, API key)
+    ├── Embedding configuration (model, dimensions)
+    └── Caching, rate limiting, and logging settings
 ```
 
 ### 4. Module Interactions
 - **APIs → Processors**: Documents flow from API clients to processors
 - **Processors → Database**: Processed chunks stored in Qdrant
+- **Server → Database**: MCP server queries Qdrant for semantic search
+- **Server → Processors**: Server uses embeddings module for query vectors
+- **Server → APIs**: Optional full document retrieval from government APIs
 - **Utils → All**: Config and logging used throughout
-- **citations.py** used by `court_listener.py` and processors for Bluebook formatting
+- **citations.py** used by `court_listener.py`, processors, and server for Bluebook formatting
 - **schema.py** validates data throughout processing pipeline
+- **LLMs → Server**: External LLMs interact via MCP protocol
 
 ## Key Design Patterns
 
@@ -361,7 +486,19 @@ The architecture is designed to easily add:
 7. Different LLM providers for metadata extraction
 8. Additional validation schemas for new metadata types
 9. Batch processing optimizations
-10. MCP server implementation for LLM integration
+10. ✅ **COMPLETED**: MCP server implementation for LLM integration
+
+### New MCP Server Extension Points:
+11. **Additional MCP Tools**: New tools for specific legal research workflows
+12. **Streaming Responses**: Real-time result streaming for large queries
+13. **Query Expansion**: Automatic query enhancement and suggestion
+14. **Result Reranking**: Post-retrieval result optimization
+15. **Caching Layer**: Cache frequent queries and embeddings
+16. **Authentication**: API key or token-based access control
+17. **Rate Limiting**: Prevent abuse and manage server load
+18. **Metrics/Monitoring**: Usage statistics and performance tracking
+19. **Multi-LLM Support**: Concurrent support for multiple LLM clients
+20. **Custom Formatting**: LLM-specific result formatting strategies
 
 ## Security Considerations
 

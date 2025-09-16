@@ -1,10 +1,12 @@
 # GovernmentReporter
 
-A Python library for retrieving, processing, and storing US federal government publications in a Qdrant vector database for retrieval augmented generation (RAG) using **hierarchical document chunking**.
+A Python library and **MCP (Model Context Protocol) server** for retrieving, processing, and storing US federal government publications in a Qdrant vector database for retrieval augmented generation (RAG) using **hierarchical document chunking**.
 
 ## Overview
 
 GovernmentReporter creates a Qdrant vector database storing semantic embeddings and rich metadata for hierarchically chunked US federal Supreme Court opinions and Executive Orders. The system uses **intelligent chunking** to break down documents by their natural structure - Supreme Court opinions by opinion type (syllabus, majority, concurring, dissenting) and sections, Executive Orders by header/sections/subsections/tail - enabling precise legal research and retrieval.
+
+**NEW: MCP Server for LLM Integration** - The system now includes a Model Context Protocol server that enables Large Language Models (like Claude, GPT-4, etc.) to semantically search government documents and retrieve relevant chunks for context-aware responses.
 
 ## Features
 
@@ -44,11 +46,19 @@ GovernmentReporter creates a Qdrant vector database storing semantic embeddings 
 - **Comprehensive Government Data**: Indexes US Supreme Court opinions and Executive Orders
 - **Fresh Data Guarantee**: Retrieves latest document text on-demand from government APIs
 - **Semantic Search**: Vector database enables intelligent document discovery at chunk level
+- **MCP Server Integration**: Direct LLM access via Model Context Protocol
 - **API-First Design**: Reusable library components for custom workflows
 - **Bulk Processing**: Automated pipeline for processing large datasets (10,000+ Supreme Court opinions)
 - **Resumable Operations**: Progress tracking and error recovery for long-running processes
 - **Duplicate Detection**: Smart checking to avoid reprocessing existing documents
 - **Programmatic API**: Reusable library components for custom data processing workflows
+
+### 🤖 MCP Server Features
+- **5 Specialized Tools**: Search across collections, SCOTUS-specific search, Executive Order search, document retrieval, collection listing
+- **Advanced Filtering**: Filter by opinion type, justice, president, agencies, policy topics, date ranges
+- **Structured Output**: Results formatted for optimal LLM comprehension with citations and metadata
+- **Real-time Search**: Live semantic search with relevance scoring
+- **Chunk-level Precision**: Returns relevant document segments with hierarchical context
 
 ## Architecture
 
@@ -86,6 +96,15 @@ GovernmentReporter creates a Qdrant vector database storing semantic embeddings 
   - `citations.py`: Bluebook citation formatting
   - `config.py`: Environment variable and credential management
   - `monitoring.py`: Performance monitoring with progress tracking
+
+- **Server Module** (`src/governmentreporter/server/`): MCP server for LLM integration
+  - `mcp_server.py`: Main MCP server implementation with tool registration
+  - `handlers.py`: Tool handlers for search, retrieval, and collection operations
+  - `query_processor.py`: Result formatting optimized for LLM consumption
+  - `config.py`: Server configuration with environment variable support
+
+- **Main Entry Points**:
+  - `server.py`: Command-line entry point for running the MCP server
 
 ## Data Flow
 
@@ -149,6 +168,318 @@ GovernmentReporter creates a Qdrant vector database storing semantic embeddings 
    **Get API Keys:**
    - **OpenAI API**: Get key from [OpenAI Platform](https://platform.openai.com/api-keys)
    - **CourtListener API**: Free registration at [CourtListener](https://www.courtlistener.com/api/)
+
+## Running the MCP Server
+
+### Start the MCP Server
+```bash
+# Using uv (recommended)
+uv run python -m governmentreporter.server
+
+# Direct Python
+python -m governmentreporter.server
+
+# As executable script
+./src/governmentreporter/server.py
+```
+
+### Server Configuration
+Optional environment variables for the MCP server:
+```bash
+# Server settings
+MCP_SERVER_NAME="Custom MCP Server"
+MCP_LOG_LEVEL=DEBUG
+MCP_DEFAULT_SEARCH_LIMIT=15
+MCP_MAX_SEARCH_LIMIT=50
+
+# Qdrant settings (if not using defaults)
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
+QDRANT_API_KEY=your-key-here
+
+# Caching
+MCP_ENABLE_CACHE=true
+```
+
+### MCP Tools Available to LLMs
+1. **`search_government_documents`** - Cross-collection semantic search
+2. **`search_scotus_opinions`** - SCOTUS-specific with legal filters
+3. **`search_executive_orders`** - Executive Order search with policy filters
+4. **`get_document_by_id`** - Retrieve specific document/chunk by ID
+5. **`list_collections`** - Show available collections and statistics
+
+## Claude Desktop Integration Tutorial
+
+This tutorial walks you through connecting the GovernmentReporter MCP server to Claude Desktop, enabling Claude to search government documents and provide legal research assistance.
+
+### Prerequisites
+
+Before starting, ensure you have:
+- ✅ Qdrant running locally (default: `localhost:6333`)
+- ✅ Government documents indexed in Qdrant collections
+- ✅ Claude Desktop app installed
+- ✅ Required API keys in `.env` file
+
+### Step 1: Configure Claude Desktop for MCP
+
+Claude Desktop uses a configuration file to connect to MCP servers. The location depends on your operating system:
+
+**macOS:**
+```bash
+~/Library/Application Support/Claude/claude_desktop_config.json
+```
+
+**Windows:**
+```bash
+%APPDATA%\Claude\claude_desktop_config.json
+```
+
+**Linux:**
+```bash
+~/.config/Claude/claude_desktop_config.json
+```
+
+### Step 2: Create MCP Configuration
+
+Create or edit the `claude_desktop_config.json` file with the following configuration:
+
+```json
+{
+  "mcpServers": {
+    "governmentreporter": {
+      "command": "uv",
+      "args": [
+        "run",
+        "python",
+        "-m",
+        "governmentreporter.server"
+      ],
+      "cwd": "/path/to/your/governmentreporter",
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key-here",
+        "COURT_LISTENER_API_TOKEN": "your-courtlistener-token-here"
+      }
+    }
+  }
+}
+```
+
+**Important:** Replace `/path/to/your/governmentreporter` with the actual path to your project directory.
+
+### Step 3: Alternative Configuration Methods
+
+#### Option A: Using Environment Variables (Recommended)
+If you already have a `.env` file in your project:
+
+```json
+{
+  "mcpServers": {
+    "governmentreporter": {
+      "command": "uv",
+      "args": [
+        "run",
+        "python",
+        "-m",
+        "governmentreporter.server"
+      ],
+      "cwd": "/path/to/your/governmentreporter"
+    }
+  }
+}
+```
+
+#### Option B: Direct Python Execution
+If you prefer running Python directly:
+
+```json
+{
+  "mcpServers": {
+    "governmentreporter": {
+      "command": "python",
+      "args": [
+        "-m",
+        "governmentreporter.server"
+      ],
+      "cwd": "/path/to/your/governmentreporter",
+      "env": {
+        "OPENAI_API_KEY": "your-openai-api-key-here",
+        "COURT_LISTENER_API_TOKEN": "your-courtlistener-token-here"
+      }
+    }
+  }
+}
+```
+
+### Step 4: Verify Qdrant is Running
+
+Ensure your local Qdrant instance is running and accessible:
+
+```bash
+# Check if Qdrant is responding
+curl http://localhost:6333/health
+
+# Expected response: {"status":"ok"}
+```
+
+If Qdrant isn't running, start it:
+
+```bash
+# Using Docker (recommended)
+docker run -p 6333:6333 qdrant/qdrant
+
+# Or using local installation
+qdrant --config-path ./qdrant-config.yaml
+```
+
+### Step 5: Restart Claude Desktop
+
+After saving the configuration file:
+
+1. **Completely quit** Claude Desktop (Cmd+Q on macOS, or close from system tray)
+2. **Restart** Claude Desktop
+3. Wait for the app to fully load
+
+### Step 6: Verify MCP Connection
+
+In a new Claude conversation, you should see:
+- 🔧 A tools indicator in the interface
+- The GovernmentReporter tools available when Claude needs to search legal documents
+
+To test the connection, ask Claude:
+> "What tools do you have access to?"
+
+Claude should mention the government document search capabilities.
+
+### Step 7: Using the MCP Server
+
+Now you can ask Claude legal research questions that will trigger the MCP tools:
+
+#### Example Queries:
+
+**Supreme Court Research:**
+```
+"Find recent Supreme Court cases about environmental regulation and the Commerce Clause"
+```
+
+**Executive Order Analysis:**
+```
+"Search for Executive Orders signed by Biden related to climate policy"
+```
+
+**Specific Legal Questions:**
+```
+"What did the Supreme Court say about the major questions doctrine in recent cases?"
+```
+
+**Cross-Document Research:**
+```
+"Find cases and executive orders related to cryptocurrency regulation"
+```
+
+### Step 8: Understanding Claude's Responses
+
+When Claude uses the MCP server, you'll see:
+
+1. **Tool Usage Indicator** - Claude will show when it's searching documents
+2. **Structured Results** - Claude will present findings with:
+   - Case names and citations
+   - Opinion types (majority, dissenting, etc.)
+   - Executive Order numbers and dates
+   - Relevant legal metadata
+   - Direct quotes from documents
+
+3. **Source Attribution** - Claude will reference specific documents and provide context
+
+### Advanced Configuration
+
+#### Custom Server Settings
+You can customize the MCP server behavior with environment variables:
+
+```json
+{
+  "mcpServers": {
+    "governmentreporter": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "governmentreporter.server"],
+      "cwd": "/path/to/your/governmentreporter",
+      "env": {
+        "OPENAI_API_KEY": "your-key-here",
+        "COURT_LISTENER_API_TOKEN": "your-token-here",
+        "MCP_SERVER_NAME": "My Legal Research Assistant",
+        "MCP_DEFAULT_SEARCH_LIMIT": "15",
+        "MCP_LOG_LEVEL": "INFO",
+        "QDRANT_HOST": "localhost",
+        "QDRANT_PORT": "6333"
+      }
+    }
+  }
+}
+```
+
+#### Multiple Collection Support
+If you have additional document collections:
+
+```json
+{
+  "env": {
+    "MCP_COLLECTIONS": "supreme_court_opinions,executive_orders,federal_register"
+  }
+}
+```
+
+### Troubleshooting
+
+#### Common Issues:
+
+**1. Claude doesn't show any tools:**
+- Check that `claude_desktop_config.json` is in the correct location
+- Verify JSON syntax is valid (use a JSON validator)
+- Restart Claude Desktop completely
+
+**2. "Server failed to start" errors:**
+- Verify the `cwd` path points to your project directory
+- Check that `uv` is installed and accessible
+- Ensure your `.env` file contains required API keys
+
+**3. "Connection refused" errors:**
+- Confirm Qdrant is running on `localhost:6333`
+- Check firewall settings
+- Verify Qdrant health endpoint: `curl http://localhost:6333/health`
+
+**4. Empty search results:**
+- Ensure your Qdrant database contains indexed documents
+- Check collection names match your configuration
+- Verify documents were properly ingested
+
+#### Debug Mode:
+Enable detailed logging by setting:
+```json
+{
+  "env": {
+    "MCP_LOG_LEVEL": "DEBUG"
+  }
+}
+```
+
+Check Claude Desktop logs (usually in Console.app on macOS) for detailed error messages.
+
+### Security Considerations
+
+- **API Keys**: Never commit API keys to version control
+- **Local Access**: The MCP server runs locally and only responds to Claude Desktop
+- **Network**: Ensure Qdrant is not exposed to external networks unless needed
+- **Logs**: Monitor logs for any sensitive information exposure
+
+### Next Steps
+
+Once connected, you can:
+- Ask Claude complex legal research questions
+- Request analysis across multiple document types
+- Get summaries of legal trends and developments
+- Find specific citations and legal precedents
+- Analyze policy impacts and agency relationships
+
+The MCP integration enables Claude to become a powerful legal research assistant with access to your curated government document database.
 
 ## Data Processing Pipeline
 
