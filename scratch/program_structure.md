@@ -322,7 +322,7 @@ This module implements the MCP (Model Context Protocol) server that enables LLMs
 - **Exports**:
   - Server classes: `GovernmentReporterMCP`, `ServerConfig`
   - Handler functions: All 5 MCP tool handlers
-  - Utilities: `QueryProcessor`, `default_config`
+  - Utilities: `QueryProcessor`, `get_config()`, `set_config()`
   - Helper: `create_and_run_server`
 
 ### 6. Main Entry Points

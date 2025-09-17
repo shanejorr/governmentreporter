@@ -38,7 +38,7 @@ from .handlers import (
     handle_get_document_by_id,
     handle_list_collections,
 )
-from .config import ServerConfig
+from .config import ServerConfig, get_config
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -73,9 +73,9 @@ class GovernmentReporterMCP:
         Initialize the MCP server.
 
         Args:
-            config: Optional server configuration. Uses defaults if not provided.
+            config: Optional server configuration. Uses factory singleton if not provided.
         """
-        self.config = config or ServerConfig()
+        self.config = config or get_config()
         self.server = Server(self.config.server_name)
         self.qdrant_client = None
 

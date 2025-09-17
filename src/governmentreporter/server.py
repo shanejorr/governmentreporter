@@ -46,7 +46,7 @@ from typing import Optional
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from governmentreporter.server.mcp_server import GovernmentReporterMCP
-from governmentreporter.server.config import ServerConfig
+from governmentreporter.server.config import ServerConfig, get_config, set_config
 from governmentreporter.utils.config import get_openai_api_key
 
 # Configure logging
@@ -78,14 +78,17 @@ async def main(config: Optional[ServerConfig] = None) -> None:
     3. Starts the server and handles shutdown
 
     Args:
-        config: Optional ServerConfig instance. Uses defaults if not provided.
+        config: Optional ServerConfig instance. Uses factory singleton if not provided.
 
     Raises:
         EnvironmentError: If required environment variables are missing.
     """
-    # Use provided config or create default
+    # Use provided config or get singleton from factory
     if config is None:
-        config = ServerConfig()
+        config = get_config()
+    else:
+        # If custom config provided, set it as the singleton
+        set_config(config)
 
     # Set up logging
     setup_logging(config.log_level)

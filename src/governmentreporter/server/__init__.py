@@ -29,7 +29,7 @@ For command-line usage:
 """
 
 from .mcp_server import GovernmentReporterMCP, create_and_run_server
-from .config import ServerConfig, default_config
+from .config import ServerConfig, get_config, set_config
 from .handlers import (
     handle_search_government_documents,
     handle_search_scotus_opinions,
@@ -46,7 +46,8 @@ __all__ = [
 
     # Configuration
     "ServerConfig",
-    "default_config",
+    "get_config",
+    "set_config",
 
     # Handlers
     "handle_search_government_documents",

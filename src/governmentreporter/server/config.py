@@ -242,5 +242,61 @@ class ServerConfig:
         self.validate()
 
 
-# Singleton instance for easy import
-default_config = ServerConfig()
+# Global instance storage for factory pattern
+_config: Optional[ServerConfig] = None
+
+
+def get_config(reset: bool = False) -> ServerConfig:
+    """
+    Factory function to get a singleton ServerConfig instance.
+
+    This function implements a factory pattern that returns a single shared
+    instance of ServerConfig throughout the application lifecycle. This approach
+    provides better testability and initialization control compared to a module-level
+    singleton.
+
+    Args:
+        reset: If True, forces creation of a new config instance even if one exists.
+               This is useful for testing or when you need to reload configuration.
+
+    Returns:
+        ServerConfig: The singleton configuration instance.
+
+    Example:
+        >>> from governmentreporter.server.config import get_config
+        >>> config = get_config()
+        >>> # All subsequent calls return the same instance
+        >>> config2 = get_config()
+        >>> assert config is config2  # True
+
+        >>> # For testing, you can reset the singleton
+        >>> test_config = get_config(reset=True)
+    """
+    global _config
+    if _config is None or reset:
+        _config = ServerConfig()
+    return _config
+
+
+def set_config(config: ServerConfig) -> None:
+    """
+    Set a custom ServerConfig instance as the singleton.
+
+    This function allows you to inject a custom configuration instance,
+    which is particularly useful for testing or for applications that need
+    to programmatically configure the server with specific settings.
+
+    Args:
+        config: The ServerConfig instance to use as the singleton.
+
+    Example:
+        >>> from governmentreporter.server.config import ServerConfig, set_config, get_config
+        >>> custom_config = ServerConfig(default_search_limit=20)
+        >>> set_config(custom_config)
+        >>> config = get_config()
+        >>> assert config.default_search_limit == 20
+    """
+    global _config
+    _config = config
+
+
