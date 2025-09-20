@@ -8,11 +8,11 @@ Free Law Project (https://www.courtlistener.com).
 
 Key Features:
     - Access to Supreme Court opinions dating back to 1791
-    - Bluebook citation formatting
+    - Raw citation data extraction
     - Rate-limited API requests to respect service limits
     - Full text retrieval and metadata extraction
     - Pagination support for large result sets
-    - Opinion cluster data for case names and citations
+    - Opinion cluster data for case names and raw citation data
 
 API Documentation:
     https://www.courtlistener.com/api/rest-info/
@@ -33,7 +33,7 @@ Data Model:
 
 Integration Points:
     - Inherits from GovernmentAPIClient (base.py)
-    - Uses citation utilities for Bluebook formatting (utils/citations.py)
+    - Extracts raw citation data for processing
     - Utilizes configuration management (utils/config.py)
     - Returns standardized Document objects for processing pipeline
 
@@ -83,12 +83,12 @@ class CourtListenerClient(GovernmentAPIClient):
         2. Supreme Court opinion listing with date filtering
         3. Opinion cluster data fetching for case metadata
         4. Full-text content extraction and cleaning
-        5. Bluebook citation generation
+        5. Raw citation data extraction
 
     Data Flow:
         1. API request → JSON response
         2. Metadata extraction → structured data
-        3. Citation formatting → Bluebook format
+        3. Raw citation data extraction
         4. Document object creation → standardized format
         5. Content population → full text or metadata-only
 
@@ -391,7 +391,7 @@ class CourtListenerClient(GovernmentAPIClient):
                            If full_content=True, each Document contains:
                            - Full opinion text
                            - Case name from cluster data
-                           - Bluebook citation
+                           - Raw citation data
                            - Complete metadata
                            If full_content=False, each Document contains:
                            - Empty content field
@@ -554,7 +554,7 @@ class CourtListenerClient(GovernmentAPIClient):
             1. Fetch opinion data using get_opinion()
             2. Extract basic metadata from opinion
             3. Retrieve cluster data for case name and citations
-            4. Generate Bluebook citation format
+            4. Extract raw citation data
             5. Construct Document object with all fields populated
 
         Args:
@@ -592,7 +592,7 @@ class CourtListenerClient(GovernmentAPIClient):
             The returned Document.metadata includes:
             - All fields from extract_basic_metadata()
             - case_name: Full case name from cluster
-            - citation: Bluebook formatted citation
+            - Raw citation data from cluster
             - Plus any additional cluster metadata
 
         Performance Notes:

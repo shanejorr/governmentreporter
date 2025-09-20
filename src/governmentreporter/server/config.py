@@ -131,7 +131,6 @@ class ServerConfig:
     # Response formatting
     truncate_chunk_length: int = 1000  # Characters to show in search results
     include_metadata_in_results: bool = True
-    format_citations_bluebook: bool = True
 
     # Rate limiting
     rate_limit_enabled: bool = False

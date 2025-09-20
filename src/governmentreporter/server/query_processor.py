@@ -12,7 +12,7 @@ Classes:
 The processor ensures that:
 - Chunk text is presented with proper context
 - Metadata is formatted clearly and consistently
-- Citations and references are properly formatted
+- References are properly formatted
 - Results are ranked and numbered for clarity
 - Document structure is preserved in the output
 """
@@ -172,10 +172,7 @@ class QueryProcessor:
         # Add document-specific header
         if collection == "supreme_court_opinions":
             case_name = payload.get("case_name", "Unknown Case")
-            citation = payload.get("citation", "")
             output.append(f"### {case_name}")
-            if citation:
-                output.append(f"**Citation:** {citation}")
         elif collection == "executive_orders":
             title = payload.get("title", "Unknown Order")
             eo_number = payload.get("executive_order_number", "")
@@ -218,7 +215,6 @@ class QueryProcessor:
         if doc_type == "scotus":
             # Format full SCOTUS opinion
             output.append(f"### {chunk_metadata.get('case_name', 'Supreme Court Opinion')}")
-            output.append(f"**Citation:** {chunk_metadata.get('citation', '')}")
             output.append(f"**Date:** {chunk_metadata.get('date', '')}\n")
             output.append("### Full Opinion Text:")
             # Note: full_document would need proper parsing
@@ -299,11 +295,9 @@ class QueryProcessor:
         """
         lines = []
 
-        # Header with case name and citation
+        # Header with case name
         case_name = payload.get("case_name", "Unknown Case")
-        citation = payload.get("citation", "No citation")
         lines.append(f"### {index}. {case_name}")
-        lines.append(f"**Citation:** {citation}")
 
         # Opinion type and justice
         opinion_type = payload.get("opinion_type", "").title()

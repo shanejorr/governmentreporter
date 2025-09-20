@@ -63,7 +63,6 @@ async def handle_search_government_documents(
         [Chunk text about major questions doctrine...]
 
         **Metadata:**
-        - Citation: 597 U.S. ___ (2022)
         - Legal Topics: Environmental Law, Administrative Law
         - Relevance Score: 0.89
 
@@ -157,7 +156,7 @@ async def handle_search_scotus_opinions(
 
     Returns:
         Formatted string containing SCOTUS-specific search results with legal
-        metadata and citations.
+        metadata.
 
     Example Return Format:
         ## Supreme Court Opinion Search Results
@@ -167,7 +166,6 @@ async def handle_search_scotus_opinions(
         [Chunk text about constitutional interpretation...]
 
         **Legal Context:**
-        - Citation: 597 U.S. 215 (2022)
         - Vote: 6-3
         - Constitutional Provisions: Fourteenth Amendment
         - Key Holding: No constitutional right to abortion

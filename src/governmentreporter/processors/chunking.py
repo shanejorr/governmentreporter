@@ -11,7 +11,7 @@ Key Features:
     - Sliding window with configurable overlap ratios
     - Special handling for Supreme Court opinion sections (Syllabus, opinions)
     - Executive Order section detection (Sec. 1, Sec. 2, etc.)
-    - Preservation of legal citations and references
+    - Preservation of legal references
     - No overlap across section boundaries for Executive Orders
 
 Chunking Configurations:

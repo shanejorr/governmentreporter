@@ -18,7 +18,7 @@ Package Structure:
     - apis/: Government API client implementations (CourtListener, Federal Register)
     - database/: Qdrant vector database integration and ingestion utilities
     - processors/: Document processing, chunking, metadata extraction, and embedding generation
-    - utils/: Shared utilities for configuration, citations, and monitoring
+    - utils/: Shared utilities for configuration, legal text parsing, and monitoring
 
 This package serves as the entry point for all GovernmentReporter functionality.
 When imported, it provides access to the entire library's capabilities through
