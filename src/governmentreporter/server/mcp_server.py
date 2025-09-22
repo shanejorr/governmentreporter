@@ -106,25 +106,25 @@ class GovernmentReporterMCP:
                         "properties": {
                             "query": {
                                 "type": "string",
-                                "description": "The search query to find relevant documents"
+                                "description": "The search query to find relevant documents",
                             },
                             "document_types": {
                                 "type": "array",
                                 "items": {
                                     "type": "string",
-                                    "enum": ["scotus", "executive_orders"]
+                                    "enum": ["scotus", "executive_orders"],
                                 },
-                                "description": "Optional: Types of documents to search (default: all)"
+                                "description": "Optional: Types of documents to search (default: both types)",
                             },
                             "limit": {
                                 "type": "integer",
                                 "description": "Maximum number of results to return (default: 10)",
                                 "minimum": 1,
-                                "maximum": 50
-                            }
+                                "maximum": 50,
+                            },
                         },
-                        "required": ["query"]
-                    }
+                        "required": ["query"],
+                    },
                 ),
                 Tool(
                     name="search_scotus_opinions",
@@ -137,36 +137,41 @@ class GovernmentReporterMCP:
                         "properties": {
                             "query": {
                                 "type": "string",
-                                "description": "The search query for SCOTUS opinions"
+                                "description": "The search query for SCOTUS opinions",
                             },
                             "opinion_type": {
                                 "type": "string",
-                                "enum": ["majority", "concurring", "dissenting", "syllabus"],
-                                "description": "Filter by type of opinion"
+                                "enum": [
+                                    "majority",
+                                    "concurring",
+                                    "dissenting",
+                                    "syllabus",
+                                ],
+                                "description": "Filter by type of opinion",
                             },
                             "justice": {
                                 "type": "string",
-                                "description": "Filter by authoring justice name"
+                                "description": "Filter by authoring justice name",
                             },
                             "start_date": {
                                 "type": "string",
                                 "format": "date",
-                                "description": "Start date for filtering (YYYY-MM-DD)"
+                                "description": "Start date for filtering (YYYY-MM-DD)",
                             },
                             "end_date": {
                                 "type": "string",
                                 "format": "date",
-                                "description": "End date for filtering (YYYY-MM-DD)"
+                                "description": "End date for filtering (YYYY-MM-DD)",
                             },
                             "limit": {
                                 "type": "integer",
                                 "description": "Maximum number of results (default: 10)",
                                 "minimum": 1,
-                                "maximum": 50
-                            }
+                                "maximum": 50,
+                            },
                         },
-                        "required": ["query"]
-                    }
+                        "required": ["query"],
+                    },
                 ),
                 Tool(
                     name="search_executive_orders",
@@ -179,41 +184,41 @@ class GovernmentReporterMCP:
                         "properties": {
                             "query": {
                                 "type": "string",
-                                "description": "The search query for Executive Orders"
+                                "description": "The search query for Executive Orders",
                             },
                             "president": {
                                 "type": "string",
-                                "description": "Filter by president name"
+                                "description": "Filter by president name",
                             },
                             "agencies": {
                                 "type": "array",
                                 "items": {"type": "string"},
-                                "description": "Filter by impacted agency codes (e.g., ['EPA', 'DOJ'])"
+                                "description": "Filter by impacted agency codes (e.g., ['EPA', 'DOJ'])",
                             },
                             "policy_topics": {
                                 "type": "array",
                                 "items": {"type": "string"},
-                                "description": "Filter by policy topics"
+                                "description": "Filter by policy topics",
                             },
                             "start_date": {
                                 "type": "string",
                                 "format": "date",
-                                "description": "Start date for filtering (YYYY-MM-DD)"
+                                "description": "Start date for filtering (YYYY-MM-DD)",
                             },
                             "end_date": {
                                 "type": "string",
                                 "format": "date",
-                                "description": "End date for filtering (YYYY-MM-DD)"
+                                "description": "End date for filtering (YYYY-MM-DD)",
                             },
                             "limit": {
                                 "type": "integer",
                                 "description": "Maximum number of results (default: 10)",
                                 "minimum": 1,
-                                "maximum": 50
-                            }
+                                "maximum": 50,
+                            },
                         },
-                        "required": ["query"]
-                    }
+                        "required": ["query"],
+                    },
                 ),
                 Tool(
                     name="get_document_by_id",
@@ -226,20 +231,20 @@ class GovernmentReporterMCP:
                         "properties": {
                             "document_id": {
                                 "type": "string",
-                                "description": "The ID of the document to retrieve"
+                                "description": "The ID of the document to retrieve",
                             },
                             "collection": {
                                 "type": "string",
                                 "description": "The collection to search in",
-                                "enum": ["supreme_court_opinions", "executive_orders"]
+                                "enum": ["supreme_court_opinions", "executive_orders"],
                             },
                             "full_document": {
                                 "type": "boolean",
-                                "description": "Whether to retrieve the full document from the API (default: false)"
-                            }
+                                "description": "Whether to retrieve the full document from the API (default: false)",
+                            },
                         },
-                        "required": ["document_id", "collection"]
-                    }
+                        "required": ["document_id", "collection"],
+                    },
                 ),
                 Tool(
                     name="list_collections",
@@ -247,11 +252,8 @@ class GovernmentReporterMCP:
                         "List all available document collections in the vector database "
                         "with statistics about each collection."
                     ),
-                    inputSchema={
-                        "type": "object",
-                        "properties": {}
-                    }
-                )
+                    inputSchema={"type": "object", "properties": {}},
+                ),
             ]
 
         @self.server.call_tool()
@@ -348,7 +350,7 @@ class GovernmentReporterMCP:
             InitializationOptions(
                 server_name=self.config.server_name,
                 server_version=self.config.server_version,
-                capabilities=self.server.get_capabilities()
+                capabilities=self.server.get_capabilities(),
             )
         ):
             logger.info(f"{self.config.server_name} is running")
@@ -404,7 +406,7 @@ if __name__ == "__main__":
     # Set up logging
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     # Run the server
