@@ -176,7 +176,7 @@ class GovernmentReporterMCP:
                 Tool(
                     name="search_executive_orders",
                     description=(
-                        "Search specifically within Executive Orders with filtering by "
+                        "Search specifically within federal Executive Orders with filtering by "
                         "president, agencies, policy topics, and date range."
                     ),
                     inputSchema={

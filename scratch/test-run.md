@@ -72,7 +72,7 @@ Once the dry run succeeds, run the actual ingestion:
 ```bash
 # Full ingestion - stores documents in Qdrant
 uv run python scripts/ingestion/ingest_executive_orders.py \
-  --start-date 2025-09-01 \
+  --start-date 2021-09-01 \
   --end-date 2025-09-11 \
   --batch-size 25 \
   --verbose
