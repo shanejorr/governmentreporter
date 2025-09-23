@@ -23,6 +23,8 @@ from qdrant_client.models import (
     FieldCondition,
     Filter,
     MatchValue,
+    MatchAny,
+    Range,
     PointStruct,
     VectorParams,
 )
@@ -128,31 +130,61 @@ class QdrantDBClient:
     EMBEDDING_DIMENSION = 1536
     DEFAULT_DISTANCE = Distance.COSINE
 
-    def __init__(self, db_path: str):
+    def __init__(
+        self,
+        db_path: Optional[str] = None,
+        host: Optional[str] = None,
+        port: Optional[int] = None,
+        api_key: Optional[str] = None,
+        url: Optional[str] = None,
+    ):
         """
-        Initialize the Qdrant client with local storage.
+        Initialize the Qdrant client with local storage or remote connection.
 
-        Creates a persistent Qdrant database at the specified path.
-        The database will be created if it doesn't exist.
+        Supports both local file-based Qdrant (for development) and remote
+        Qdrant instances (for production). Provide either db_path for local
+        or host/port/url for remote connection.
 
         Args:
-            db_path: Path to the Qdrant database directory
+            db_path: Path to the local Qdrant database directory (for local mode)
+            host: Host address for remote Qdrant server (e.g., "localhost")
+            port: Port number for remote Qdrant server (e.g., 6333)
+            api_key: API key for remote Qdrant authentication
+            url: Full URL for Qdrant cloud instances
 
         Raises:
-            ValueError: If db_path is empty
-            PermissionError: If the path cannot be created
+            ValueError: If neither local nor remote connection params provided
+            ConnectionError: If cannot connect to remote Qdrant
 
         Python Learning Notes:
             - __init__ is called when creating a new instance
-            - Instance variables (self.x) store state
-            - Logging helps with debugging
+            - Optional parameters allow flexible initialization
+            - Multiple connection modes provide flexibility
         """
-        if not db_path:
-            raise ValueError("db_path is required")
-
-        self.db_path = db_path
-        self.client = QdrantBaseClient(path=db_path)
-        logger.info(f"Initialized Qdrant client at {db_path}")
+        # Remote connection mode (prioritize URL, then host/port)
+        if url:
+            self.client = QdrantBaseClient(url=url, api_key=api_key)
+            self.connection_mode = "cloud"
+            logger.info(f"Initialized Qdrant client with cloud URL: {url}")
+        elif host:
+            self.client = QdrantBaseClient(
+                host=host,
+                port=port or 6333,
+                api_key=api_key
+            )
+            self.connection_mode = "remote"
+            logger.info(f"Initialized Qdrant client at {host}:{port or 6333}")
+        # Local file-based mode
+        elif db_path:
+            self.db_path = db_path
+            self.client = QdrantBaseClient(path=db_path)
+            self.connection_mode = "local"
+            logger.info(f"Initialized local Qdrant client at {db_path}")
+        else:
+            raise ValueError(
+                "Must provide either db_path for local storage or "
+                "host/port/url for remote connection"
+            )
 
     def create_collection(self, collection_name: str) -> bool:
         """
@@ -485,6 +517,7 @@ class QdrantDBClient:
         limit: int = 10,
         score_threshold: Optional[float] = None,
         metadata_filter: Optional[Dict[str, Any]] = None,
+        query_filter: Optional[Dict] = None,
     ) -> List[SearchResult]:
         """
         Search for similar documents using semantic search.
@@ -529,7 +562,12 @@ class QdrantDBClient:
 
         # Build filter if provided
         filter_obj = None
-        if metadata_filter:
+
+        # Use query_filter if provided (complex filter from handlers)
+        if query_filter:
+            filter_obj = query_filter
+        # Otherwise use simple metadata_filter
+        elif metadata_filter:
             conditions = [
                 FieldCondition(key=key, match=MatchValue(value=value))
                 for key, value in metadata_filter.items()
@@ -594,7 +632,7 @@ class QdrantDBClient:
             collection_name: Collection to search in
             query_vector: Query embedding vector
             limit: Maximum number of results
-            query_filter: Optional filter conditions
+            query_filter: Optional filter conditions (can be complex Qdrant filter)
 
         Returns:
             List of SearchResult objects
@@ -603,7 +641,7 @@ class QdrantDBClient:
             query_embedding=query_vector,
             collection_name=collection_name,
             limit=limit,
-            metadata_filter=query_filter
+            query_filter=query_filter  # Pass directly as query_filter for complex filters
         )
 
     def delete_document(self, document_id: str, collection_name: str) -> bool:

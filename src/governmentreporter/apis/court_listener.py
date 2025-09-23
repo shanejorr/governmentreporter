@@ -19,7 +19,7 @@ API Documentation:
 
 Authentication:
     Requires API token from Court Listener account settings.
-    Token should be stored in environment variable COURT_LISTENER_TOKEN.
+    Token should be stored in environment variable COURT_LISTENER_API_TOKEN.
 
 Rate Limits:
     Court Listener allows generous API usage but recommends reasonable delays

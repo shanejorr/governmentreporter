@@ -272,7 +272,24 @@ class GovernmentReporterMCP:
                 ValueError: If the tool name is not recognized.
             """
             if not self.qdrant_client:
-                self.qdrant_client = QdrantDBClient()
+                # Initialize Qdrant client with configured settings
+                # Check for cloud URL first (highest priority)
+                if hasattr(self.config, 'qdrant_url') and self.config.qdrant_url:
+                    self.qdrant_client = QdrantDBClient(
+                        url=self.config.qdrant_url,
+                        api_key=self.config.qdrant_api_key
+                    )
+                # Then check for remote host/port
+                elif self.config.qdrant_host != 'localhost' or self.config.qdrant_port != 6333:
+                    self.qdrant_client = QdrantDBClient(
+                        host=self.config.qdrant_host,
+                        port=self.config.qdrant_port,
+                        api_key=self.config.qdrant_api_key
+                    )
+                # Default to local file-based storage
+                else:
+                    db_path = getattr(self.config, 'qdrant_db_path', './qdrant_db')
+                    self.qdrant_client = QdrantDBClient(db_path=db_path)
 
             try:
                 if name == "search_government_documents":
@@ -319,8 +336,24 @@ class GovernmentReporterMCP:
         """
         logger.info(f"Initializing {self.config.server_name}...")
 
-        # Initialize Qdrant client
-        self.qdrant_client = QdrantDBClient()
+        # Initialize Qdrant client with configured settings
+        # Check for cloud URL first (highest priority)
+        if hasattr(self.config, 'qdrant_url') and self.config.qdrant_url:
+            self.qdrant_client = QdrantDBClient(
+                url=self.config.qdrant_url,
+                api_key=self.config.qdrant_api_key
+            )
+        # Then check for remote host/port
+        elif self.config.qdrant_host != 'localhost' or self.config.qdrant_port != 6333:
+            self.qdrant_client = QdrantDBClient(
+                host=self.config.qdrant_host,
+                port=self.config.qdrant_port,
+                api_key=self.config.qdrant_api_key
+            )
+        # Default to local file-based storage
+        else:
+            db_path = getattr(self.config, 'qdrant_db_path', './qdrant_db')
+            self.qdrant_client = QdrantDBClient(db_path=db_path)
 
         # Verify connection and log available collections
         try:

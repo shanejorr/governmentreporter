@@ -83,6 +83,9 @@ class ServerConfig:
     )
 
     # Qdrant connection settings
+    qdrant_url: Optional[str] = field(
+        default_factory=lambda: os.getenv("QDRANT_URL")
+    )
     qdrant_host: str = field(
         default_factory=lambda: os.getenv("QDRANT_HOST", "localhost")
     )
@@ -98,6 +101,9 @@ class ServerConfig:
     )
     qdrant_api_key: Optional[str] = field(
         default_factory=lambda: os.getenv("QDRANT_API_KEY")
+    )
+    qdrant_db_path: str = field(
+        default_factory=lambda: os.getenv("QDRANT_DB_PATH", "./qdrant_db")
     )
 
     # Embedding configuration
