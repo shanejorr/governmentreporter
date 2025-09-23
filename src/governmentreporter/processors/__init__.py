@@ -41,7 +41,7 @@ Python Learning Notes:
 
 from .build_payloads import build_payloads_from_document
 from .chunking import chunk_executive_order, chunk_supreme_court_opinion
-from .embeddings import EmbeddingGenerator
+from .embeddings import EmbeddingGenerator, generate_embedding
 from .llm_extraction import generate_eo_llm_fields, generate_scotus_llm_fields
 from .schema import (ChunkMetadata, ExecutiveOrderMetadata, QdrantPayload,
                      SupremeCourtMetadata)
@@ -62,4 +62,5 @@ __all__ = [
     "chunk_executive_order",
     # Embeddings
     "EmbeddingGenerator",
+    "generate_embedding",
 ]

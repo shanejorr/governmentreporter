@@ -79,7 +79,7 @@ class SearchResult:
     score: float
 
 
-class QdrantClient:
+class QdrantDBClient:
     """
     Unified client for all Qdrant operations.
 
@@ -576,6 +576,35 @@ class QdrantClient:
         except Exception as e:
             logger.error(f"Search failed: {e}")
             raise
+
+    def semantic_search(
+        self,
+        collection_name: str,
+        query_vector: List[float],
+        limit: int = 10,
+        query_filter: Optional[Dict] = None,
+    ) -> List[SearchResult]:
+        """
+        Semantic search method for MCP server compatibility.
+
+        This is a wrapper around the search method that matches the interface
+        expected by the MCP server handlers.
+
+        Args:
+            collection_name: Collection to search in
+            query_vector: Query embedding vector
+            limit: Maximum number of results
+            query_filter: Optional filter conditions
+
+        Returns:
+            List of SearchResult objects
+        """
+        return self.search(
+            query_embedding=query_vector,
+            collection_name=collection_name,
+            limit=limit,
+            metadata_filter=query_filter
+        )
 
     def delete_document(self, document_id: str, collection_name: str) -> bool:
         """

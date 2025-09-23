@@ -22,7 +22,7 @@ import logging
 from typing import Any, Dict, List, Tuple
 from uuid import uuid4
 
-from .qdrant import QdrantClient, Document
+from .qdrant import QdrantDBClient, Document
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ class QdrantIngestionClient:
             raise ValueError("collection_name is required")
         
         self.collection_name = collection_name
-        self.client = QdrantClient(db_path)
+        self.client = QdrantDBClient(db_path)
         
         # Ensure collection exists
         self.client.create_collection(collection_name)

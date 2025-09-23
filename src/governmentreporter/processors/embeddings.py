@@ -231,3 +231,23 @@ class EmbeddingGenerator:
                         embeddings.append([0.0] * self.dimension)
 
         return embeddings
+
+
+def generate_embedding(text: str) -> List[float]:
+    """
+    Standalone function for generating embeddings.
+
+    This function provides backward compatibility with the MCP server
+    handlers that expect a standalone function rather than a class method.
+
+    Args:
+        text: Text to generate embedding for
+
+    Returns:
+        1536-dimensional embedding vector
+
+    Example:
+        embedding = generate_embedding("Supreme Court opinion text...")
+    """
+    generator = EmbeddingGenerator()
+    return generator.generate_embedding(text)

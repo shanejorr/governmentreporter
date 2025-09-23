@@ -53,6 +53,6 @@ Example Usage:
         print(f"Score: {result.score:.3f} - {result.document.id}")
 """
 
-from .qdrant import Document, QdrantClient, SearchResult
+from .qdrant import Document, QdrantDBClient, SearchResult
 
-__all__ = ["QdrantClient", "Document", "SearchResult"]
+__all__ = ["QdrantDBClient", "Document", "SearchResult"]
