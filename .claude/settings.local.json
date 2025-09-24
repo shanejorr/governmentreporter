@@ -27,7 +27,11 @@
       "Bash(git pull:*)",
       "Bash(git push:*)",
       "Bash(chmod:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Read(//Users/shaneorr/repos/personal/**)",
+      "Bash(uv show:*)",
+      "Bash(uv pip:*)",
+      "Bash(timeout 5 uv run:*)"
     ],
     "deny": [],
     "additionalDirectories": [

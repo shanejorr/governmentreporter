@@ -7,7 +7,7 @@ in a Qdrant vector database for retrieval augmented generation (RAG) application
 
 The GovernmentReporter system provides:
     - Hierarchical document chunking for complex legal documents
-    - AI-powered metadata extraction using Google Gemini 2.5 Flash-Lite
+    - AI-powered metadata extraction using OpenAI GPT-5-nano
     - Semantic embedding generation for intelligent search
     - Qdrant integration for vector storage and retrieval
     - Support for multiple government data sources (SCOTUS opinions, Executive Orders)
@@ -33,7 +33,7 @@ Integration Points:
 Environment Requirements:
     - Python 3.11+ (specified in pyproject.toml)
     - COURT_LISTENER_API_TOKEN (for SCOTUS opinions)
-    - GOOGLE_GEMINI_API_KEY (for metadata and embeddings)
+    - OPENAI_API_KEY (for metadata generation and embeddings)
     - Qdrant for vector storage
 
 Python Learning Notes:
