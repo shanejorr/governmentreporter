@@ -23,8 +23,8 @@ import argparse
 import logging
 import sys
 import time
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any, Dict, List
 
 # Handle both module and script execution
 try:
@@ -36,7 +36,6 @@ from governmentreporter.apis.court_listener import CourtListenerClient
 from governmentreporter.database.ingestion import QdrantIngestionClient
 from governmentreporter.processors.build_payloads import build_payloads_from_document
 from governmentreporter.processors.embeddings import EmbeddingGenerator
-from governmentreporter.utils.config import get_court_listener_token
 from governmentreporter.utils.monitoring import PerformanceMonitor, setup_logging
 
 logger = logging.getLogger(__name__)
@@ -102,7 +101,9 @@ class SCOTUSIngester:
         4. Reports final statistics
         """
         logger.info(
-            f"Starting SCOTUS ingestion for date range: {self.start_date} to {self.end_date}"
+            "Starting SCOTUS ingestion for date range: %s to %s",
+            self.start_date,
+            self.end_date,
         )
 
         if self.dry_run:
@@ -123,7 +124,7 @@ class SCOTUSIngester:
                 logger.warning("No opinions found in the specified date range")
                 return
 
-            logger.info(f"Found {len(opinion_ids)} total opinions")
+            logger.info("Found %d total opinions", len(opinion_ids))
 
             # Add all opinions to tracker (will ignore duplicates)
             for opinion_id in opinion_ids:
@@ -131,7 +132,7 @@ class SCOTUSIngester:
 
             # Get pending documents
             pending_ids = self.progress_tracker.get_pending_documents()
-            logger.info(f"Processing {len(pending_ids)} pending opinions")
+            logger.info("Processing %d pending opinions", len(pending_ids))
 
             if not pending_ids:
                 logger.info("All opinions have already been processed")
@@ -153,38 +154,164 @@ class SCOTUSIngester:
         """
         Fetch all Supreme Court opinion IDs in the date range.
 
+        This method fetches opinion IDs in batches to avoid timeout issues.
+        It directly accesses the CourtListener API with pagination support
+        to handle large date ranges that may contain thousands of opinions.
+
         Returns:
             List of opinion IDs to process
         """
         logger.info("Fetching opinion IDs from CourtListener API...")
+        logger.info("Date range: %s to %s", self.start_date, self.end_date)
 
         all_opinion_ids = []
 
+        # Build initial API URL and parameters
+        # IMPORTANT: The CourtListener API limits page_size to 20 for opinions endpoint
+        url = f"{self.api_client.base_url}/opinions/"
+        params = {
+            "cluster__docket__court": "scotus",  # Supreme Court only - this is the correct filter
+            "order_by": "-cluster__date_filed",  # Most recent first by filing date
+            "cluster__date_filed__gte": self.start_date,  # Use filing date, not creation date
+            "cluster__date_filed__lte": self.end_date,  # Use filing date, not creation date
+            "page_size": 20,  # API maximum for opinions endpoint is 20
+        }
+
         try:
-            # Use search_documents method to fetch Supreme Court opinions
-            # Pass empty query to get all opinions in date range
-            # Set a high limit to get all available opinions
-            opinions = self.api_client.search_documents(
-                query="",  # Empty query to get all opinions
-                start_date=self.start_date,
-                end_date=self.end_date,
-                limit=10000,  # High limit to get all opinions
-                full_content=False  # Don't fetch full content, just IDs
+            import httpx
+            import time
+            from datetime import datetime
+
+            # Create HTTP client with longer timeout for pagination
+            with httpx.Client(timeout=60.0) as client:
+                # First, get the total count to know what we're dealing with
+                # Use the count API endpoint directly
+                count_params = params.copy()
+                count_params['count'] = 'on'
+                count_params['page_size'] = 1
+
+                logger.debug("Fetching count with params: %s", count_params)
+                count_response = client.get(url, headers=self.api_client.headers, params=count_params)
+                count_response.raise_for_status()
+                count_data = count_response.json()
+
+                # The count field directly contains the count for this endpoint
+                total_count = count_data.get('count', 0)
+                if isinstance(total_count, str):
+                    # If it's a URL string, fetch it
+                    try:
+                        actual_count_response = client.get(total_count, headers=self.api_client.headers)
+                        count_json = actual_count_response.json()
+                        total_count = count_json.get('count', 0)
+                    except Exception as e:
+                        logger.warning("Could not fetch count from URL: %s", e)
+                        total_count = None
+
+                if total_count:
+                    logger.info(
+                        "Total SCOTUS opinions available in date range: %d",
+                        total_count,
+                    )
+
+                    # Sanity check - SCOTUS typically issues 60-80 opinions per term
+                    # If we're getting thousands, something is wrong
+                    years_in_range = (
+                        datetime.strptime(self.end_date, "%Y-%m-%d")
+                        - datetime.strptime(self.start_date, "%Y-%m-%d")
+                    ).days / 365
+                    expected_max = int(years_in_range * 100)  # ~100 opinions per year max
+
+                    if total_count > max(1000, expected_max * 2):
+                        logger.error(
+                            "ERROR: Found %d opinions, which is far more than expected "
+                            "for SCOTUS.",
+                            total_count,
+                        )
+                        logger.error(
+                            "The filter may not be working correctly. Aborting to "
+                            "prevent excessive API calls."
+                        )
+                        return all_opinion_ids
+
+                    max_opinions = total_count
+                else:
+                    logger.warning(
+                        "Could not determine total count, proceeding with caution"
+                    )
+                    max_opinions = 1000  # Conservative default
+
+                page = 1
+                while url and len(all_opinion_ids) < max_opinions:
+                    # Add rate limiting
+                    time.sleep(self.api_client._get_rate_limit_delay())
+
+                    logger.debug("Fetching page %d from: %s", page, url)
+                    response = client.get(url, headers=self.api_client.headers, params=params)
+                    response.raise_for_status()
+
+                    data = response.json()
+                    results = data.get("results", [])
+
+                    # If we get no results, we're done
+                    if not results:
+                        logger.info("No more results on page %d, stopping.", page)
+                        break
+
+                    # Process each opinion in the current page
+                    for opinion_summary in results:
+                        opinion_id = opinion_summary.get("id")
+                        if opinion_id:
+                            all_opinion_ids.append(str(opinion_id))
+
+                            # Stop if we've reached the maximum
+                            if len(all_opinion_ids) >= max_opinions:
+                                logger.info(
+                                    "Reached maximum opinion limit (%d), stopping.",
+                                    max_opinions,
+                                )
+                                break
+
+                    # Log progress
+                    logger.info(
+                        "Fetched page %d: %d opinions (total: %d/%s)",
+                        page,
+                        len(results),
+                        len(all_opinion_ids),
+                        total_count or "unknown",
+                    )
+
+                    # Get next page URL
+                    url = data.get("next")
+                    # Clear params for subsequent requests (they're included in the next URL)
+                    params = {}
+                    page += 1
+
+                    # Safety check to prevent infinite loops
+                    if page > 100:  # Maximum 100 pages (10,000 opinions at 100 per page)
+                        logger.warning(
+                            "Reached maximum page limit (100 pages), stopping pagination"
+                        )
+                        break
+
+            logger.info("Successfully fetched %d opinion IDs", len(all_opinion_ids))
+
+        except httpx.TimeoutException as e:
+            logger.error("Request timed out while fetching opinion IDs: %s", e)
+            logger.info(
+                "Partial results: fetched %d opinion IDs before timeout",
+                len(all_opinion_ids),
             )
-
-            for opinion in opinions:
-                # Extract opinion ID from the Document object
-                opinion_id = opinion.id
-                all_opinion_ids.append(opinion_id)
-
-                # Log progress every 100 opinions
-                if len(all_opinion_ids) % 100 == 0:
-                    logger.info(f"Fetched {len(all_opinion_ids)} opinion IDs...")
-
-            logger.info(f"Successfully fetched {len(all_opinion_ids)} opinion IDs")
-
+        except httpx.HTTPError as e:
+            logger.error("HTTP error while fetching opinion IDs: %s", e)
+            if hasattr(e, "response") and e.response:
+                logger.error("Response status: %s", e.response.status_code)
+                logger.error("Response content: %s", e.response.text[:500])
         except Exception as e:
-            logger.error(f"Error fetching opinion IDs: {e}")
+            logger.error(
+                "Unexpected error fetching opinion IDs: %s: %s",
+                type(e).__name__,
+                e,
+            )
 
         return all_opinion_ids
 
@@ -201,7 +328,9 @@ class SCOTUSIngester:
         for i in range(0, total, self.batch_size):
             batch_ids = opinion_ids[i : i + self.batch_size]
             logger.info(
-                f"Processing batch {i//self.batch_size + 1} ({len(batch_ids)} opinions)"
+                "Processing batch %d (%d opinions)",
+                i // self.batch_size + 1,
+                len(batch_ids),
             )
 
             batch_documents = []
@@ -212,7 +341,7 @@ class SCOTUSIngester:
 
                 # Update progress bar
                 self.performance_monitor.print_progress(
-                    processed, total, f"Processing opinions"
+                    processed, total, "Processing opinions"
                 )
 
                 # Process individual opinion
@@ -304,13 +433,13 @@ class SCOTUSIngester:
             embeddings: Corresponding embedding vectors
         """
         try:
-            logger.info(f"Storing batch of {len(documents)} chunks in Qdrant")
+            logger.info("Storing batch of %d chunks in Qdrant", len(documents))
 
             successful, failed = self.qdrant_client.batch_upsert_documents(
                 documents, embeddings, batch_size=100
             )
 
-            logger.info(f"Stored {successful} chunks, {failed} failed")
+            logger.info("Stored %d chunks, %d failed", successful, failed)
 
         except Exception as e:
             logger.error(f"Error storing batch in Qdrant: {e}")
