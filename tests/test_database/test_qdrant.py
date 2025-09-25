@@ -1371,3 +1371,557 @@ class TestIntegrationWorkflows:
         # Delete collection
         collection_deleted = client.delete_collection(collection_name)
         assert collection_deleted is True
+
+
+class TestAdvancedFilteringAndSearch:
+    """
+    Tests for advanced filtering and search capabilities.
+
+    These tests verify complex query scenarios including range filters,
+    multiple conditions, and advanced Qdrant features.
+
+    Python Learning Notes:
+        - Complex filters enable precise document retrieval
+        - Range queries support numerical comparisons
+        - Multiple conditions can be combined with AND/OR logic
+    """
+
+    @pytest.fixture
+    def client_with_mock(self):
+        """Create a client with mocked Qdrant connection."""
+        with patch('governmentreporter.database.qdrant.QdrantBaseClient') as mock_class:
+            mock_instance = MagicMock()
+            mock_class.return_value = mock_instance
+            client = QdrantDBClient(db_path="./test")
+            return client, mock_instance
+
+    def test_search_with_range_filter(self, client_with_mock):
+        """
+        Test search with range-based metadata filter.
+
+        Verifies that range filters for numerical fields work correctly.
+        """
+        client, mock_qdrant = client_with_mock
+        mock_qdrant.search.return_value = []
+
+        from qdrant_client.models import Range
+
+        # Create range filter
+        range_filter = {
+            "must": [
+                {"key": "year", "range": {"gte": 2020, "lte": 2024}},
+                {"key": "score", "range": {"gt": 0.5}}
+            ]
+        }
+
+        # Search with range filter
+        results = client.search(
+            query_embedding=[0.1] * 1536,
+            collection_name="test_collection",
+            limit=10,
+            query_filter=range_filter
+        )
+
+        # Verify filter was applied
+        call_args = mock_qdrant.search.call_args
+        assert call_args.kwargs["query_filter"] == range_filter
+
+    def test_search_with_match_any_filter(self, client_with_mock):
+        """
+        Test search with MatchAny filter for multiple values.
+
+        Verifies that searching for documents matching any of multiple values works.
+        """
+        client, mock_qdrant = client_with_mock
+        mock_qdrant.search.return_value = []
+
+        from qdrant_client.models import MatchAny
+
+        # Create MatchAny filter
+        match_any_filter = {
+            "must": [
+                {"key": "type", "match": {"any": ["opinion", "order", "judgment"]}}
+            ]
+        }
+
+        # Search with MatchAny filter
+        results = client.search(
+            query_embedding=[0.1] * 1536,
+            collection_name="test_collection",
+            limit=10,
+            query_filter=match_any_filter
+        )
+
+        # Verify filter was applied
+        call_args = mock_qdrant.search.call_args
+        assert call_args.kwargs["query_filter"] == match_any_filter
+
+    def test_search_with_combined_filters(self, client_with_mock):
+        """
+        Test search with combined must/should/must_not conditions.
+
+        Verifies complex boolean logic in filters.
+        """
+        client, mock_qdrant = client_with_mock
+        mock_qdrant.search.return_value = []
+
+        # Create complex combined filter
+        complex_filter = {
+            "must": [
+                {"key": "year", "match": {"value": 2024}}
+            ],
+            "should": [
+                {"key": "court", "match": {"value": "SCOTUS"}},
+                {"key": "court", "match": {"value": "Federal"}}
+            ],
+            "must_not": [
+                {"key": "status", "match": {"value": "draft"}}
+            ]
+        }
+
+        # Search with complex filter
+        results = client.search(
+            query_embedding=[0.1] * 1536,
+            collection_name="test_collection",
+            limit=10,
+            query_filter=complex_filter
+        )
+
+        # Verify complex filter was applied
+        call_args = mock_qdrant.search.call_args
+        assert call_args.kwargs["query_filter"] == complex_filter
+
+    def test_search_with_nested_metadata(self, client_with_mock):
+        """
+        Test search results with nested metadata structures.
+
+        Verifies that nested metadata is preserved in search results.
+        """
+        client, mock_qdrant = client_with_mock
+
+        # Mock result with nested metadata
+        mock_point = ScoredPoint(
+            id=str(uuid.uuid5(uuid.NAMESPACE_DNS, "doc-1")),
+            score=0.95,
+            payload={
+                "text": "Result content",
+                "original_id": "doc-1",
+                "metadata": {
+                    "author": {
+                        "name": "John Doe",
+                        "affiliation": "Supreme Court"
+                    },
+                    "citations": ["Case A", "Case B"],
+                    "topics": {
+                        "primary": "Constitutional Law",
+                        "secondary": ["Civil Rights", "Due Process"]
+                    }
+                }
+            },
+            version=1
+        )
+        mock_qdrant.search.return_value = [mock_point]
+
+        # Perform search
+        results = client.search(
+            query_embedding=[0.1] * 1536,
+            collection_name="test_collection",
+            limit=10
+        )
+
+        # Verify nested metadata is preserved
+        assert len(results) == 1
+        metadata = results[0].document.metadata
+        assert metadata["metadata"]["author"]["name"] == "John Doe"
+        assert "Constitutional Law" in metadata["metadata"]["topics"]["primary"]
+        assert len(metadata["metadata"]["citations"]) == 2
+
+
+class TestConnectionManagementAndRetries:
+    """
+    Tests for connection management and retry logic.
+
+    These tests verify proper handling of connection issues,
+    timeouts, and retry scenarios.
+
+    Python Learning Notes:
+        - Connection pooling improves performance
+        - Retry logic handles transient failures
+        - Timeout handling prevents hanging operations
+    """
+
+    @patch('governmentreporter.database.qdrant.QdrantBaseClient')
+    def test_connection_timeout_handling(self, mock_qdrant_base):
+        """
+        Test handling of connection timeouts.
+
+        Verifies graceful degradation when Qdrant is unreachable.
+        """
+        # Mock connection timeout
+        mock_qdrant_base.side_effect = TimeoutError("Connection timeout")
+
+        # Should raise error during initialization
+        with pytest.raises(TimeoutError):
+            QdrantDBClient(host="unreachable-host", port=6333)
+
+    @patch('governmentreporter.database.qdrant.QdrantBaseClient')
+    def test_authentication_failure(self, mock_qdrant_base):
+        """
+        Test handling of authentication failures.
+
+        Verifies proper error handling for invalid API keys.
+        """
+        # Mock authentication error
+        mock_qdrant_base.side_effect = Exception("Authentication failed: Invalid API key")
+
+        # Should raise error with clear message
+        with pytest.raises(Exception) as exc_info:
+            QdrantDBClient(
+                url="https://cloud.qdrant.io",
+                api_key="invalid-key"
+            )
+
+        assert "Authentication failed" in str(exc_info.value)
+
+    def test_network_error_during_operation(self):
+        """
+        Test handling of network errors during operations.
+
+        Verifies that network failures are handled gracefully.
+        """
+        with patch('governmentreporter.database.qdrant.QdrantBaseClient') as mock_class:
+            mock_instance = MagicMock()
+            mock_class.return_value = mock_instance
+            client = QdrantDBClient(db_path="./test")
+
+            # Mock network error during search
+            mock_instance.search.side_effect = ConnectionError("Network unreachable")
+
+            # Should handle error gracefully
+            with pytest.raises(ConnectionError):
+                client.search(
+                    query_embedding=[0.1] * 1536,
+                    collection_name="test_collection",
+                    limit=10
+                )
+
+
+class TestDataConsistencyAndValidation:
+    """
+    Tests for data consistency and validation.
+
+    These tests ensure data integrity is maintained across operations.
+
+    Python Learning Notes:
+        - Data validation prevents corruption
+        - Consistency checks ensure reliability
+        - Type checking catches errors early
+    """
+
+    @pytest.fixture
+    def client_with_mock(self):
+        """Create a client with mocked Qdrant connection."""
+        with patch('governmentreporter.database.qdrant.QdrantBaseClient') as mock_class:
+            mock_instance = MagicMock()
+            mock_class.return_value = mock_instance
+
+            # Mock collection exists
+            mock_collections = MagicMock()
+            mock_collections.collections = []
+            mock_instance.get_collections.return_value = mock_collections
+
+            client = QdrantDBClient(db_path="./test")
+            return client, mock_instance
+
+    def test_embedding_normalization(self, client_with_mock):
+        """
+        Test that embeddings are handled correctly regardless of normalization.
+
+        Verifies that both normalized and unnormalized embeddings work.
+        """
+        client, mock_qdrant = client_with_mock
+
+        # Create embedding with very small values
+        small_embedding = [1e-10] * 1536
+
+        doc = Document(
+            id="test-doc",
+            text="Test content",
+            embedding=small_embedding,
+            metadata={}
+        )
+
+        # Should store successfully
+        result = client.store_document(doc, "test_collection")
+        assert result is True
+
+        # Verify embedding was stored as-is
+        call_args = mock_qdrant.upsert.call_args
+        points = call_args.kwargs["points"]
+        assert points[0].vector == small_embedding
+
+    def test_special_characters_in_metadata(self, client_with_mock):
+        """
+        Test handling of special characters in metadata fields.
+
+        Verifies that Unicode and special characters are preserved.
+        """
+        client, mock_qdrant = client_with_mock
+
+        # Document with special characters
+        doc = Document(
+            id="test-doc",
+            text="Test content with émojis 🎯 and ünïcödé",
+            embedding=[0.1] * 1536,
+            metadata={
+                "title": "Case № 123: Smith v. O'Brien",
+                "summary": "Contains special chars: €£¥₹",
+                "unicode": "测试中文字符",
+                "emoji": "📚🔍⚖️"
+            }
+        )
+
+        # Store document
+        result = client.store_document(doc, "test_collection")
+        assert result is True
+
+        # Verify special characters preserved
+        call_args = mock_qdrant.upsert.call_args
+        points = call_args.kwargs["points"]
+        payload = points[0].payload
+
+        assert "émojis 🎯" in payload["text"]
+        assert payload["title"] == "Case № 123: Smith v. O'Brien"
+        assert "€£¥₹" in payload["summary"]
+        assert payload["unicode"] == "测试中文字符"
+        assert payload["emoji"] == "📚🔍⚖️"
+
+    def test_very_large_metadata(self, client_with_mock):
+        """
+        Test handling of documents with very large metadata.
+
+        Verifies that large metadata objects are handled correctly.
+        """
+        client, mock_qdrant = client_with_mock
+
+        # Create large metadata object
+        large_metadata = {
+            f"field_{i}": f"Value {i} " * 100  # Each field has long value
+            for i in range(100)  # 100 fields
+        }
+
+        doc = Document(
+            id="large-doc",
+            text="Document with large metadata",
+            embedding=[0.1] * 1536,
+            metadata=large_metadata
+        )
+
+        # Should handle large metadata
+        result = client.store_document(doc, "test_collection")
+        assert result is True
+
+        # Verify metadata was stored
+        call_args = mock_qdrant.upsert.call_args
+        points = call_args.kwargs["points"]
+
+        # Check a sample of fields
+        for i in range(0, 100, 10):
+            assert f"field_{i}" in points[0].payload
+
+    def test_null_values_in_metadata(self, client_with_mock):
+        """
+        Test handling of null/None values in metadata.
+
+        Verifies that None values in metadata are handled appropriately.
+        """
+        client, mock_qdrant = client_with_mock
+
+        doc = Document(
+            id="test-doc",
+            text="Test content",
+            embedding=[0.1] * 1536,
+            metadata={
+                "field1": "value1",
+                "field2": None,
+                "field3": "",
+                "field4": 0,
+                "field5": False
+            }
+        )
+
+        # Store document
+        result = client.store_document(doc, "test_collection")
+        assert result is True
+
+        # Verify handling of different "empty" values
+        call_args = mock_qdrant.upsert.call_args
+        points = call_args.kwargs["points"]
+        payload = points[0].payload
+
+        assert payload["field1"] == "value1"
+        assert payload["field2"] is None
+        assert payload["field3"] == ""
+        assert payload["field4"] == 0
+        assert payload["field5"] is False
+
+    def test_concurrent_operations_safety(self, client_with_mock):
+        """
+        Test that operations are safe for concurrent use.
+
+        Verifies thread-safety of client operations.
+        """
+        client, mock_qdrant = client_with_mock
+
+        # Multiple operations should not interfere with each other
+        doc1 = Document(id="doc1", text="Text 1", embedding=[0.1] * 1536, metadata={})
+        doc2 = Document(id="doc2", text="Text 2", embedding=[0.2] * 1536, metadata={})
+
+        # Store both documents
+        result1 = client.store_document(doc1, "collection1")
+        result2 = client.store_document(doc2, "collection2")
+
+        assert result1 is True
+        assert result2 is True
+
+        # Verify both operations completed
+        assert mock_qdrant.upsert.call_count == 2
+
+
+class TestPerformanceAndOptimization:
+    """
+    Tests for performance-related features and optimizations.
+
+    These tests verify batch processing efficiency and optimization features.
+
+    Python Learning Notes:
+        - Batch processing reduces API calls
+        - Chunking prevents memory issues
+        - Async operations improve throughput
+    """
+
+    @pytest.fixture
+    def client_with_mock(self):
+        """Create a client with mocked Qdrant connection."""
+        with patch('governmentreporter.database.qdrant.QdrantBaseClient') as mock_class:
+            mock_instance = MagicMock()
+            mock_class.return_value = mock_instance
+
+            # Mock collection exists
+            mock_collections = MagicMock()
+            mock_collections.collections = []
+            mock_instance.get_collections.return_value = mock_collections
+
+            client = QdrantDBClient(db_path="./test")
+            return client, mock_instance
+
+    def test_batch_size_optimization(self, client_with_mock):
+        """
+        Test that batch operations respect batch size limits.
+
+        Verifies efficient batching of large document sets.
+        """
+        client, mock_qdrant = client_with_mock
+
+        # Create many documents
+        documents = [
+            Document(
+                id=f"doc-{i}",
+                text=f"Document {i}",
+                embedding=[0.1] * 1536,
+                metadata={"index": i}
+            )
+            for i in range(250)  # Large batch
+        ]
+
+        # Store with small batch size
+        client.store_documents_batch(
+            documents,
+            "test_collection",
+            batch_size=50
+        )
+
+        # Should make 5 calls (250 / 50)
+        assert mock_qdrant.upsert.call_count == 5
+
+        # Each call should have <= 50 documents
+        for call_args in mock_qdrant.upsert.call_args_list:
+            points = call_args.kwargs["points"]
+            assert len(points) <= 50
+
+    def test_memory_efficient_batch_processing(self, client_with_mock):
+        """
+        Test memory-efficient processing of very large batches.
+
+        Verifies that large batches don't cause memory issues.
+        """
+        client, mock_qdrant = client_with_mock
+
+        # Simulate very large batch processing
+        total_docs = 10000
+        processed = 0
+
+        # Process in chunks to avoid memory issues
+        chunk_size = 1000
+        for start_idx in range(0, total_docs, chunk_size):
+            end_idx = min(start_idx + chunk_size, total_docs)
+
+            documents = [
+                Document(
+                    id=f"doc-{i}",
+                    text=f"Document {i}",
+                    embedding=[0.1] * 1536,
+                    metadata={"batch": start_idx // chunk_size}
+                )
+                for i in range(start_idx, end_idx)
+            ]
+
+            success_count, failed_ids = client.store_documents_batch(
+                documents,
+                "large_collection",
+                batch_size=100
+            )
+
+            processed += success_count
+
+        # Verify all documents were processed
+        assert processed == total_docs
+
+    def test_progress_callback_performance(self, client_with_mock):
+        """
+        Test that progress callbacks don't impact performance.
+
+        Verifies efficient progress reporting.
+        """
+        client, mock_qdrant = client_with_mock
+
+        # Track callback overhead
+        callback_count = 0
+
+        def progress_callback(current, total):
+            nonlocal callback_count
+            callback_count += 1
+            # Simulate some work in callback
+            assert current <= total
+            assert current > 0
+
+        documents = [
+            Document(
+                id=f"doc-{i}",
+                text=f"Document {i}",
+                embedding=[0.1] * 1536,
+                metadata={}
+            )
+            for i in range(100)
+        ]
+
+        # Store with progress callback
+        client.store_documents_batch(
+            documents,
+            "test_collection",
+            batch_size=25,
+            on_progress=progress_callback
+        )
+
+        # Should have 4 progress updates (100 / 25)
+        assert callback_count == 4

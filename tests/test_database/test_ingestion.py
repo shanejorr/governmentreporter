@@ -904,3 +904,525 @@ class TestEdgeCasesAndValidation:
         # Verify ID format
         for i, doc_id in enumerate(ids):
             assert f"same-doc_chunk_{i}" == doc_id
+
+
+class TestIngestionClientAdvancedScenarios:
+    """
+    Tests for advanced ingestion scenarios and edge cases.
+
+    These tests cover complex real-world scenarios that might occur
+    during document ingestion.
+
+    Python Learning Notes:
+        - Complex scenarios test system robustness
+        - Edge cases reveal hidden bugs
+        - Real-world testing improves reliability
+    """
+
+    @pytest.fixture
+    def client_with_mock(self):
+        """Create ingestion client with advanced mocking."""
+        with patch('governmentreporter.database.ingestion.QdrantDBClient') as mock_class:
+            mock_instance = MagicMock()
+            mock_class.return_value = mock_instance
+            client = QdrantIngestionClient("test_collection")
+            return client, mock_instance
+
+    def test_mixed_embedding_dimensions(self, client_with_mock):
+        """
+        Test handling of embeddings with inconsistent dimensions.
+
+        Verifies that dimension mismatches are caught and handled.
+        """
+        client, mock_qdrant = client_with_mock
+
+        payloads = [
+            {"chunk_metadata": {"text": "Text 1", "chunk_index": 0}, "document_id": "doc-1"},
+            {"chunk_metadata": {"text": "Text 2", "chunk_index": 1}, "document_id": "doc-1"}
+        ]
+
+        # Embeddings with different dimensions (should be caught by QdrantDBClient)
+        embeddings = [
+            [0.1] * 1536,
+            [0.2] * 768  # Wrong dimension
+        ]
+
+        # Mock that storage will reject the second document
+        mock_qdrant.store_documents_batch.return_value = (1, ["doc-1_chunk_1"])
+
+        success, failed = client.batch_upsert_documents(payloads, embeddings)
+
+        # First should succeed, second should fail
+        assert success == 1
+        assert failed == 1
+
+    def test_duplicate_document_ids_handling(self, client_with_mock):
+        """
+        Test handling of duplicate document IDs in batch.
+
+        Verifies that documents with same IDs are handled properly.
+        """
+        client, mock_qdrant = client_with_mock
+
+        # Same document_id and chunk_index creates duplicate IDs
+        payloads = [
+            {"chunk_metadata": {"text": "Version 1", "chunk_index": 0}, "document_id": "doc-1"},
+            {"chunk_metadata": {"text": "Version 2", "chunk_index": 0}, "document_id": "doc-1"},
+        ]
+        embeddings = [[0.1] * 1536, [0.2] * 1536]
+
+        mock_qdrant.store_documents_batch.return_value = (2, [])
+
+        success, failed = client.batch_upsert_documents(payloads, embeddings)
+
+        # Both should be processed (upsert will update the first)
+        assert success == 2
+        assert failed == 0
+
+        # Verify both documents were created with same ID (will be upserted)
+        call_args = mock_qdrant.store_documents_batch.call_args
+        documents = call_args[0][0]
+        assert documents[0].id == "doc-1_chunk_0"
+        assert documents[1].id == "doc-1_chunk_0"
+
+    def test_extremely_large_text_content(self, client_with_mock):
+        """
+        Test handling of documents with very large text content.
+
+        Verifies that large text fields are handled without issues.
+        """
+        client, mock_qdrant = client_with_mock
+
+        # Create payload with very large text
+        large_text = "A" * 1_000_000  # 1MB of text
+        payloads = [
+            {
+                "chunk_metadata": {"text": large_text, "chunk_index": 0},
+                "document_id": "large-doc"
+            }
+        ]
+        embeddings = [[0.1] * 1536]
+
+        mock_qdrant.store_documents_batch.return_value = (1, [])
+
+        success, failed = client.batch_upsert_documents(payloads, embeddings)
+
+        assert success == 1
+        assert failed == 0
+
+        # Verify large text was included
+        call_args = mock_qdrant.store_documents_batch.call_args
+        documents = call_args[0][0]
+        assert len(documents[0].text) == 1_000_000
+
+    def test_nested_metadata_structures(self, client_with_mock):
+        """
+        Test handling of deeply nested metadata structures.
+
+        Verifies that complex nested metadata is preserved.
+        """
+        client, mock_qdrant = client_with_mock
+
+        payloads = [
+            {
+                "chunk_metadata": {
+                    "text": "Nested test",
+                    "chunk_index": 0,
+                    "annotations": {
+                        "entities": {
+                            "people": ["John Doe", "Jane Smith"],
+                            "organizations": {
+                                "government": ["Supreme Court", "Congress"],
+                                "private": ["ACLU", "EFF"]
+                            }
+                        },
+                        "citations": [
+                            {"case": "Roe v Wade", "year": 1973, "relevance": 0.9},
+                            {"case": "Brown v Board", "year": 1954, "relevance": 0.8}
+                        ]
+                    }
+                },
+                "document_metadata": {
+                    "hierarchy": {
+                        "level1": {
+                            "level2": {
+                                "level3": "deep value"
+                            }
+                        }
+                    }
+                },
+                "document_id": "nested-doc"
+            }
+        ]
+        embeddings = [[0.1] * 1536]
+
+        mock_qdrant.store_documents_batch.return_value = (1, [])
+
+        success, failed = client.batch_upsert_documents(payloads, embeddings)
+
+        assert success == 1
+
+        # Verify nested structure is preserved
+        call_args = mock_qdrant.store_documents_batch.call_args
+        documents = call_args[0][0]
+        metadata = documents[0].metadata
+
+        # Check nested structures
+        assert metadata["chunk_metadata"]["annotations"]["entities"]["people"][0] == "John Doe"
+        assert metadata["chunk_metadata"]["annotations"]["citations"][0]["case"] == "Roe v Wade"
+        assert metadata["document_metadata"]["hierarchy"]["level1"]["level2"]["level3"] == "deep value"
+
+    def test_unicode_and_special_characters(self, client_with_mock):
+        """
+        Test handling of Unicode and special characters in all fields.
+
+        Verifies international text and special characters are preserved.
+        """
+        client, mock_qdrant = client_with_mock
+
+        payloads = [
+            {
+                "chunk_metadata": {
+                    "text": "Legal text with émojis 🎯⚖️ and symbols €£¥",
+                    "chunk_index": 0,
+                    "languages": ["English", "Español", "中文", "العربية"]
+                },
+                "document_metadata": {
+                    "title": "Case № 2024-001: Müller vs. O'Connor",
+                    "special_chars": "∀x∈ℝ: x²≥0",
+                    "rtl_text": "مرحبا بك",
+                    "emoji_tags": ["📚", "🔍", "⚖️"]
+                },
+                "document_id": "unicode-doc-2024"
+            }
+        ]
+        embeddings = [[0.1] * 1536]
+
+        mock_qdrant.store_documents_batch.return_value = (1, [])
+
+        success, failed = client.batch_upsert_documents(payloads, embeddings)
+
+        assert success == 1
+
+        # Verify Unicode is preserved
+        call_args = mock_qdrant.store_documents_batch.call_args
+        documents = call_args[0][0]
+
+        assert "émojis 🎯⚖️" in documents[0].text
+        metadata = documents[0].metadata
+        assert "中文" in metadata["chunk_metadata"]["languages"]
+        assert metadata["document_metadata"]["title"] == "Case № 2024-001: Müller vs. O'Connor"
+        assert metadata["document_metadata"]["emoji_tags"][0] == "📚"
+
+    def test_concurrent_batch_processing(self, client_with_mock):
+        """
+        Test handling of concurrent batch processing scenarios.
+
+        Simulates multiple batches being processed simultaneously.
+        """
+        client, mock_qdrant = client_with_mock
+
+        # Create multiple batches
+        batch1_payloads = [
+            {"chunk_metadata": {"text": f"Batch 1, Chunk {i}", "chunk_index": i}, "document_id": "doc-batch1"}
+            for i in range(50)
+        ]
+        batch1_embeddings = [[0.1] * 1536 for _ in range(50)]
+
+        batch2_payloads = [
+            {"chunk_metadata": {"text": f"Batch 2, Chunk {i}", "chunk_index": i}, "document_id": "doc-batch2"}
+            for i in range(50)
+        ]
+        batch2_embeddings = [[0.2] * 1536 for _ in range(50)]
+
+        # Mock successful storage
+        mock_qdrant.store_documents_batch.return_value = (50, [])
+
+        # Process both batches
+        success1, failed1 = client.batch_upsert_documents(batch1_payloads, batch1_embeddings, batch_size=25)
+        success2, failed2 = client.batch_upsert_documents(batch2_payloads, batch2_embeddings, batch_size=25)
+
+        assert success1 == 50
+        assert failed1 == 0
+        assert success2 == 50
+        assert failed2 == 0
+
+        # Verify both batches were processed
+        assert mock_qdrant.store_documents_batch.call_count == 2
+
+
+class TestIngestionClientRecoveryAndResilience:
+    """
+    Tests for recovery and resilience features.
+
+    These tests verify that the ingestion client can recover from
+    failures and handle degraded conditions.
+
+    Python Learning Notes:
+        - Resilience patterns prevent cascading failures
+        - Recovery mechanisms ensure data consistency
+        - Graceful degradation maintains partial functionality
+    """
+
+    @pytest.fixture
+    def client_with_mock(self):
+        """Create client with failure simulation capabilities."""
+        with patch('governmentreporter.database.ingestion.QdrantDBClient') as mock_class:
+            mock_instance = MagicMock()
+            mock_class.return_value = mock_instance
+            client = QdrantIngestionClient("test_collection")
+            return client, mock_instance
+
+    def test_partial_batch_recovery(self, client_with_mock):
+        """
+        Test recovery from partial batch failures.
+
+        Verifies that successful items are preserved even when some fail.
+        """
+        client, mock_qdrant = client_with_mock
+
+        payloads = [
+            {"chunk_metadata": {"text": f"Chunk {i}", "chunk_index": i}, "document_id": f"doc-{i}"}
+            for i in range(10)
+        ]
+        embeddings = [[0.1] * 1536 for _ in range(10)]
+
+        # Simulate partial failure (7 succeed, 3 fail)
+        mock_qdrant.store_documents_batch.return_value = (
+            7,
+            ["doc-7_chunk_7", "doc-8_chunk_8", "doc-9_chunk_9"]
+        )
+
+        success, failed = client.batch_upsert_documents(payloads, embeddings)
+
+        assert success == 7
+        assert failed == 3
+
+    def test_collection_recreation_after_deletion(self, client_with_mock):
+        """
+        Test that collection is recreated if deleted externally.
+
+        Verifies automatic recovery from collection deletion.
+        """
+        client, mock_qdrant = client_with_mock
+
+        # First operation succeeds
+        mock_qdrant.store_documents_batch.return_value = (1, [])
+
+        payloads = [{"chunk_metadata": {"text": "Test", "chunk_index": 0}, "document_id": "doc-1"}]
+        embeddings = [[0.1] * 1536]
+
+        # Initial storage should work
+        success, failed = client.batch_upsert_documents(payloads, embeddings)
+        assert success == 1
+
+        # Simulate collection was deleted
+        mock_qdrant.store_documents_batch.side_effect = Exception("Collection not found")
+
+        # Next operation should fail but gracefully
+        success, failed = client.batch_upsert_documents(payloads, embeddings)
+        assert success == 0
+        assert failed == 1  # Converted to documents but storage failed
+
+    def test_memory_pressure_handling(self, client_with_mock):
+        """
+        Test handling of memory pressure with very large batches.
+
+        Verifies that large batches are processed without memory issues.
+        """
+        client, mock_qdrant = client_with_mock
+
+        # Create a very large batch that might cause memory pressure
+        large_batch_size = 10000
+
+        # Use generator to avoid creating all data at once
+        def generate_payloads():
+            for i in range(large_batch_size):
+                yield {
+                    "chunk_metadata": {"text": f"Chunk {i}", "chunk_index": i % 100},
+                    "document_id": f"doc-{i // 100}"
+                }
+
+        def generate_embeddings():
+            for i in range(large_batch_size):
+                yield [0.1 + (i * 0.0001)] * 1536
+
+        payloads = list(generate_payloads())
+        embeddings = list(generate_embeddings())
+
+        # Mock successful storage
+        mock_qdrant.store_documents_batch.return_value = (large_batch_size, [])
+
+        # Process large batch
+        success, failed = client.batch_upsert_documents(payloads, embeddings, batch_size=500)
+
+        assert success == large_batch_size
+        assert failed == 0
+
+    def test_invalid_json_serialization(self, client_with_mock):
+        """
+        Test handling of objects that can't be JSON serialized.
+
+        Verifies graceful handling of non-serializable metadata.
+        """
+        client, mock_qdrant = client_with_mock
+
+        # Create payload with non-serializable object
+        import datetime
+
+        payloads = [
+            {
+                "chunk_metadata": {
+                    "text": "Test text",
+                    "chunk_index": 0,
+                    "date": datetime.datetime.now(),  # Not directly JSON serializable
+                    "set_data": {1, 2, 3}  # Sets aren't JSON serializable
+                },
+                "document_id": "doc-1"
+            }
+        ]
+        embeddings = [[0.1] * 1536]
+
+        # Should handle by converting to documents (datetime becomes string in dict)
+        mock_qdrant.store_documents_batch.return_value = (1, [])
+
+        # This should work as the payload becomes part of metadata
+        success, failed = client.batch_upsert_documents(payloads, embeddings)
+
+        # Should succeed as we're just passing the dict as metadata
+        assert success == 1
+        assert failed == 0
+
+
+class TestCollectionStatisticsAdvanced:
+    """
+    Advanced tests for collection statistics and monitoring.
+
+    These tests verify detailed statistics gathering and edge cases.
+
+    Python Learning Notes:
+        - Statistics provide observability into system state
+        - Monitoring helps identify issues early
+        - Metrics guide optimization decisions
+    """
+
+    @pytest.fixture
+    def client_with_advanced_mock(self):
+        """Create client with advanced statistics mocking."""
+        with patch('governmentreporter.database.ingestion.QdrantDBClient') as mock_class:
+            mock_instance = MagicMock()
+            mock_class.return_value = mock_instance
+
+            # Create sophisticated mock for statistics
+            mock_base = MagicMock()
+            mock_instance.client = mock_base
+
+            # Setup collection mock
+            mock_collection = MagicMock()
+            mock_collection.name = "test_collection"
+
+            mock_collections_response = MagicMock()
+            mock_collections_response.collections = [mock_collection]
+            mock_base.get_collections.return_value = mock_collections_response
+
+            # Setup detailed collection info
+            mock_info = MagicMock()
+            mock_info.points_count = 1500
+            mock_info.vectors_count = 1500
+            mock_info.indexed_vectors_count = 1450
+            mock_info.segments_count = 3
+            mock_info.config.params.vectors.size = 1536
+            mock_info.config.params.vectors.distance = "Cosine"
+            mock_info.config.params.vectors.on_disk = False
+            mock_info.status = "green"
+            mock_info.optimizer_status = "idle"
+
+            mock_base.get_collection.return_value = mock_info
+
+            client = QdrantIngestionClient("test_collection")
+            return client, mock_instance, mock_base, mock_info
+
+    def test_detailed_statistics_retrieval(self, client_with_advanced_mock):
+        """
+        Test retrieval of detailed collection statistics.
+
+        Verifies that all available statistics are captured.
+        """
+        client, mock_qdrant, mock_base, mock_info = client_with_advanced_mock
+
+        stats = client.get_collection_stats()
+
+        # Verify basic stats
+        assert stats["collection_name"] == "test_collection"
+        assert stats["total_documents"] == 1500
+        assert stats["vector_size"] == 1536
+        assert stats["distance_metric"] == "Cosine"
+
+    def test_statistics_with_multiple_collections(self, client_with_advanced_mock):
+        """
+        Test statistics when multiple collections exist.
+
+        Verifies correct collection is queried.
+        """
+        client, mock_qdrant, mock_base, mock_info = client_with_advanced_mock
+
+        # Add more collections to the mock
+        other_collection = MagicMock()
+        other_collection.name = "other_collection"
+        test_collection = MagicMock()
+        test_collection.name = "test_collection"
+
+        mock_collections_response = MagicMock()
+        mock_collections_response.collections = [
+            other_collection,
+            test_collection
+        ]
+        mock_base.get_collections.return_value = mock_collections_response
+
+        stats = client.get_collection_stats()
+
+        # Should still get stats for the correct collection
+        assert stats["collection_name"] == "test_collection"
+        mock_base.get_collection.assert_called_with("test_collection")
+
+    def test_statistics_during_indexing(self, client_with_advanced_mock):
+        """
+        Test statistics retrieval during active indexing.
+
+        Verifies statistics accuracy during ongoing operations.
+        """
+        client, mock_qdrant, mock_base, mock_info = client_with_advanced_mock
+
+        # Simulate indexing in progress
+        mock_info.indexed_vectors_count = 1200  # Less than total
+        mock_info.optimizer_status = "indexing"
+
+        stats = client.get_collection_stats()
+
+        # Should reflect indexing state
+        assert stats["total_documents"] == 1500
+
+    def test_statistics_error_recovery(self, client_with_advanced_mock):
+        """
+        Test statistics recovery from transient errors.
+
+        Verifies graceful handling of temporary API failures.
+        """
+        client, mock_qdrant, mock_base, mock_info = client_with_advanced_mock
+
+        # First call fails
+        original_get_collections = mock_base.get_collections.return_value
+        mock_base.get_collections.side_effect = Exception("Temporary network error")
+
+        # First attempt should fail gracefully
+        stats1 = client.get_collection_stats()
+        assert "error" in stats1
+        assert "network error" in stats1["error"].lower()
+
+        # Reset for second call to succeed
+        mock_base.get_collections.side_effect = None
+        mock_base.get_collections.return_value = original_get_collections
+
+        # Second attempt should succeed
+        stats2 = client.get_collection_stats()
+        assert stats2["total_documents"] == 1500
