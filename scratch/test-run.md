@@ -108,7 +108,7 @@ Run the actual ingestion:
 ```bash
 # Full ingestion of SCOTUS opinions
 uv run python scripts/ingestion/ingest_scotus.py \
-  --start-date 2022-08-11 \
+  --start-date 2021-08-11 \
   --end-date 2025-09-11 \
   --batch-size 50 \
   --verbose

@@ -31,7 +31,8 @@
       "Read(//Users/shaneorr/repos/personal/**)",
       "Bash(uv show:*)",
       "Bash(uv pip:*)",
-      "Bash(timeout 5 uv run:*)"
+      "Bash(timeout 5 uv run:*)",
+      "Bash(timeout 30 uv run:*)"
     ],
     "deny": [],
     "additionalDirectories": [
