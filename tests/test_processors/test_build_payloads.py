@@ -403,9 +403,11 @@ class TestBuildPayloadsFromDocument:
             url="https://example.com"
         )
 
-        mock_chunk.return_value = [
-            ("Chunk 1 text", {"chunk_index": 0, "chunk_total": 1})
-        ]
+        # chunk_supreme_court_opinion returns (chunks, syllabus) tuple
+        mock_chunk.return_value = (
+            [("Chunk 1 text", {"chunk_index": 0, "chunk_total": 1})],
+            "This is the syllabus"  # syllabus text
+        )
 
         mock_llm.return_value = {
             "plain_language_summary": "Summary",

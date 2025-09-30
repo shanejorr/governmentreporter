@@ -125,13 +125,18 @@ def normalize_scotus_metadata(doc: Document) -> Dict[str, Any]:
     if source and source.lower() == "courtlistener":
         source = "CourtListener"
 
+    # Normalize type to human-readable format
+    doc_type = doc.type
+    if doc_type and doc_type.lower() == "scotus_opinion":
+        doc_type = "Supreme Court Opinion"
+
     return {
         "document_id": doc.id,
         "title": case_name,  # Use case_name which prefers metadata over doc.title
         "publication_date": doc.date,
         "year": extract_year_from_date(doc.date),
         "source": source,  # Normalized to "CourtListener"
-        "type": doc.type,  # Should be "Supreme Court Opinion"
+        "type": doc_type,  # Normalized to "Supreme Court Opinion"
         "url": url,
         "case_name": case_name,
         "opinion_type": opinion_type,
@@ -139,6 +144,10 @@ def normalize_scotus_metadata(doc: Document) -> Dict[str, Any]:
         "author_str": metadata.get("author_str", ""),
         "per_curiam": metadata.get("per_curiam", False),
         "joined_by_str": metadata.get("joined_by_str", ""),
+        # Additional CourtListener fields
+        "docket_number": metadata.get("docket_number"),
+        "majority_author": metadata.get("majority_author"),
+        "vote_majority": metadata.get("vote_majority"),
     }
 
 
@@ -185,15 +194,26 @@ def normalize_eo_metadata(doc: Document) -> Dict[str, Any]:
     else:
         president_name = str(president_info) if president_info else ""
 
+    # Normalize source name to proper capitalization
+    source = doc.source
+    if source and source.lower() == "federal_register":
+        source = "Federal Register"
+
+    # Normalize type to human-readable format
+    doc_type = doc.type
+    if doc_type and doc_type.lower() == "executive_order":
+        doc_type = "Executive Order"
+
     return {
         "document_id": doc.id,
         "title": doc.title,
         "publication_date": doc.date,
         "year": extract_year_from_date(doc.date),
-        "source": doc.source,  # Should be "Federal Register"
-        "type": doc.type,  # Should be "Executive Order"
+        "source": source,  # Normalized to "Federal Register"
+        "type": doc_type,  # Normalized to "Executive Order"
         "url": url,
         "eo_number": eo_number,
+        "executive_order_number": eo_number,  # Alias for eo_number for backwards compatibility
         "president": president_name,
         "agencies": metadata.get("agencies", []),
         "signing_date": metadata.get("signing_date", doc.date),
@@ -301,7 +321,8 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
     )
 
     if not (is_scotus or is_eo):
-        raise ValueError(f"Unknown document type: {doc.type} from {doc.source}")
+        logger.warning("Unknown document type: %s from %s - skipping", doc.type, doc.source)
+        return []
 
     logger.info("Processing document %s (%s)", doc.id, doc.type)
 
@@ -467,6 +488,7 @@ def validate_payload(payload: Dict[str, Any]) -> bool:
         - Required fields: id, text, metadata
         - Non-empty id and text
         - Metadata is a dictionary
+        - Embedding field is optional (added by caller later)
         - All metadata values are JSON-serializable
 
     Args:
@@ -480,8 +502,8 @@ def validate_payload(payload: Dict[str, Any]) -> bool:
         - all() for checking multiple conditions
         - Dictionary iteration with items()
     """
-    # Check required fields
-    if not all(key in payload for key in ["id", "text", "embedding", "metadata"]):
+    # Check required fields (embedding is optional)
+    if not all(key in payload for key in ["id", "text", "metadata"]):
         return False
 
     # Check id and text are non-empty strings
@@ -495,8 +517,8 @@ def validate_payload(payload: Dict[str, Any]) -> bool:
     if not isinstance(payload["metadata"], dict):
         return False
 
-    # Check embedding is a list (can be empty initially)
-    if not isinstance(payload["embedding"], list):
+    # Check embedding is a list if present (can be empty initially)
+    if "embedding" in payload and not isinstance(payload["embedding"], list):
         return False
 
     # Check metadata values are JSON-serializable

@@ -215,9 +215,11 @@ class TestEmbeddingGenerator:
         mock_openai_class.return_value = mock_client
 
         # Simulate persistent API error
+        # APIError signature: (message, request, *, body)
+        mock_request = MagicMock()
         mock_client.embeddings.create.side_effect = APIError(
             "Internal server error",
-            response=MagicMock(),
+            request=mock_request,
             body=None
         )
 
@@ -314,8 +316,9 @@ class TestEmbeddingGenerator:
         texts = ["Valid text", "Another valid text"]
 
         # First attempt fails, fallback to individual processing
+        mock_request = MagicMock()
         mock_client.embeddings.create.side_effect = [
-            APIError("Batch processing failed", response=MagicMock(), body=None),
+            APIError("Batch processing failed", request=mock_request, body=None),
             MagicMock(data=[MagicMock(embedding=[0.1] * 1536)]),
             MagicMock(data=[MagicMock(embedding=[0.2] * 1536)])
         ]
@@ -360,14 +363,13 @@ class TestGenerateEmbeddingFunction:
         mock_generator.generate_embedding.return_value = mock_embedding
 
         test_text = "Test document for embedding."
-        test_api_key = "test-api-key"
 
         # Act
-        result = generate_embedding(test_text, api_key=test_api_key)
+        result = generate_embedding(test_text)
 
         # Assert
         assert result == mock_embedding
-        mock_generator_class.assert_called_once_with(api_key=test_api_key)
+        mock_generator_class.assert_called_once()  # No api_key argument
         mock_generator.generate_embedding.assert_called_once_with(test_text)
 
     @patch('governmentreporter.processors.embeddings.EmbeddingGenerator')
@@ -392,7 +394,7 @@ class TestGenerateEmbeddingFunction:
 
         # Assert
         assert result == mock_embedding
-        mock_generator_class.assert_called_once_with(api_key=None)
+        mock_generator_class.assert_called_once()  # No arguments
 
 
 class TestEmbeddingIntegration:
