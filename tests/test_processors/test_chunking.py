@@ -284,7 +284,7 @@ class TestCountTokens:
         - Different encodings produce different counts
     """
 
-    @patch('governmentreporter.processors.chunking.tiktoken')
+    @patch('governmentreporter.processors.chunking.base.tiktoken')
     def test_count_tokens_normal_text(self, mock_tiktoken):
         """
         Test token counting for normal text.
@@ -308,7 +308,7 @@ class TestCountTokens:
         assert count == 5
         mock_encoder.encode.assert_called_once_with(text)
 
-    @patch('governmentreporter.processors.chunking.tiktoken')
+    @patch('governmentreporter.processors.chunking.base.tiktoken')
     def test_count_tokens_empty_text(self, mock_tiktoken):
         """
         Test token counting for empty text.
@@ -344,9 +344,10 @@ class TestNormalizeWhitespace:
 
     def test_normalize_multiple_spaces(self):
         """
-        Test normalization of multiple spaces.
+        Test normalization preserves inline spaces.
 
-        Verifies multiple spaces are reduced to single space.
+        Verifies that normalize_whitespace only handles blank lines,
+        not inline spaces (which are preserved for formatting).
         """
         # Arrange
         text = "This  has   multiple    spaces."
@@ -354,26 +355,23 @@ class TestNormalizeWhitespace:
         # Act
         result = normalize_whitespace(text)
 
-        # Assert
-        assert result == "This has multiple spaces."
+        # Assert - Function preserves inline spaces, only normalizes blank lines
+        assert result == "This  has   multiple    spaces."
 
     def test_normalize_mixed_whitespace(self):
         """
-        Test normalization of mixed whitespace characters.
+        Test normalization of multiple blank lines.
 
-        Ensures tabs, newlines, and spaces are normalized.
+        Ensures multiple blank lines are reduced to paragraph breaks.
         """
         # Arrange
-        text = "Text\twith\ttabs\nand\nnewlines  and   spaces."
+        text = "Paragraph one.\n\n\n\nParagraph two."
 
         # Act
         result = normalize_whitespace(text)
 
-        # Assert
-        # Should normalize all whitespace to single spaces
-        assert "  " not in result
-        assert "\t" not in result
-        assert "\n" not in result
+        # Assert - Multiple blank lines become double newline (paragraph break)
+        assert result == "Paragraph one.\n\nParagraph two."
 
 
 class TestChunkTextWithTokens:
@@ -412,7 +410,14 @@ class TestChunkTextWithTokens:
         )
 
         # Act
-        chunks = chunk_text_with_tokens(text, config)
+        chunks = chunk_text_with_tokens(
+            text,
+            "test_section",
+            min_tokens=config.min_tokens,
+            target_tokens=config.target_tokens,
+            max_tokens=config.max_tokens,
+            overlap_tokens=int(config.target_tokens * config.overlap_ratio)
+        )
 
         # Assert
         assert len(chunks) > 0
@@ -441,7 +446,14 @@ class TestChunkTextWithTokens:
         )
 
         # Act
-        chunks = chunk_text_with_tokens(text, config)
+        chunks = chunk_text_with_tokens(
+            text,
+            "test_section",
+            min_tokens=config.min_tokens,
+            target_tokens=config.target_tokens,
+            max_tokens=config.max_tokens,
+            overlap_tokens=int(config.target_tokens * config.overlap_ratio)
+        )
 
         # Assert
         assert len(chunks) == 1
@@ -461,7 +473,7 @@ class TestChunkSupremeCourtOpinion:
     """
 
     @patch('governmentreporter.processors.chunking.count_tokens')
-    @patch('governmentreporter.processors.chunking.tiktoken')
+    @patch('governmentreporter.processors.chunking.base.tiktoken')
     def test_chunk_scotus_opinion_success(self, mock_tiktoken, mock_count):
         """
         Test successful chunking of Supreme Court opinion.
@@ -491,15 +503,17 @@ class TestChunkSupremeCourtOpinion:
         """
 
         # Act
-        chunks = chunk_supreme_court_opinion(opinion_text)
+        chunks, syllabus = chunk_supreme_court_opinion(opinion_text)
 
         # Assert
         assert len(chunks) > 0
         assert all(isinstance(chunk, tuple) for chunk in chunks)
         assert all(len(chunk) == 2 for chunk in chunks)  # (text, metadata)
+        # Syllabus should be extracted
+        assert syllabus is not None
 
     @patch('governmentreporter.processors.chunking.count_tokens')
-    @patch('governmentreporter.processors.chunking.tiktoken')
+    @patch('governmentreporter.processors.chunking.base.tiktoken')
     def test_chunk_scotus_opinion_empty(self, mock_tiktoken, mock_count):
         """
         Test chunking empty Supreme Court opinion.
@@ -516,11 +530,12 @@ class TestChunkSupremeCourtOpinion:
         mock_count.return_value = 0
 
         # Act
-        chunks = chunk_supreme_court_opinion("")
+        chunks, syllabus = chunk_supreme_court_opinion("")
 
         # Assert
         # Should handle empty input gracefully
         assert isinstance(chunks, list)
+        assert syllabus is None  # No syllabus in empty text
 
 
 class TestChunkExecutiveOrder:
@@ -536,7 +551,7 @@ class TestChunkExecutiveOrder:
     """
 
     @patch('governmentreporter.processors.chunking.count_tokens')
-    @patch('governmentreporter.processors.chunking.tiktoken')
+    @patch('governmentreporter.processors.chunking.base.tiktoken')
     def test_chunk_executive_order_success(self, mock_tiktoken, mock_count):
         """
         Test successful chunking of Executive Order.
@@ -573,7 +588,7 @@ class TestChunkExecutiveOrder:
         assert all(len(chunk) == 2 for chunk in chunks)  # (text, metadata)
 
     @patch('governmentreporter.processors.chunking.count_tokens')
-    @patch('governmentreporter.processors.chunking.tiktoken')
+    @patch('governmentreporter.processors.chunking.base.tiktoken')
     def test_chunk_executive_order_empty(self, mock_tiktoken, mock_count):
         """
         Test chunking empty Executive Order.

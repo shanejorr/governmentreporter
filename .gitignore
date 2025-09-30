@@ -57,7 +57,9 @@ Icon?
 
 # Logs
 *.log
-logs/
+
+# Data directory (contains all runtime data)
+data/
 
 # Temporary files
 tmp/
@@ -78,20 +80,11 @@ coverage.xml
 .dmypy.json
 dmypy.json
 
-# Database files
-*.sqlite
-*.sqlite3
-*.db
-
 # Binary files
 *.bin
 
 # Project-specific ignores
-# Qdrant database files
-qdrant_db/
-test_qdrant_db/
-
-# Raw data and processing files
+# Raw data and processing files (legacy)
 raw-data/
 processing_progress.json
 

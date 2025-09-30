@@ -60,12 +60,17 @@ def extract_year_from_date(date_str: str) -> int:
         - datetime.now() for current date
     """
     try:
+        # Handle None or empty strings
+        if not date_str:
+            logger.warning("Empty date string, using current year")
+            return datetime.now().year
+
         # Try simple extraction first (faster)
-        if len(date_str) >= 4 and date_str[4] in ["-", "/"]:
+        if len(date_str) >= 5 and date_str[4] in ["-", "/"]:
             return int(date_str[:4])
         # Fallback to datetime parsing
         return datetime.strptime(date_str, "%Y-%m-%d").year
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError, IndexError, TypeError):
         logger.warning("Failed to parse date '%s', using current year", date_str)
         return datetime.now().year
 
@@ -115,12 +120,17 @@ def normalize_scotus_metadata(doc: Document) -> Dict[str, Any]:
     # Use absolute_url if available, otherwise download_url
     url = doc.url or metadata.get("absolute_url", metadata.get("download_url", ""))
 
+    # Normalize source name to proper capitalization
+    source = doc.source
+    if source and source.lower() == "courtlistener":
+        source = "CourtListener"
+
     return {
         "document_id": doc.id,
-        "title": doc.title,
+        "title": case_name,  # Use case_name which prefers metadata over doc.title
         "publication_date": doc.date,
         "year": extract_year_from_date(doc.date),
-        "source": doc.source,  # Should be "CourtListener"
+        "source": source,  # Normalized to "CourtListener"
         "type": doc.type,  # Should be "Supreme Court Opinion"
         "url": url,
         "case_name": case_name,
