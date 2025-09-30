@@ -2,6 +2,28 @@
 
 A Python library and **MCP (Model Context Protocol) server** for retrieving, processing, and storing US federal government publications in a Qdrant vector database for retrieval augmented generation (RAG) using **hierarchical document chunking**.
 
+## Quick Start
+
+```bash
+# Install dependencies
+uv sync
+
+# Start MCP server for LLM integration
+uv run governmentreporter server
+
+# Ingest Supreme Court opinions
+uv run governmentreporter ingest scotus --start-date 2024-01-01 --end-date 2024-12-31
+
+# Ingest Executive Orders
+uv run governmentreporter ingest eo --start-date 2024-01-01 --end-date 2024-12-31
+
+# Test semantic search
+uv run governmentreporter query "environmental regulation"
+
+# Get help
+uv run governmentreporter --help
+```
+
 ## Overview
 
 GovernmentReporter creates a Qdrant vector database storing semantic embeddings and rich metadata for hierarchically chunked US federal Supreme Court opinions and Executive Orders. The system uses **intelligent chunking** to break down documents by their natural structure - Supreme Court opinions by opinion type (syllabus, majority, concurring, dissenting) and sections, Executive Orders by header/sections/subsections/tail - enabling precise legal research and retrieval.
@@ -81,30 +103,89 @@ GovernmentReporter creates a Qdrant vector database storing semantic embeddings 
   - `court_listener.py`: CourtListener API for SCOTUS opinions
   - `federal_register.py`: Federal Register API for Executive Orders
 
+- **CLI Module** (`src/governmentreporter/cli/`): Command-line interface
+  - `main.py`: Primary CLI entry point with Click framework
+  - `ingest.py`: Document ingestion commands (scotus, eo)
+  - `server.py`: MCP server start command
+  - `query.py`: Test query command for semantic search
+
 - **Database Module** (`src/governmentreporter/database/`): Qdrant vector storage
-  - `qdrant_client.py`: Core vector database operations
+  - `qdrant.py`: Core vector database operations
   - `ingestion.py`: High-performance batch ingestion utilities
 
+- **Ingestion Module** (`src/governmentreporter/ingestion/`): Document ingestion pipelines
+  - `base.py`: Abstract base class for ingestion pipelines
+  - `scotus.py`: Supreme Court opinion ingestion pipeline
+  - `executive_orders.py`: Executive Order ingestion pipeline
+  - `progress.py`: Progress tracking and resumable operations
+
 - **Processors Module** (`src/governmentreporter/processors/`): Document processing
-  - `chunking.py`: Hierarchical document chunking algorithms
+  - `chunking/`: Hierarchical document chunking algorithms
+    - `base.py`: Shared utilities and core chunking algorithm
+    - `scotus.py`: Supreme Court-specific chunking with opinion type detection
+    - `executive_orders.py`: Executive Order-specific chunking by sections
   - `embeddings.py`: OpenAI embedding generation with batch support
   - `llm_extraction.py`: GPT-5-nano metadata extraction
   - `schema.py`: Pydantic data validation models
   - `build_payloads.py`: Processing orchestration
-
-- **Utils Module** (`src/governmentreporter/utils/`): Shared utilities
-  - `citations.py`: Bluebook citation formatting
-  - `config.py`: Environment variable and credential management
-  - `monitoring.py`: Performance monitoring with progress tracking
 
 - **Server Module** (`src/governmentreporter/server/`): MCP server for LLM integration
   - `mcp_server.py`: Main MCP server implementation with tool registration
   - `handlers.py`: Tool handlers for search, retrieval, and collection operations
   - `query_processor.py`: Result formatting optimized for LLM consumption
   - `config.py`: Server configuration with environment variable support
+  - `__main__.py`: Server entry point for `python -m governmentreporter.server`
 
-- **Main Entry Points**:
-  - `server.py`: Command-line entry point for running the MCP server
+- **Utils Module** (`src/governmentreporter/utils/`): Shared utilities
+  - `citations.py`: Bluebook citation formatting
+  - `config.py`: Environment variable and credential management
+  - `monitoring.py`: Performance monitoring with progress tracking
+
+### Project Structure
+
+```
+governmentreporter/
+├── src/governmentreporter/
+│   ├── apis/                      # Government API clients
+│   │   ├── base.py               # Abstract base class
+│   │   ├── court_listener.py     # CourtListener API
+│   │   └── federal_register.py   # Federal Register API
+│   ├── cli/                       # Command-line interface
+│   │   ├── main.py               # CLI entry point
+│   │   ├── ingest.py             # Ingestion commands
+│   │   ├── server.py             # Server command
+│   │   └── query.py              # Query command
+│   ├── database/                  # Vector database
+│   │   ├── qdrant.py             # Qdrant client
+│   │   └── ingestion.py          # Batch ingestion
+│   ├── ingestion/                 # Ingestion pipelines
+│   │   ├── base.py               # Base pipeline class
+│   │   ├── scotus.py             # SCOTUS pipeline
+│   │   ├── executive_orders.py   # EO pipeline
+│   │   └── progress.py           # Progress tracking
+│   ├── processors/                # Document processing
+│   │   ├── chunking/             # Chunking algorithms
+│   │   │   ├── base.py           # Core chunking utilities
+│   │   │   ├── scotus.py         # SCOTUS chunking
+│   │   │   └── executive_orders.py # EO chunking
+│   │   ├── embeddings.py         # Embedding generation
+│   │   ├── llm_extraction.py     # Metadata extraction
+│   │   ├── schema.py             # Pydantic schemas
+│   │   └── build_payloads.py     # Payload orchestration
+│   ├── server/                    # MCP server
+│   │   ├── mcp_server.py         # Main server
+│   │   ├── handlers.py           # Tool handlers
+│   │   ├── query_processor.py    # Result formatting
+│   │   ├── config.py             # Server config
+│   │   └── __main__.py           # Module entry point
+│   └── utils/                     # Shared utilities
+│       ├── citations.py          # Citation formatting
+│       ├── config.py             # Config management
+│       └── monitoring.py         # Performance monitoring
+├── tests/                         # Test suite
+├── pyproject.toml                # Package configuration
+└── README.md                     # This file
+```
 
 ## Data Flow
 
@@ -130,6 +211,36 @@ GovernmentReporter creates a Qdrant vector database storing semantic embeddings 
    - Users can search specifically within syllabus, majority, or dissenting opinions
    - Results include precise section references and justice attribution
    - Legal metadata enables topic-specific and citation-based searches
+
+## Recent Updates
+
+### Version 0.1.0 - Major Restructure (September 2025)
+
+The codebase underwent a comprehensive restructure for improved maintainability and user experience:
+
+**New CLI Framework:**
+- Unified `governmentreporter` command with Click-based CLI
+- Subcommands: `server`, `ingest scotus`, `ingest eo`, `query`
+- Shell completion support for bash/zsh/fish
+- Improved help documentation and option validation
+
+**Modular Architecture:**
+- New `cli/` module with dedicated command handlers
+- New `ingestion/` module with base class pattern (eliminates ~500 lines of code duplication)
+- Chunking split into organized submodules: `base.py`, `scotus.py`, `executive_orders.py`
+- Better separation of concerns across all modules
+
+**Developer Experience:**
+- All scripts migrated to proper CLI commands
+- Backwards-compatible imports through `__init__.py` exports
+- Comprehensive docstrings and type hints
+- Modern `src/` layout for Python packaging best practices
+
+**Key Benefits:**
+- Single entry point (`governmentreporter`) for all operations
+- Consistent command structure across all features
+- Easy to extend with new document types or commands
+- Better error handling and user feedback
 
 ## Prerequisites
 
@@ -169,18 +280,51 @@ GovernmentReporter creates a Qdrant vector database storing semantic embeddings 
    - **OpenAI API**: Get key from [OpenAI Platform](https://platform.openai.com/api-keys)
    - **CourtListener API**: Free registration at [CourtListener](https://www.courtlistener.com/api/)
 
-## Running the MCP Server
+## Usage
+
+GovernmentReporter provides a unified CLI command `governmentreporter` with several subcommands:
 
 ### Start the MCP Server
 ```bash
-# Using uv (recommended)
+# Using the CLI (recommended)
+uv run governmentreporter server
+
+# Or using Python module
 uv run python -m governmentreporter.server
+```
 
-# Direct Python
-python -m governmentreporter.server
+### Ingest Documents
+```bash
+# Ingest Supreme Court opinions for a date range
+uv run governmentreporter ingest scotus --start-date 2024-01-01 --end-date 2024-12-31
 
-# As executable script
-./src/governmentreporter/server.py
+# Ingest Executive Orders for a date range
+uv run governmentreporter ingest eo --start-date 2024-01-01 --end-date 2024-12-31
+
+# Customize batch size and database paths
+uv run governmentreporter ingest scotus \
+  --start-date 2024-01-01 \
+  --end-date 2024-12-31 \
+  --batch-size 100 \
+  --progress-db ./data/progress/scotus.db \
+  --qdrant-db-path ./data/qdrant/qdrant_db
+```
+
+### Test Semantic Search
+```bash
+# Search across all document types
+uv run governmentreporter query "environmental regulation Commerce Clause"
+
+# The query command tests the vector database and displays results
+```
+
+### Shell Completion
+```bash
+# Install shell completion for bash/zsh/fish
+uv run governmentreporter --install-completion
+
+# Show completion code
+uv run governmentreporter --show-completion
 ```
 
 ### Server Configuration
@@ -250,9 +394,8 @@ Create or edit the `claude_desktop_config.json` file with the following configur
       "command": "uv",
       "args": [
         "run",
-        "python",
-        "-m",
-        "governmentreporter.server"
+        "governmentreporter",
+        "server"
       ],
       "cwd": "/path/to/your/governmentreporter",
       "env": {
@@ -278,9 +421,8 @@ If you already have a `.env` file in your project:
       "command": "uv",
       "args": [
         "run",
-        "python",
-        "-m",
-        "governmentreporter.server"
+        "governmentreporter",
+        "server"
       ],
       "cwd": "/path/to/your/governmentreporter"
     }
@@ -288,15 +430,17 @@ If you already have a `.env` file in your project:
 }
 ```
 
-#### Option B: Direct Python Execution
-If you prefer running Python directly:
+#### Option B: Using Python Module
+If you prefer running the Python module directly:
 
 ```json
 {
   "mcpServers": {
     "governmentreporter": {
-      "command": "python",
+      "command": "uv",
       "args": [
+        "run",
+        "python",
         "-m",
         "governmentreporter.server"
       ],
@@ -400,7 +544,7 @@ You can customize the MCP server behavior with environment variables:
   "mcpServers": {
     "governmentreporter": {
       "command": "uv",
-      "args": ["run", "python", "-m", "governmentreporter.server"],
+      "args": ["run", "governmentreporter", "server"],
       "cwd": "/path/to/your/governmentreporter",
       "env": {
         "OPENAI_API_KEY": "your-key-here",
@@ -629,26 +773,32 @@ GovernmentReporter automatically identifies and chunks Supreme Court opinions us
 ### Processing Pipeline
 
 **Supreme Court Opinions:**
-1. **API Retrieval** (`apis/court_listener.py`): Fetch opinion and cluster data from CourtListener
-2. **Opinion Type Detection** (`processors/chunking.py`): Use regex patterns to identify different opinion types
-3. **Section Parsing** (`processors/chunking.py`): Detect Roman numeral sections and lettered subsections
-4. **Intelligent Chunking** (`processors/chunking.py`): Target 600 tokens, max 800 tokens while preserving legal structure
-5. **Metadata Extraction** (`processors/llm_extraction.py`): Use GPT-5-nano for rich legal metadata
-6. **Citation Formatting** (`utils/citations.py`): Build proper bluebook citations from cluster data
-7. **Payload Building** (`processors/build_payloads.py`): Orchestrate processing and create Qdrant-ready payloads
-8. **Embedding Generation**: Create semantic embeddings for each chunk
-9. **Database Storage** (`database/qdrant_client.py`): Store chunks with complete metadata in Qdrant
+1. **CLI Command** (`cli/ingest.py`): Entry point for ingestion commands
+2. **Pipeline Orchestration** (`ingestion/scotus.py`): Coordinates the full ingestion process
+3. **API Retrieval** (`apis/court_listener.py`): Fetch opinion and cluster data from CourtListener
+4. **Opinion Type Detection** (`processors/chunking/scotus.py`): Use regex patterns to identify different opinion types
+5. **Section Parsing** (`processors/chunking/scotus.py`): Detect Roman numeral sections and lettered subsections
+6. **Intelligent Chunking** (`processors/chunking/base.py`, `scotus.py`): Target 600 tokens, max 800 tokens while preserving legal structure
+7. **Metadata Extraction** (`processors/llm_extraction.py`): Use GPT-5-nano for rich legal metadata
+8. **Citation Formatting** (`utils/citations.py`): Build proper bluebook citations from cluster data
+9. **Payload Building** (`processors/build_payloads.py`): Orchestrate processing and create Qdrant-ready payloads
+10. **Embedding Generation** (`processors/embeddings.py`): Create semantic embeddings for each chunk
+11. **Progress Tracking** (`ingestion/progress.py`): Track processing state and enable resumption
+12. **Database Storage** (`database/ingestion.py`, `qdrant.py`): Batch store chunks with complete metadata in Qdrant
 
 **Executive Orders:**
-1. **API Retrieval** (`apis/federal_register.py`): Fetch order data and raw text from Federal Register
-2. **Structure Detection** (`processors/chunking.py`): Identify header, sections, subsections, and tail blocks
-3. **HTML Cleaning** (`apis/federal_register.py`): Remove markup and extract clean text
-4. **Intelligent Chunking** (`processors/chunking.py`): Target 300 tokens, max 400 tokens with sentence overlap
-5. **Metadata Extraction** (`processors/llm_extraction.py`): Use GPT-5-nano for policy metadata
-6. **Schema Validation** (`processors/schema.py`): Validate metadata with Pydantic models
-7. **Payload Building** (`processors/build_payloads.py`): Orchestrate processing and create Qdrant-ready payloads
-8. **Embedding Generation**: Create semantic embeddings for each chunk
-9. **Database Storage** (`database/qdrant_client.py`): Store chunks with complete metadata in Qdrant
+1. **CLI Command** (`cli/ingest.py`): Entry point for ingestion commands
+2. **Pipeline Orchestration** (`ingestion/executive_orders.py`): Coordinates the full ingestion process
+3. **API Retrieval** (`apis/federal_register.py`): Fetch order data and raw text from Federal Register
+4. **Structure Detection** (`processors/chunking/executive_orders.py`): Identify header, sections, subsections, and tail blocks
+5. **HTML Cleaning** (`apis/federal_register.py`): Remove markup and extract clean text
+6. **Intelligent Chunking** (`processors/chunking/base.py`, `executive_orders.py`): Target 300 tokens, max 400 tokens with sentence overlap
+7. **Metadata Extraction** (`processors/llm_extraction.py`): Use GPT-5-nano for policy metadata
+8. **Schema Validation** (`processors/schema.py`): Validate metadata with Pydantic models
+9. **Payload Building** (`processors/build_payloads.py`): Orchestrate processing and create Qdrant-ready payloads
+10. **Embedding Generation** (`processors/embeddings.py`): Create semantic embeddings for each chunk
+11. **Progress Tracking** (`ingestion/progress.py`): Track processing state and enable resumption
+12. **Database Storage** (`database/ingestion.py`, `qdrant.py`): Batch store chunks with complete metadata in Qdrant
 
 ## Government Data Sources
 
