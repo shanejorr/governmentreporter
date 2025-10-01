@@ -116,13 +116,20 @@ def generate_scotus_llm_fields(
 
         # System prompt defining the extraction task
         system_prompt = f"""You are a legal analyst extracting metadata from Supreme Court opinions for a RAG system.
-Your task is to extract structured metadata that helps lay users understand complex legal documents.
+Your task is to extract structured metadata that helps lay users (non-lawyers) understand complex legal documents.
+
+CRITICAL: Use simple, everyday language. Avoid legal jargon at all costs.
 
 {syllabus_instruction}
 
 Extract the following fields in JSON format:
 
-1. plain_language_summary: One paragraph using EXACTLY this template: "The Court held [holding in plain English]. It stated [key reasoning in plain English]."
+1. plain_language_summary: One paragraph following this structure:
+   - Start with: "In a case about [what the case is about in everyday terms]..."
+   - Then: "the Court decided that [holding in plain English]."
+   - Finally: "The Court reasoned that [why they decided this way - the key reason]."
+
+   Example: "In a case about whether police can search someone's phone without a warrant, the Court decided that police must get a warrant before searching digital devices. The Court reasoned that cell phones contain massive amounts of private information that deserves strong privacy protection."
 
 2. constitution_cited: Array of U.S. Constitution citations in Bluebook format (e.g., "U.S. Const. amend. XIV, § 1", "U.S. Const. art. I, § 8, cl. 3")
 
@@ -132,17 +139,50 @@ Extract the following fields in JSON format:
 
 5. cases_cited: Array of case citations in Bluebook format (e.g., "Brown v. Bd. of Educ., 347 U.S. 483 (1954)")
 
-6. topics_or_policy_areas: Array of 5-8 plain-language tags covering both legal areas (e.g., "free speech", "due process") and topics (e.g., "education", "immigration")
+6. topics_or_policy_areas: Array of 5-8 tags that mix legal concepts AND everyday search terms people might use.
+   - Include both: technical legal terms (e.g., "due process", "commerce clause")
+   - AND everyday topics (e.g., "healthcare", "voting rights", "police searches", "religious freedom")
+   - Think: "What would a regular person search for to find this case?"
+   - Good examples: ["abortion rights", "religious freedom", "healthcare law", "federal power"]
+   - Bad examples: ["constitutional law", "statutory interpretation", "judicial review"]
 
-7. holding_plain: The Court's holding in ONE sentence, plain English
+7. holding_plain: The Court's decision in ONE sentence using simple language.
+   - Avoid legal jargon. Instead of "petitioner prevailed" say "the person who sued won"
+   - Instead of "reversed and remanded" say "overturned the lower court's decision and sent it back"
+   - Focus on WHAT the Court decided, not the technical legal outcome
 
-8. outcome_simple: The outcome in simple terms (e.g., "Petitioner won", "Reversed and remanded", "Affirmed")
+8. outcome_simple: Who won and what happens next, in simple terms.
+   - Instead of: "Reversed and remanded"
+   - Say: "The person who sued won. The case goes back to the lower court for a new decision."
+   - Instead of: "Affirmed"
+   - Say: "The lower court's decision stands. The person who appealed lost."
 
-9. issue_plain: The central legal question in plain English
+9. issue_plain: The central question the Court answered, phrased as a simple question anyone could understand.
+   - Start with: "Can...", "Does...", "Must...", "Is it constitutional to..."
+   - Example: "Can Congress pass a law requiring people to buy health insurance?"
+   - NOT: "Whether the Affordable Care Act's individual mandate exceeds Congress's enumerated powers"
 
-10. reasoning: The Court's reasoning in plain English (maximum one paragraph)
+10. reasoning: Why did the Court decide this way? Explain in ONE paragraph using everyday language.
+    - Focus on the Court's main reason, not all arguments
+    - Explain it like you're telling a friend who knows nothing about law
+    - Connect the reasoning to common sense or familiar principles when possible
+    - Avoid terms like: "petitioner", "respondent", "appellant", "appellee", "certiorari", "standing", "justiciability"
 
-Focus on clarity for non-lawyers. Use everyday language while maintaining accuracy."""
+FORBIDDEN LEGAL JARGON - Use these plain alternatives:
+- "Petitioner" → "the person/party who sued" or "the person who appealed"
+- "Respondent" → "the other party" or "the government" or "[specific party name]"
+- "Affirmed" → "upheld the lower court's decision" or "kept the decision in place"
+- "Reversed" → "overturned the lower court's decision"
+- "Remanded" → "sent back to the lower court"
+- "Reversed and remanded" → "overturned the decision and sent it back for reconsideration"
+- "Vacated" → "threw out the lower court's decision"
+- "Standing" → "the right to sue" or "legal permission to bring the case"
+- "Certiorari" → "agreed to hear the case" or "took the case"
+- "En banc" → "full court" or "all the judges"
+- "Per curiam" → "unsigned opinion" or "opinion by the whole court"
+- "Dicta" → "additional comments" or "side remarks"
+
+Remember: Write for someone with NO legal training. Use concrete examples and simple explanations."""
 
         # User prompt with the opinion text
         user_prompt = (
@@ -315,19 +355,38 @@ def generate_eo_llm_fields(text: str) -> Dict[str, Any]:
 
         # System prompt defining the extraction task for Executive Orders
         system_prompt = """You are a policy analyst extracting metadata from Presidential Executive Orders for a RAG system.
-Your task is to extract structured metadata that helps lay users understand government actions and policies.
+Your task is to extract structured metadata that helps lay users (non-lawyers, everyday Americans) understand government actions and policies.
+
+CRITICAL: Write for regular people, not policy experts. Focus on real-world impacts.
 
 Extract the following fields in JSON format:
 
-1. plain_language_summary: One paragraph in everyday language starting with action verbs like:
-   - "Establishes..." (for new programs/requirements)
-   - "Prohibits..." (for bans/restrictions)
-   - "Requires..." (for mandates)
-   - "Revokes..." (for cancellations)
-   - "Directs..." (for agency instructions)
-   Explain WHAT the order does in concrete terms.
+1. plain_language_summary: One paragraph (3-4 sentences) explaining what this order does and who it affects.
 
-2. agencies_impacted: Array of federal agencies materially affected by this order (use canonical names like "Department of Defense", "Environmental Protection Agency")
+   Structure:
+   - First sentence: Start with an action verb describing what the order does
+   - Second sentence: Explain the practical impact or real-world change
+   - Third sentence: Note who is affected (businesses, individuals, agencies, etc.)
+   - Optional fourth sentence: Mention any deadlines or implementation timeline
+
+   Strong action verbs to use:
+   - "Creates..." - for new programs, agencies, or initiatives
+   - "Bans..." or "Prohibits..." - for restrictions (be specific about what's banned)
+   - "Requires..." or "Mandates..." - for new obligations (explain who must do what)
+   - "Cancels..." or "Eliminates..." - for ending existing programs/policies
+   - "Orders [agency] to..." - when directing specific agency actions
+   - "Speeds up..." - for acceleration of existing processes
+   - "Protects..." - for safeguarding people or resources
+   - "Expands..." - for growing existing programs
+
+   Example: "Creates a new task force within the Department of Transportation to speed up approval of supersonic aircraft for commercial flights. This aims to make supersonic passenger travel available in the United States by reducing regulatory delays. The order affects aircraft manufacturers, airlines planning supersonic routes, and the Federal Aviation Administration, which must update its rules within 180 days."
+
+   NOT: "Establishes interagency coordination mechanisms to facilitate regulatory harmonization for next-generation aviation technologies."
+
+2. agencies_impacted: Array of federal agencies that must take action or are affected by this order.
+   - Use full, recognizable names: "Department of Transportation", "Environmental Protection Agency"
+   - Include both primary agencies (who must act) and secondary agencies (who are affected)
+   - When helpful for understanding, you may note their role: "Department of Energy (renewable energy programs)"
 
 3. constitution_cited: Array of U.S. Constitution citations in Bluebook format
 
@@ -337,9 +396,25 @@ Extract the following fields in JSON format:
 
 6. cases_cited: Array of case citations in Bluebook format (rare in EOs but possible)
 
-7. topics_or_policy_areas: Array of 5-8 plain-language tags covering both policy areas (e.g., "national security", "climate change") and topics (e.g., "aviation", "healthcare")
+7. topics_or_policy_areas: Array of 5-8 tags using terms regular people would search for.
 
-Focus on concrete actions and real-world impacts. Use everyday language for non-experts."""
+   Include a mix of:
+   - Broad policy areas: "climate change", "national security", "healthcare", "immigration"
+   - Specific topics: "electric vehicles", "border security", "prescription drugs", "voting access"
+   - Affected sectors: "small business", "farming", "technology", "manufacturing"
+   - Geographic relevance when applicable: "federal lands", "coastal areas", "tribal lands"
+
+   Good examples: ["clean energy", "electric vehicles", "auto industry", "climate change", "manufacturing jobs"]
+   Bad examples: ["regulatory reform", "administrative procedure", "executive authority", "federal policy"]
+
+   Think: "What would someone type into a search engine to find this order?"
+
+REMEMBER:
+- Avoid bureaucratic language and acronyms without explanation
+- Focus on "who does what" and "who is affected"
+- Explain the practical, real-world impact
+- Use concrete, specific terms over abstract policy language
+- Write like you're explaining this to a friend or family member who doesn't work in government"""
 
         # User prompt with the Executive Order text
         user_prompt = f"Extract metadata from this Executive Order:\n\n{text}"

@@ -27,7 +27,8 @@ from typing import Any, Dict, List, Optional
 
 from mcp.server import Server
 from mcp.server.models import InitializationOptions
-from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
+from mcp.server.stdio import stdio_server
+from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource, ServerCapabilities, ToolsCapability
 
 from ..database.qdrant import QdrantDBClient
 from ..processors.embeddings import generate_embedding
@@ -378,17 +379,19 @@ class GovernmentReporterMCP:
         if not self.qdrant_client:
             await self.initialize()
 
-        # Run the server
-        async with self.server.run(
-            InitializationOptions(
-                server_name=self.config.server_name,
-                server_version=self.config.server_version,
-                capabilities=self.server.get_capabilities(),
+        # Run the server using stdio transport
+        async with stdio_server() as (read_stream, write_stream):
+            await self.server.run(
+                read_stream,
+                write_stream,
+                InitializationOptions(
+                    server_name=self.config.server_name,
+                    server_version=self.config.server_version,
+                    capabilities=ServerCapabilities(
+                        tools=ToolsCapability()
+                    )
+                )
             )
-        ):
-            logger.info(f"{self.config.server_name} is running")
-            # Keep the server running
-            await asyncio.Event().wait()
 
     async def shutdown(self):
         """
@@ -430,7 +433,7 @@ async def create_and_run_server():
     except KeyboardInterrupt:
         logger.info("Received interrupt signal")
     except Exception as e:
-        logger.error(f"Server error: {e}")
+        logger.error(f"Server error: {e}", exc_info=True)
     finally:
         await server.shutdown()
 
