@@ -28,6 +28,11 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 - `uv run governmentreporter server` - Start MCP server
 - `uv run governmentreporter ingest scotus --start-date YYYY-MM-DD --end-date YYYY-MM-DD` - Ingest SCOTUS opinions
 - `uv run governmentreporter ingest eo --start-date YYYY-MM-DD --end-date YYYY-MM-DD` - Ingest Executive Orders
+- `uv run governmentreporter info collections` - List all collections with statistics
+- `uv run governmentreporter info sample scotus` - View sample SCOTUS documents
+- `uv run governmentreporter info sample eo --show-text` - View sample EO documents with text
+- `uv run governmentreporter info stats scotus` - Show detailed statistics for SCOTUS collection
+- `uv run governmentreporter info stats eo` - Show detailed statistics for EO collection
 - `uv run governmentreporter query "search text"` - Search documents (test semantic search)
 - `uv run governmentreporter --install-completion` - Install shell completion (bash/zsh/fish)
 - `uv run governmentreporter --help` - Show all available commands

@@ -17,6 +17,9 @@ uv run governmentreporter ingest scotus --start-date 2024-01-01 --end-date 2024-
 # Ingest Executive Orders
 uv run governmentreporter ingest eo --start-date 2024-01-01 --end-date 2024-12-31
 
+# View database information
+uv run governmentreporter info collections
+
 # Test semantic search
 uv run governmentreporter query "environmental regulation"
 
@@ -28,7 +31,7 @@ uv run governmentreporter --help
 
 GovernmentReporter creates a Qdrant vector database storing semantic embeddings and rich metadata for hierarchically chunked US federal Supreme Court opinions and Executive Orders. The system uses **intelligent chunking** to break down documents by their natural structure - Supreme Court opinions by opinion type (syllabus, majority, concurring, dissenting) and sections, Executive Orders by header/sections/subsections/tail - enabling precise legal research and retrieval.
 
-**NEW: MCP Server for LLM Integration** - The system now includes a Model Context Protocol server that enables Large Language Models (like Claude, GPT-4, etc.) to semantically search government documents and retrieve relevant chunks for context-aware responses.
+The system includes a Model Context Protocol server that enables Large Language Models (like Claude, GPT-4, etc.) to semantically search government documents and retrieve relevant chunks for context-aware responses.
 
 ## Features
 
@@ -308,6 +311,20 @@ uv run governmentreporter ingest scotus \
   --batch-size 100 \
   --progress-db ./data/progress/scotus.db \
   --qdrant-db-path ./data/qdrant/qdrant_db
+```
+
+### View Database Information
+```bash
+# List all collections and their statistics
+uv run governmentreporter info collections
+
+# View sample documents from a collection
+uv run governmentreporter info sample scotus
+uv run governmentreporter info sample eo --limit 10 --show-text
+
+# View detailed statistics for a collection
+uv run governmentreporter info stats scotus
+uv run governmentreporter info stats eo
 ```
 
 ### Test Semantic Search

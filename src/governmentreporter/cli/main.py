@@ -11,6 +11,7 @@ import click
 from .ingest import ingest
 from .server import server
 from .query import query
+from .info import info
 
 
 def shell_complete_install():
@@ -83,6 +84,7 @@ def main(ctx, install_completion, show_completion):
 main.add_command(ingest)
 main.add_command(server)
 main.add_command(query)
+main.add_command(info)
 
 
 if __name__ == "__main__":
