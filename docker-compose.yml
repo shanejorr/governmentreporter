@@ -1,0 +1,128 @@
+# Docker Compose configuration for GovernmentReporter
+# Provides complete development and deployment environment
+
+version: '3.8'
+
+services:
+  # Qdrant vector database service
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: governmentreporter-qdrant
+    ports:
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC API
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    networks:
+      - governmentreporter-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # GovernmentReporter MCP Server
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: governmentreporter-mcp
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    environment:
+      # Required API keys (set in .env file)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - COURT_LISTENER_API_TOKEN=${COURT_LISTENER_API_TOKEN}
+
+      # Qdrant configuration
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - QDRANT_DB_PATH=/app/data/qdrant/qdrant_db
+
+      # MCP Server configuration
+      - MCP_SERVER_NAME=GovernmentReporter MCP Server
+      - MCP_LOG_LEVEL=INFO
+      - MCP_DEFAULT_SEARCH_LIMIT=10
+      - MCP_MAX_SEARCH_LIMIT=50
+
+      # Application settings
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - governmentreporter-network
+    restart: unless-stopped
+    # Uncomment if MCP server exposes HTTP endpoint
+    # ports:
+    #   - "8080:8080"
+
+  # Optional: Ingestion service for SCOTUS opinions
+  scotus-ingester:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: governmentreporter-scotus-ingester
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - COURT_LISTENER_API_TOKEN=${COURT_LISTENER_API_TOKEN}
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - QDRANT_DB_PATH=/app/data/qdrant/qdrant_db
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - governmentreporter-network
+    command: >
+      python -m governmentreporter.cli.main ingest scotus
+      --start-date 2024-01-01
+      --end-date 2024-12-31
+      --batch-size 50
+    profiles:
+      - ingestion
+    restart: "no"
+
+  # Optional: Ingestion service for Executive Orders
+  eo-ingester:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: governmentreporter-eo-ingester
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - QDRANT_DB_PATH=/app/data/qdrant/qdrant_db
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - governmentreporter-network
+    command: >
+      python -m governmentreporter.cli.main ingest eo
+      --start-date 2024-01-01
+      --end-date 2024-12-31
+      --batch-size 50
+    profiles:
+      - ingestion
+    restart: "no"
+
+networks:
+  governmentreporter-network:
+    driver: bridge
+
+volumes:
+  qdrant_storage:
+    driver: local

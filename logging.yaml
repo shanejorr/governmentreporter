@@ -1,0 +1,210 @@
+# Logging configuration for GovernmentReporter
+# This YAML file configures Python's logging system for all components
+#
+# Usage:
+#   import logging.config
+#   import yaml
+#   with open('logging.yaml', 'r') as f:
+#       config = yaml.safe_load(f)
+#       logging.config.dictConfig(config)
+
+version: 1
+disable_existing_loggers: false
+
+# Format templates for log messages
+formatters:
+  detailed:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+
+  simple:
+    format: '%(levelname)s - %(name)s - %(message)s'
+
+  json:
+    # For structured logging to external systems
+    format: '{"timestamp": "%(asctime)s", "logger": "%(name)s", "level": "%(levelname)s", "message": "%(message)s", "function": "%(funcName)s", "line": %(lineno)d}'
+
+# Output handlers define where logs go
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: simple
+    stream: ext://sys.stdout
+
+  file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/governmentreporter.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf8
+
+  error_file:
+    class: logging.handlers.RotatingFileHandler
+    level: ERROR
+    formatter: detailed
+    filename: logs/errors.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+    encoding: utf8
+
+  ingestion_file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/ingestion.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 3
+    encoding: utf8
+
+  mcp_server_file:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/mcp_server.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 3
+    encoding: utf8
+
+# Logger configuration for different modules
+loggers:
+  # Root package logger
+  governmentreporter:
+    level: DEBUG
+    handlers: [console, file, error_file]
+    propagate: false
+
+  # API module loggers
+  governmentreporter.apis:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  governmentreporter.apis.court_listener:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+
+  governmentreporter.apis.federal_register:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+
+  # Database module loggers
+  governmentreporter.database:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  governmentreporter.database.qdrant:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+
+  governmentreporter.database.ingestion:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  # Ingestion module loggers
+  governmentreporter.ingestion:
+    level: DEBUG
+    handlers: [console, ingestion_file, error_file]
+    propagate: false
+
+  governmentreporter.ingestion.scotus:
+    level: INFO
+    handlers: [console, ingestion_file]
+    propagate: false
+
+  governmentreporter.ingestion.executive_orders:
+    level: INFO
+    handlers: [console, ingestion_file]
+    propagate: false
+
+  governmentreporter.ingestion.progress:
+    level: DEBUG
+    handlers: [console, ingestion_file]
+    propagate: false
+
+  # Processors module loggers
+  governmentreporter.processors:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  governmentreporter.processors.chunking:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+
+  governmentreporter.processors.embeddings:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+
+  governmentreporter.processors.llm_extraction:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+
+  # Server module loggers
+  governmentreporter.server:
+    level: DEBUG
+    handlers: [console, mcp_server_file, error_file]
+    propagate: false
+
+  governmentreporter.server.mcp_server:
+    level: INFO
+    handlers: [console, mcp_server_file]
+    propagate: false
+
+  governmentreporter.server.handlers:
+    level: DEBUG
+    handlers: [console, mcp_server_file]
+    propagate: false
+
+  governmentreporter.server.query_processor:
+    level: INFO
+    handlers: [console, mcp_server_file]
+    propagate: false
+
+  # CLI module loggers
+  governmentreporter.cli:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+
+  # Utils module loggers
+  governmentreporter.utils:
+    level: DEBUG
+    handlers: [console, file]
+    propagate: false
+
+  governmentreporter.utils.monitoring:
+    level: INFO
+    handlers: [console, file]
+    propagate: false
+
+# Root logger (catches everything not specifically configured)
+root:
+  level: WARNING
+  handlers: [console, file]
+
+# Third-party library logging
+  httpx:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+
+  openai:
+    level: WARNING
+    handlers: [console]
+    propagate: false
+
+  qdrant_client:
+    level: WARNING
+    handlers: [console]
+    propagate: false
