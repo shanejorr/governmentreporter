@@ -47,9 +47,20 @@ class QueryProcessor:
         >>> formatted = processor.format_search_results(query, results)
     """
 
-    def __init__(self):
-        """Initialize the QueryProcessor."""
-        pass
+    def __init__(self, max_chunk_length: int = 1000):
+        """
+        Initialize the QueryProcessor.
+
+        Args:
+            max_chunk_length: Maximum length for chunk text before truncation.
+                             Defaults to 1000 characters.
+
+        Raises:
+            ValueError: If max_chunk_length is less than or equal to 0.
+        """
+        if max_chunk_length <= 0:
+            raise ValueError("max_chunk_length must be greater than 0")
+        self.max_chunk_length = max_chunk_length
 
     def format_search_results(self, query: str, results: List[Dict[str, Any]]) -> str:
         """
@@ -72,6 +83,13 @@ class QueryProcessor:
             doc_type = result.get("type")
             score = result.get("score", 0)
             payload = result.get("payload", {})
+
+            # Auto-detect document type from payload if not explicitly set
+            if not doc_type:
+                if "case_name" in payload or "opinion_type" in payload:
+                    doc_type = "scotus"
+                elif "executive_order_number" in payload or "president" in payload:
+                    doc_type = "executive_order"
 
             if doc_type == "scotus":
                 output.append(self._format_scotus_chunk(i, payload, score))
@@ -167,7 +185,7 @@ class QueryProcessor:
 
         # Add the chunk text
         output.append("\n### Document Content:")
-        text = payload.get("text", "No text available")
+        text = payload.get("text") or payload.get("chunk_text", "No text available")
         output.append(text)
 
         # Add metadata section
@@ -283,6 +301,11 @@ class QueryProcessor:
         case_name = payload.get("case_name", "Unknown Case")
         lines.append(f"### {index}. {case_name}")
 
+        # Citation if available
+        citation = payload.get("citation", "")
+        if citation:
+            lines.append(f"*{citation}*")
+
         # Opinion type and justice
         opinion_type = payload.get("opinion_type", "").title()
         justice = payload.get("justice", "")
@@ -298,10 +321,10 @@ class QueryProcessor:
 
         # Chunk text
         lines.append("\n**Excerpt:**")
-        text = payload.get("text", "No text available")
+        text = payload.get("text") or payload.get("chunk_text", "No text available")
         # Truncate very long chunks for display
-        if len(text) > 1000:
-            text = text[:1000] + "..."
+        if len(text) > self.max_chunk_length:
+            text = text[: self.max_chunk_length] + "..."
         lines.append(text)
 
         # Metadata section
@@ -385,10 +408,10 @@ class QueryProcessor:
 
         # Chunk text
         lines.append("\n**Excerpt:**")
-        text = payload.get("text", "No text available")
+        text = payload.get("text") or payload.get("chunk_text", "No text available")
         # Truncate very long chunks for display
-        if len(text) > 1000:
-            text = text[:1000] + "..."
+        if len(text) > self.max_chunk_length:
+            text = text[: self.max_chunk_length] + "..."
         lines.append(text)
 
         # Metadata section
@@ -449,9 +472,9 @@ class QueryProcessor:
                 break
 
         # Add text
-        text = payload.get("text", "No text available")
-        if len(text) > 1000:
-            text = text[:1000] + "..."
+        text = payload.get("text") or payload.get("chunk_text", "No text available")
+        if len(text) > self.max_chunk_length:
+            text = text[: self.max_chunk_length] + "..."
         lines.append(f"\n**Content:**\n{text}")
 
         # Relevance score

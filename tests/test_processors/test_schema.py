@@ -207,41 +207,28 @@ class TestChunkMetadata:
         """
         # Arrange
         chunk_dict = {
+            "chunk_id": "doc123_chunk_0",
             "chunk_index": 0,
-            "chunk_total": 5,
-            "section_name": "Syllabus",
-            "start_char": 0,
-            "end_char": 1000,
+            "section_label": "Syllabus",
         }
 
         # Act
         chunk_meta = ChunkMetadata(**chunk_dict)
 
         # Assert
+        assert chunk_meta.chunk_id == "doc123_chunk_0"
         assert chunk_meta.chunk_index == 0
-        assert chunk_meta.chunk_total == 5
-        assert chunk_meta.section_name == "Syllabus"
-        assert chunk_meta.start_char == 0
-        assert chunk_meta.end_char == 1000
+        assert chunk_meta.section_label == "Syllabus"
 
     def test_chunk_metadata_optional_fields(self):
         """
-        Test that optional chunk fields can be omitted.
+        Test that chunk_id and section_label are required fields.
 
-        Ensures section_name and character positions are optional.
+        ChunkMetadata requires chunk_id, chunk_index, and section_label.
         """
-        # Arrange - Minimal chunk metadata
-        chunk_dict = {"chunk_index": 2, "chunk_total": 10}
-
-        # Act
-        chunk_meta = ChunkMetadata(**chunk_dict)
-
-        # Assert
-        assert chunk_meta.chunk_index == 2
-        assert chunk_meta.chunk_total == 10
-        assert chunk_meta.section_name is None
-        assert chunk_meta.start_char is None
-        assert chunk_meta.end_char is None
+        # Test that all fields are required
+        with pytest.raises(ValidationError):
+            ChunkMetadata(chunk_index=2)  # Missing chunk_id and section_label
 
     def test_chunk_metadata_validation(self):
         """
@@ -251,15 +238,17 @@ class TestChunkMetadata:
         """
         # Test invalid chunk_index type
         with pytest.raises(ValidationError):
-            ChunkMetadata(chunk_index="not_an_int", chunk_total=5)
+            ChunkMetadata(
+                chunk_id="test", chunk_index="not_an_int", section_label="Section"
+            )
 
-        # Test negative chunk_index
-        chunk = ChunkMetadata(chunk_index=-1, chunk_total=5)
+        # Test negative chunk_index (should be allowed)
+        chunk = ChunkMetadata(chunk_id="test", chunk_index=-1, section_label="Section")
         assert chunk.chunk_index == -1  # Pydantic allows negative by default
 
-        # Test invalid section_name type
+        # Test invalid section_label type
         with pytest.raises(ValidationError):
-            ChunkMetadata(chunk_index=0, chunk_total=5, section_name=123)
+            ChunkMetadata(chunk_id="test", chunk_index=0, section_label=123)
 
 
 class TestSupremeCourtMetadata:

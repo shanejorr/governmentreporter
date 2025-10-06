@@ -104,7 +104,7 @@ class TestFormatSearchResults:
 
     def test_format_empty_results(self, query_processor):
         """Test formatting empty search results."""
-        result = query_processor.format_search_results([])
+        result = query_processor.format_search_results("test query", [])
 
         assert isinstance(result, str)
         assert len(result) > 0
@@ -112,7 +112,7 @@ class TestFormatSearchResults:
 
     def test_format_single_result(self, query_processor, scotus_search_results):
         """Test formatting single search result."""
-        result = query_processor.format_search_results([scotus_search_results[0]])
+        result = query_processor.format_search_results("test query", [scotus_search_results[0]])
 
         assert isinstance(result, str)
         assert "Consumer Financial Protection Bureau" in result
@@ -121,7 +121,7 @@ class TestFormatSearchResults:
 
     def test_format_multiple_results(self, query_processor, scotus_search_results):
         """Test formatting multiple search results."""
-        result = query_processor.format_search_results(scotus_search_results)
+        result = query_processor.format_search_results("test query", scotus_search_results)
 
         assert isinstance(result, str)
         assert "Consumer Financial Protection Bureau" in result
@@ -140,7 +140,7 @@ class TestFormatSearchResults:
             }
         ]
 
-        result = query_processor.format_search_results(results)
+        result = query_processor.format_search_results("test query", results)
 
         # Result should not contain the entire long text
         assert len(result) < len(long_text) + 200  # Allow for metadata
@@ -150,7 +150,7 @@ class TestFormatSearchResults:
         self, query_processor, scotus_search_results
     ):
         """Test that relevance scores are included in output."""
-        result = query_processor.format_search_results(scotus_search_results)
+        result = query_processor.format_search_results("test query", scotus_search_results)
 
         # Should show scores in some format
         assert "0.95" in result or "95%" in result or "score" in result.lower()
@@ -163,7 +163,7 @@ class TestFormatSCOTUSResults:
         self, query_processor, scotus_search_results
     ):
         """Test SCOTUS formatting includes legal metadata."""
-        result = query_processor.format_scotus_results(scotus_search_results)
+        result = query_processor.format_scotus_results("test query", scotus_search_results)
 
         assert "Consumer Financial Protection Bureau" in result
         assert "601 U.S. 416 (2024)" in result
@@ -173,7 +173,7 @@ class TestFormatSCOTUSResults:
         self, query_processor, scotus_search_results
     ):
         """Test SCOTUS formatting distinguishes opinion types."""
-        result = query_processor.format_scotus_results(scotus_search_results)
+        result = query_processor.format_scotus_results("test query", scotus_search_results)
 
         assert "majority" in result.lower()
         assert "dissenting" in result.lower()
@@ -182,7 +182,7 @@ class TestFormatSCOTUSResults:
         self, query_processor, scotus_search_results
     ):
         """Test SCOTUS formatting attributes opinions to justices."""
-        result = query_processor.format_scotus_results(scotus_search_results)
+        result = query_processor.format_scotus_results("test query", scotus_search_results)
 
         # Dissenting opinion should be attributed to Alito
         assert "Alito" in result
@@ -191,7 +191,7 @@ class TestFormatSCOTUSResults:
         self, query_processor, scotus_search_results
     ):
         """Test SCOTUS formatting includes legal topics."""
-        result = query_processor.format_scotus_results(scotus_search_results)
+        result = query_processor.format_scotus_results("test query", scotus_search_results)
 
         assert "Constitutional Law" in result
         assert "Administrative Law" in result
@@ -200,7 +200,7 @@ class TestFormatSCOTUSResults:
         self, query_processor, scotus_search_results
     ):
         """Test SCOTUS formatting includes constitutional citations."""
-        result = query_processor.format_scotus_results(scotus_search_results)
+        result = query_processor.format_scotus_results("test query", scotus_search_results)
 
         assert (
             "Art. I, § 9, cl. 7" in result or "Appropriations Clause" in result.lower()
@@ -208,7 +208,7 @@ class TestFormatSCOTUSResults:
 
     def test_format_scotus_empty_results(self, query_processor):
         """Test SCOTUS formatting handles empty results."""
-        result = query_processor.format_scotus_results([])
+        result = query_processor.format_scotus_results("test query", [])
 
         assert isinstance(result, str)
         assert len(result) > 0
@@ -221,7 +221,7 @@ class TestFormatEOResults:
         self, query_processor, eo_search_results
     ):
         """Test EO formatting includes order metadata."""
-        result = query_processor.format_eo_results(eo_search_results)
+        result = query_processor.format_eo_results("test query", eo_search_results)
 
         assert "14100" in result
         assert "Promoting Access to Voting" in result
@@ -230,21 +230,21 @@ class TestFormatEOResults:
 
     def test_format_eo_includes_policy_topics(self, query_processor, eo_search_results):
         """Test EO formatting includes policy topics."""
-        result = query_processor.format_eo_results(eo_search_results)
+        result = query_processor.format_eo_results("test query", eo_search_results)
 
         assert "voting rights" in result
         assert "civil rights" in result
 
     def test_format_eo_includes_agencies(self, query_processor, eo_search_results):
         """Test EO formatting includes impacted agencies."""
-        result = query_processor.format_eo_results(eo_search_results)
+        result = query_processor.format_eo_results("test query", eo_search_results)
 
         assert "DOJ" in result
         assert "DHS" in result
 
     def test_format_eo_empty_results(self, query_processor):
         """Test EO formatting handles empty results."""
-        result = query_processor.format_eo_results([])
+        result = query_processor.format_eo_results("test query", [])
 
         assert isinstance(result, str)
         assert len(result) > 0
@@ -354,7 +354,7 @@ class TestQueryProcessorEdgeCases:
 
     def test_handles_none_input(self, query_processor):
         """Test processor handles None input gracefully."""
-        result = query_processor.format_search_results(None)
+        result = query_processor.format_search_results("test query", None)
 
         assert isinstance(result, str)
         # Should not crash
@@ -364,14 +364,14 @@ class TestQueryProcessorEdgeCases:
         malformed = [{"invalid": "structure"}, {"id": "test", "payload": None}]
 
         # Should not crash
-        result = query_processor.format_search_results(malformed)
+        result = query_processor.format_search_results("test query", malformed)
         assert isinstance(result, str)
 
     def test_handles_missing_payload(self, query_processor):
         """Test processor handles results with missing payload."""
         results = [{"id": "test_id", "score": 0.9}]
 
-        result = query_processor.format_search_results(results)
+        result = query_processor.format_search_results("test query", results)
         assert isinstance(result, str)
 
     def test_handles_unicode_content(self, query_processor):
@@ -387,7 +387,7 @@ class TestQueryProcessorEdgeCases:
             }
         ]
 
-        result = query_processor.format_search_results(results)
+        result = query_processor.format_search_results("test query", results)
         assert isinstance(result, str)
         assert "🎉" in result or "emoji" in result.lower()
 
@@ -402,6 +402,6 @@ class TestQueryProcessorEdgeCases:
             for i in range(100)
         ]
 
-        result = query_processor.format_search_results(large_results)
+        result = query_processor.format_search_results("test query", large_results)
         assert isinstance(result, str)
         # Should complete in reasonable time
