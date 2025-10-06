@@ -5,9 +5,10 @@ Provides a command-line interface for testing document search
 without needing to run the full MCP server.
 """
 
-import click
 import sys
 from typing import Optional
+
+import click
 
 
 @click.command()

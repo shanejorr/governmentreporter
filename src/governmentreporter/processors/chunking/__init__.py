@@ -31,21 +31,12 @@ Usage:
 import tiktoken
 
 # Import shared utilities from base
-from .base import (
-    ChunkingConfig,
-    SCOTUS_CFG,
-    EO_CFG,
-    _load_config,
-    get_chunking_config,
-    count_tokens,
-    normalize_whitespace,
-    chunk_text_with_tokens,
-    overlap_tokens,
-)
-
+from .base import (EO_CFG, SCOTUS_CFG, ChunkingConfig, _load_config,
+                   chunk_text_with_tokens, count_tokens, get_chunking_config,
+                   normalize_whitespace, overlap_tokens)
+from .executive_orders import chunk_executive_order
 # Import document-specific chunkers
 from .scotus import chunk_supreme_court_opinion
-from .executive_orders import chunk_executive_order
 
 __all__ = [
     # Configuration

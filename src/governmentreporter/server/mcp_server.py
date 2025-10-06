@@ -28,25 +28,16 @@ from typing import Any, Dict, List, Optional
 from mcp.server import Server
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
-from mcp.types import (
-    Tool,
-    TextContent,
-    ImageContent,
-    EmbeddedResource,
-    ServerCapabilities,
-    ToolsCapability,
-)
+from mcp.types import (EmbeddedResource, ImageContent, ServerCapabilities,
+                       TextContent, Tool, ToolsCapability)
 
 from ..database.qdrant import QdrantDBClient
 from ..processors.embeddings import generate_embedding
-from .handlers import (
-    handle_search_government_documents,
-    handle_search_scotus_opinions,
-    handle_search_executive_orders,
-    handle_get_document_by_id,
-    handle_list_collections,
-)
 from .config import ServerConfig, get_config
+from .handlers import (handle_get_document_by_id, handle_list_collections,
+                       handle_search_executive_orders,
+                       handle_search_government_documents,
+                       handle_search_scotus_opinions)
 
 # Set up logging
 logger = logging.getLogger(__name__)

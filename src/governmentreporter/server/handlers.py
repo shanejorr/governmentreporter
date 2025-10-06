@@ -22,11 +22,13 @@ Each handler follows the pattern:
 import logging
 from typing import Any, Dict
 
-from ..database.qdrant import QdrantDBClient
-from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny, Range
-from ..processors.embeddings import generate_embedding
+from qdrant_client.models import (FieldCondition, Filter, MatchAny, MatchValue,
+                                  Range)
+
 from ..apis.court_listener import CourtListenerClient
 from ..apis.federal_register import FederalRegisterClient
+from ..database.qdrant import QdrantDBClient
+from ..processors.embeddings import generate_embedding
 from .query_processor import QueryProcessor
 
 logger = logging.getLogger(__name__)

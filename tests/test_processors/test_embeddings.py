@@ -18,14 +18,13 @@ Python Learning Notes:
 """
 
 import logging
-from unittest.mock import Mock, patch, MagicMock
-import pytest
-from openai import OpenAI, RateLimitError, APIError
+from unittest.mock import MagicMock, Mock, patch
 
-from governmentreporter.processors.embeddings import (
-    EmbeddingGenerator,
-    generate_embedding,
-)
+import pytest
+from openai import APIError, OpenAI, RateLimitError
+
+from governmentreporter.processors.embeddings import (EmbeddingGenerator,
+                                                      generate_embedding)
 
 
 class TestEmbeddingGenerator:

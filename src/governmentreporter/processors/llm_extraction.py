@@ -25,7 +25,7 @@ import re
 import time
 from typing import Any, Dict, List, Optional
 
-from openai import OpenAI, RateLimitError, APIError
+from openai import APIError, OpenAI, RateLimitError
 
 from ..utils import get_logger
 from ..utils.config import get_openai_api_key

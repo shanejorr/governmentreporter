@@ -21,16 +21,15 @@ Python Learning Notes:
 import json
 from datetime import datetime
 from typing import List
+
 import pytest
 from pydantic import ValidationError
 
-from governmentreporter.processors.schema import (
-    SharedMetadata,
-    ChunkMetadata,
-    SupremeCourtMetadata,
-    ExecutiveOrderMetadata,
-    QdrantPayload,
-)
+from governmentreporter.processors.schema import (ChunkMetadata,
+                                                  ExecutiveOrderMetadata,
+                                                  QdrantPayload,
+                                                  SharedMetadata,
+                                                  SupremeCourtMetadata)
 
 
 class TestSharedMetadata:

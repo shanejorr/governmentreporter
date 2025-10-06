@@ -4,10 +4,11 @@ Unit tests for abstract base classes and data models in the APIs module.
 Streamlined test suite covering essential functionality.
 """
 
-import pytest
 from abc import ABC
-from typing import Dict, Any, Optional
-from unittest.mock import Mock, MagicMock
+from typing import Any, Dict, Optional
+from unittest.mock import MagicMock, Mock
+
+import pytest
 
 from governmentreporter.apis.base import Document, GovernmentAPIClient
 

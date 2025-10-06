@@ -22,7 +22,7 @@ import logging
 from typing import Any, Dict, List, Tuple
 from uuid import uuid4
 
-from .qdrant import QdrantDBClient, Document
+from .qdrant import Document, QdrantDBClient
 
 logger = logging.getLogger(__name__)
 

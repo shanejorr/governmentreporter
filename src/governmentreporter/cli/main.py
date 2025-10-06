@@ -7,11 +7,13 @@ All commands are organized into subcommands for different operations.
 
 import os
 import sys
+
 import click
-from .ingest import ingest
-from .server import server
-from .query import query
+
 from .info import info
+from .ingest import ingest
+from .query import query
+from .server import server
 
 
 def shell_complete_install():

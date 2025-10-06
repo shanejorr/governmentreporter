@@ -12,9 +12,9 @@ Usage:
     governmentreporter query       # Search documents
 """
 
-from .main import main
 from .ingest import ingest
-from .server import server
+from .main import main
 from .query import query
+from .server import server
 
 __all__ = ["main", "ingest", "server", "query"]

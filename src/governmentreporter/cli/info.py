@@ -5,10 +5,11 @@ Provides commands for inspecting Qdrant database contents, viewing
 collection statistics, and browsing sample documents.
 """
 
-import click
 import sys
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+import click
 
 
 @click.group()
@@ -340,8 +341,9 @@ def stats(
         governmentreporter info stats scotus
         governmentreporter info stats eo
     """
-    from ..database.qdrant import QdrantDBClient
     from collections import Counter
+
+    from ..database.qdrant import QdrantDBClient
 
     # Map friendly names to collection names
     collection_map = {

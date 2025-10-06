@@ -31,7 +31,7 @@ Python Learning Notes:
 """
 
 import json
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, Mock, call, patch
 

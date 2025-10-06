@@ -22,13 +22,12 @@ import io
 import logging
 import sys
 import time
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import MagicMock, call, patch
+
 import pytest
 
-from governmentreporter.utils.monitoring import (
-    PerformanceMonitor,
-    setup_logging,
-)
+from governmentreporter.utils.monitoring import (PerformanceMonitor,
+                                                 setup_logging)
 
 
 class TestDocumentRecording:

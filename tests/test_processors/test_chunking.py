@@ -18,21 +18,15 @@ Python Learning Notes:
 """
 
 import os
-from unittest.mock import Mock, patch, MagicMock
-import pytest
 from dataclasses import dataclass
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 from governmentreporter.processors.chunking import (
-    ChunkingConfig,
-    chunk_supreme_court_opinion,
-    chunk_executive_order,
-    _load_config,
-    get_chunking_config,
-    count_tokens,
-    normalize_whitespace,
-    chunk_text_with_tokens,
-    overlap_tokens,
-)
+    ChunkingConfig, _load_config, chunk_executive_order,
+    chunk_supreme_court_opinion, chunk_text_with_tokens, count_tokens,
+    get_chunking_config, normalize_whitespace, overlap_tokens)
 
 
 class TestChunkingConfig:

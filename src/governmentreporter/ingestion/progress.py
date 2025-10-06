@@ -9,13 +9,13 @@ The tracker uses SQLite to maintain state across script runs, allowing
 for safe interruption and resumption of large batch jobs.
 """
 
-import sqlite3
-from datetime import datetime
-from typing import Optional, List, Dict, Any, Tuple
-from pathlib import Path
-from enum import Enum
 import json
 import logging
+import sqlite3
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

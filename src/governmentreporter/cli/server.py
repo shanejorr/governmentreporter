@@ -5,9 +5,10 @@ Starts the Model Context Protocol server for LLM integration.
 """
 
 import asyncio
-import click
 import logging
 import sys
+
+import click
 
 from ..server.mcp_server import create_and_run_server
 

@@ -21,7 +21,7 @@ Python Learning Notes:
 
 import uuid
 from typing import Any, Dict, List
-from unittest.mock import MagicMock, Mock, patch, call
+from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
 

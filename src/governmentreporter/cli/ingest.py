@@ -5,9 +5,10 @@ Provides commands for ingesting Supreme Court opinions and Executive Orders
 into the Qdrant vector database.
 """
 
-import click
 import sys
 from datetime import datetime
+
+import click
 
 
 @click.group()

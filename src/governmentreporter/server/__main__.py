@@ -8,8 +8,8 @@ This module allows the MCP server to be run using:
 It executes the main server functionality.
 """
 
-import sys
 import os
+import sys
 
 # Execute the server.py file directly
 server_py_path = os.path.join(

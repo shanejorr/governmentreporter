@@ -16,9 +16,9 @@ Classes:
 """
 
 from .base import DocumentIngester
-from .scotus import SCOTUSIngester
 from .executive_orders import ExecutiveOrderIngester
 from .progress import ProgressTracker
+from .scotus import SCOTUSIngester
 
 __all__ = [
     "DocumentIngester",

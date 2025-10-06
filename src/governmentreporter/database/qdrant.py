@@ -18,16 +18,8 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from qdrant_client import QdrantClient as QdrantBaseClient
-from qdrant_client.models import (
-    Distance,
-    FieldCondition,
-    Filter,
-    MatchValue,
-    MatchAny,
-    Range,
-    PointStruct,
-    VectorParams,
-)
+from qdrant_client.models import (Distance, FieldCondition, Filter, MatchAny,
+                                  MatchValue, PointStruct, Range, VectorParams)
 
 logger = logging.getLogger(__name__)
 

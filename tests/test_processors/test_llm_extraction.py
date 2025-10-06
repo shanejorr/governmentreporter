@@ -18,14 +18,13 @@ Python Learning Notes:
 """
 
 import json
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import MagicMock, Mock, call, patch
+
 import pytest
-from openai import OpenAI, RateLimitError, APIError
+from openai import APIError, OpenAI, RateLimitError
 
 from governmentreporter.processors.llm_extraction import (
-    generate_scotus_llm_fields,
-    generate_eo_llm_fields,
-)
+    generate_eo_llm_fields, generate_scotus_llm_fields)
 
 
 class TestGenerateSCOTUSLLMFields:

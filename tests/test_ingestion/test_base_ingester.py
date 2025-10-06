@@ -10,9 +10,10 @@ Python Learning Notes:
     - Testing abstract classes requires creating test implementations
 """
 
-import pytest
-from unittest.mock import MagicMock, patch, call
 from abc import ABC
+from unittest.mock import MagicMock, call, patch
+
+import pytest
 
 from governmentreporter.ingestion.base import DocumentIngester
 
