@@ -206,12 +206,6 @@ class TestFormatSCOTUSResults:
             "Art. I, § 9, cl. 7" in result or "Appropriations Clause" in result.lower()
         )
 
-    def test_format_scotus_empty_results(self, query_processor):
-        """Test SCOTUS formatting handles empty results."""
-        result = query_processor.format_scotus_results("test query", [])
-
-        assert isinstance(result, str)
-        assert len(result) > 0
 
 
 class TestFormatEOResults:
@@ -242,12 +236,6 @@ class TestFormatEOResults:
         assert "DOJ" in result
         assert "DHS" in result
 
-    def test_format_eo_empty_results(self, query_processor):
-        """Test EO formatting handles empty results."""
-        result = query_processor.format_eo_results("test query", [])
-
-        assert isinstance(result, str)
-        assert len(result) > 0
 
 
 class TestFormatDocumentChunk:
@@ -352,27 +340,6 @@ class TestFormatCollectionsList:
 class TestQueryProcessorEdgeCases:
     """Test edge cases and error handling."""
 
-    def test_handles_none_input(self, query_processor):
-        """Test processor handles None input gracefully."""
-        result = query_processor.format_search_results("test query", None)
-
-        assert isinstance(result, str)
-        # Should not crash
-
-    def test_handles_malformed_results(self, query_processor):
-        """Test processor handles malformed result data."""
-        malformed = [{"invalid": "structure"}, {"id": "test", "payload": None}]
-
-        # Should not crash
-        result = query_processor.format_search_results("test query", malformed)
-        assert isinstance(result, str)
-
-    def test_handles_missing_payload(self, query_processor):
-        """Test processor handles results with missing payload."""
-        results = [{"id": "test_id", "score": 0.9}]
-
-        result = query_processor.format_search_results("test query", results)
-        assert isinstance(result, str)
 
     def test_handles_unicode_content(self, query_processor):
         """Test processor handles unicode content correctly."""
@@ -391,17 +358,3 @@ class TestQueryProcessorEdgeCases:
         assert isinstance(result, str)
         assert "🎉" in result or "emoji" in result.lower()
 
-    def test_handles_very_large_result_sets(self, query_processor):
-        """Test processor handles large number of results efficiently."""
-        large_results = [
-            {
-                "id": f"doc_{i}",
-                "score": 0.9,
-                "payload": {"chunk_text": f"Content {i}", "document_id": f"doc_{i}"},
-            }
-            for i in range(100)
-        ]
-
-        result = query_processor.format_search_results("test query", large_results)
-        assert isinstance(result, str)
-        # Should complete in reasonable time

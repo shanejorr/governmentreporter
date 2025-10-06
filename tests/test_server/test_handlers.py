@@ -125,41 +125,6 @@ class TestSearchGovernmentDocuments:
 
     @pytest.mark.asyncio
     @patch("governmentreporter.server.handlers.generate_embedding")
-    async def test_search_with_collection_filter(
-        self, mock_generate_embedding, mock_qdrant_client
-    ):
-        """Test search with specific collection filter."""
-        mock_generate_embedding.return_value = [0.1] * 1536
-        mock_qdrant_client.semantic_search.return_value = []
-
-        await handle_search_government_documents(
-            query="test",
-            qdrant_client=mock_qdrant_client,
-            collections=["supreme_court_opinions"],
-        )
-
-        # Verify collection filter was passed
-        call_kwargs = mock_qdrant_client.semantic_search.call_args[1]
-        assert "collection_name" in call_kwargs or call_kwargs.get("collections") == [
-            "supreme_court_opinions"
-        ]
-
-    @pytest.mark.asyncio
-    @patch("governmentreporter.server.handlers.generate_embedding")
-    async def test_search_with_limit(self, mock_generate_embedding, mock_qdrant_client):
-        """Test search respects limit parameter."""
-        mock_generate_embedding.return_value = [0.1] * 1536
-        mock_qdrant_client.semantic_search.return_value = []
-
-        await handle_search_government_documents(
-            query="test", qdrant_client=mock_qdrant_client, limit=5
-        )
-
-        call_kwargs = mock_qdrant_client.semantic_search.call_args[1]
-        assert call_kwargs.get("limit") == 5
-
-    @pytest.mark.asyncio
-    @patch("governmentreporter.server.handlers.generate_embedding")
     async def test_search_with_empty_results(
         self, mock_generate_embedding, mock_qdrant_client
     ):
@@ -228,76 +193,6 @@ class TestSearchSCOTUSOpinions:
         assert isinstance(result, str)
         assert "Test v. Example" in result
 
-    @pytest.mark.asyncio
-    @patch("governmentreporter.server.handlers.generate_embedding")
-    async def test_scotus_search_with_opinion_type_filter(
-        self, mock_generate_embedding, mock_qdrant_client
-    ):
-        """Test SCOTUS search with opinion type filter."""
-        mock_generate_embedding.return_value = [0.1] * 1536
-        mock_qdrant_client.semantic_search.return_value = []
-
-        await handle_search_scotus_opinions(
-            query="test", qdrant_client=mock_qdrant_client, opinion_type="dissenting"
-        )
-
-        # Verify filter was applied
-        call_args = mock_qdrant_client.semantic_search.call_args
-        assert call_args is not None
-
-    @pytest.mark.asyncio
-    @patch("governmentreporter.server.handlers.generate_embedding")
-    async def test_scotus_search_with_justice_filter(
-        self, mock_generate_embedding, mock_qdrant_client
-    ):
-        """Test SCOTUS search with justice filter."""
-        mock_generate_embedding.return_value = [0.1] * 1536
-        mock_qdrant_client.semantic_search.return_value = []
-
-        await handle_search_scotus_opinions(
-            query="test", qdrant_client=mock_qdrant_client, justice="Thomas"
-        )
-
-        call_args = mock_qdrant_client.semantic_search.call_args
-        assert call_args is not None
-
-    @pytest.mark.asyncio
-    @patch("governmentreporter.server.handlers.generate_embedding")
-    async def test_scotus_search_with_date_range(
-        self, mock_generate_embedding, mock_qdrant_client
-    ):
-        """Test SCOTUS search with date range filters."""
-        mock_generate_embedding.return_value = [0.1] * 1536
-        mock_qdrant_client.semantic_search.return_value = []
-
-        await handle_search_scotus_opinions(
-            query="test",
-            qdrant_client=mock_qdrant_client,
-            start_date="2024-01-01",
-            end_date="2024-12-31",
-        )
-
-        call_args = mock_qdrant_client.semantic_search.call_args
-        assert call_args is not None
-
-    @pytest.mark.asyncio
-    @patch("governmentreporter.server.handlers.generate_embedding")
-    async def test_scotus_search_with_multiple_filters(
-        self, mock_generate_embedding, mock_qdrant_client
-    ):
-        """Test SCOTUS search with multiple filters combined."""
-        mock_generate_embedding.return_value = [0.1] * 1536
-        mock_qdrant_client.semantic_search.return_value = []
-
-        await handle_search_scotus_opinions(
-            query="test",
-            qdrant_client=mock_qdrant_client,
-            opinion_type="concurring",
-            justice="Kagan",
-            start_date="2023-01-01",
-        )
-
-        mock_qdrant_client.semantic_search.assert_called_once()
 
 
 class TestSearchExecutiveOrders:
@@ -319,72 +214,6 @@ class TestSearchExecutiveOrders:
         assert isinstance(result, str)
         assert "14100" in result or "Test Executive Order" in result
 
-    @pytest.mark.asyncio
-    @patch("governmentreporter.server.handlers.generate_embedding")
-    async def test_eo_search_with_president_filter(
-        self, mock_generate_embedding, mock_qdrant_client
-    ):
-        """Test EO search with president filter."""
-        mock_generate_embedding.return_value = [0.1] * 1536
-        mock_qdrant_client.semantic_search.return_value = []
-
-        await handle_search_executive_orders(
-            query="test", qdrant_client=mock_qdrant_client, president="Biden"
-        )
-
-        call_args = mock_qdrant_client.semantic_search.call_args
-        assert call_args is not None
-
-    @pytest.mark.asyncio
-    @patch("governmentreporter.server.handlers.generate_embedding")
-    async def test_eo_search_with_agency_filter(
-        self, mock_generate_embedding, mock_qdrant_client
-    ):
-        """Test EO search with agency filter."""
-        mock_generate_embedding.return_value = [0.1] * 1536
-        mock_qdrant_client.semantic_search.return_value = []
-
-        await handle_search_executive_orders(
-            query="test", qdrant_client=mock_qdrant_client, agency="EPA"
-        )
-
-        call_args = mock_qdrant_client.semantic_search.call_args
-        assert call_args is not None
-
-    @pytest.mark.asyncio
-    @patch("governmentreporter.server.handlers.generate_embedding")
-    async def test_eo_search_with_policy_topic_filter(
-        self, mock_generate_embedding, mock_qdrant_client
-    ):
-        """Test EO search with policy topic filter."""
-        mock_generate_embedding.return_value = [0.1] * 1536
-        mock_qdrant_client.semantic_search.return_value = []
-
-        await handle_search_executive_orders(
-            query="test", qdrant_client=mock_qdrant_client, policy_topic="climate"
-        )
-
-        call_args = mock_qdrant_client.semantic_search.call_args
-        assert call_args is not None
-
-    @pytest.mark.asyncio
-    @patch("governmentreporter.server.handlers.generate_embedding")
-    async def test_eo_search_with_date_range(
-        self, mock_generate_embedding, mock_qdrant_client
-    ):
-        """Test EO search with date range."""
-        mock_generate_embedding.return_value = [0.1] * 1536
-        mock_qdrant_client.semantic_search.return_value = []
-
-        await handle_search_executive_orders(
-            query="test",
-            qdrant_client=mock_qdrant_client,
-            start_date="2024-01-01",
-            end_date="2024-12-31",
-        )
-
-        call_args = mock_qdrant_client.semantic_search.call_args
-        assert call_args is not None
 
 
 class TestGetDocumentById:

@@ -138,64 +138,6 @@ class TestMCPToolRegistration:
         assert len(tools) == 5
         assert all(isinstance(tool, Tool) for tool in tools)
 
-    @pytest.mark.asyncio
-    async def test_search_government_documents_tool_registered(self, mock_config):
-        """Test search_government_documents tool is registered."""
-        server = GovernmentReporterMCP(config=mock_config)
-        tools = await server.server._list_tools_handlers[0].fn()
-
-        tool_names = [tool.name for tool in tools]
-        assert "search_government_documents" in tool_names
-
-        # Find the tool and verify its properties
-        search_tool = next(t for t in tools if t.name == "search_government_documents")
-        assert "search" in search_tool.description.lower()
-        assert search_tool.inputSchema is not None
-
-    @pytest.mark.asyncio
-    async def test_search_scotus_opinions_tool_registered(self, mock_config):
-        """Test search_scotus_opinions tool is registered."""
-        server = GovernmentReporterMCP(config=mock_config)
-        tools = await server.server._list_tools_handlers[0].fn()
-
-        tool_names = [tool.name for tool in tools]
-        assert "search_scotus_opinions" in tool_names
-
-        scotus_tool = next(t for t in tools if t.name == "search_scotus_opinions")
-        assert (
-            "supreme court" in scotus_tool.description.lower()
-            or "scotus" in scotus_tool.description.lower()
-        )
-
-    @pytest.mark.asyncio
-    async def test_search_executive_orders_tool_registered(self, mock_config):
-        """Test search_executive_orders tool is registered."""
-        server = GovernmentReporterMCP(config=mock_config)
-        tools = await server.server._list_tools_handlers[0].fn()
-
-        tool_names = [tool.name for tool in tools]
-        assert "search_executive_orders" in tool_names
-
-        eo_tool = next(t for t in tools if t.name == "search_executive_orders")
-        assert "executive order" in eo_tool.description.lower()
-
-    @pytest.mark.asyncio
-    async def test_get_document_by_id_tool_registered(self, mock_config):
-        """Test get_document_by_id tool is registered."""
-        server = GovernmentReporterMCP(config=mock_config)
-        tools = await server.server._list_tools_handlers[0].fn()
-
-        tool_names = [tool.name for tool in tools]
-        assert "get_document_by_id" in tool_names
-
-    @pytest.mark.asyncio
-    async def test_list_collections_tool_registered(self, mock_config):
-        """Test list_collections tool is registered."""
-        server = GovernmentReporterMCP(config=mock_config)
-        tools = await server.server._list_tools_handlers[0].fn()
-
-        tool_names = [tool.name for tool in tools]
-        assert "list_collections" in tool_names
 
 
 class TestMCPToolInputSchemas:

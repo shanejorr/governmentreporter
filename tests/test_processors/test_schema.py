@@ -79,12 +79,14 @@ class TestSharedMetadata:
         # Act
         metadata = SharedMetadata(**metadata_dict)
 
-        # Assert
+        # Assert - Verify model creation and key fields
         assert metadata.document_id == "doc-12345"
         assert metadata.title == "Test Case v. United States"
         assert metadata.year == 2024
         assert len(metadata.constitution_cited) == 2
         assert len(metadata.topics_or_policy_areas) == 5
+        assert metadata.federal_statutes_cited == ["42 U.S.C. § 1983"]
+        assert "40 C.F.R. Part 60" in metadata.federal_regulations_cited
 
     def test_shared_metadata_missing_required_field(self):
         """
