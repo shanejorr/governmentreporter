@@ -514,7 +514,7 @@ class TestEmbeddingIntegration:
 
         # Verify the special text was passed correctly (check the actual parameter)
         call_args = mock_client.embeddings.create.call_args
-        assert call_args.kwargs['input'] == special_text
+        assert call_args.kwargs["input"] == special_text
 
 
 # Fixtures for embedding tests

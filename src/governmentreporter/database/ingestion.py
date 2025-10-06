@@ -114,7 +114,7 @@ class QdrantIngestionClient:
 
         Args:
             payloads (List[Dict[str, Any]]): List of document chunk payloads.
-                                            Each should be a dict from QdrantPayload.dict()
+                                            Each should be a dict from QdrantPayload.model_dump()
             embeddings (List[List[float]]): Corresponding embedding vectors.
                                            Must match payloads in order and count.
             batch_size (int): Number of documents to process per batch.
@@ -134,7 +134,7 @@ class QdrantIngestionClient:
             for chunk in document_chunks:
                 payload = build_payload(chunk)
                 embedding = generate_embedding(chunk.text)
-                payloads.append(payload.dict())
+                payloads.append(payload.model_dump())
                 embeddings.append(embedding)
 
             # Store in Qdrant

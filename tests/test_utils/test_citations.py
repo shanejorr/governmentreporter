@@ -23,12 +23,15 @@ class TestFormatCFRCitation:
         assert format_cfr_citation("14", "91.817") == "14 C.F.R. § 91.817"
         assert format_cfr_citation("21", "101.1", "2024") == "21 C.F.R. § 101.1 (2024)"
 
-    @pytest.mark.parametrize("title,section,year,expected", [
-        ("14", "91.817", None, "14 C.F.R. § 91.817"),
-        ("14", "91.817", "2024", "14 C.F.R. § 91.817 (2024)"),
-        ("5", "1.1", "2023", "5 C.F.R. § 1.1 (2023)"),
-        ("42", "1983.1(a)(2)(iii)", "2023", "42 C.F.R. § 1983.1(a)(2)(iii) (2023)"),
-    ])
+    @pytest.mark.parametrize(
+        "title,section,year,expected",
+        [
+            ("14", "91.817", None, "14 C.F.R. § 91.817"),
+            ("14", "91.817", "2024", "14 C.F.R. § 91.817 (2024)"),
+            ("5", "1.1", "2023", "5 C.F.R. § 1.1 (2023)"),
+            ("42", "1983.1(a)(2)(iii)", "2023", "42 C.F.R. § 1983.1(a)(2)(iii) (2023)"),
+        ],
+    )
     def test_cfr_citation_parametrized(self, title, section, year, expected):
         """Test CFR citations with various formats."""
         result = format_cfr_citation(title, section, year)
@@ -43,11 +46,14 @@ class TestFormatUSCCitation:
         assert format_usc_citation("8", "1182") == "8 U.S.C. § 1182"
         assert format_usc_citation("42", "1983", "2024") == "42 U.S.C. § 1983 (2024)"
 
-    @pytest.mark.parametrize("title,section,year,expected", [
-        ("8", "1182", None, "8 U.S.C. § 1182"),
-        ("8", "1182(f)", "2023", "8 U.S.C. § 1182(f) (2023)"),
-        ("42", "1983", "2024", "42 U.S.C. § 1983 (2024)"),
-    ])
+    @pytest.mark.parametrize(
+        "title,section,year,expected",
+        [
+            ("8", "1182", None, "8 U.S.C. § 1182"),
+            ("8", "1182(f)", "2023", "8 U.S.C. § 1182(f) (2023)"),
+            ("42", "1983", "2024", "42 U.S.C. § 1983 (2024)"),
+        ],
+    )
     def test_usc_citation_parametrized(self, title, section, year, expected):
         """Test USC citations with various formats."""
         result = format_usc_citation(title, section, year)
@@ -60,24 +66,40 @@ class TestFormatConstitutionCitation:
     def test_article_citations(self):
         """Test Article citations."""
         assert format_constitution_citation(article="I") == "U.S. Const. art. I"
-        assert format_constitution_citation(article="I", section="8") == "U.S. Const. art. I, § 8"
-        assert format_constitution_citation(article="I", section="9", clause="7") == "U.S. Const. art. I, § 9, cl. 7"
+        assert (
+            format_constitution_citation(article="I", section="8")
+            == "U.S. Const. art. I, § 8"
+        )
+        assert (
+            format_constitution_citation(article="I", section="9", clause="7")
+            == "U.S. Const. art. I, § 9, cl. 7"
+        )
 
     def test_amendment_citations(self):
         """Test Amendment citations."""
         assert format_constitution_citation(amendment="XIV") == "U.S. Const. amend. XIV"
-        assert format_constitution_citation(amendment="XIV", section="1") == "U.S. Const. amend. XIV, § 1"
+        assert (
+            format_constitution_citation(amendment="XIV", section="1")
+            == "U.S. Const. amend. XIV, § 1"
+        )
 
-    @pytest.mark.parametrize("article,amendment,section,clause,expected", [
-        ("I", None, None, None, "U.S. Const. art. I"),
-        ("I", None, "8", None, "U.S. Const. art. I, § 8"),
-        ("I", None, "9", "7", "U.S. Const. art. I, § 9, cl. 7"),
-        (None, "XIV", None, None, "U.S. Const. amend. XIV"),
-        (None, "XIV", "1", None, "U.S. Const. amend. XIV, § 1"),
-    ])
-    def test_constitution_citation_parametrized(self, article, amendment, section, clause, expected):
+    @pytest.mark.parametrize(
+        "article,amendment,section,clause,expected",
+        [
+            ("I", None, None, None, "U.S. Const. art. I"),
+            ("I", None, "8", None, "U.S. Const. art. I, § 8"),
+            ("I", None, "9", "7", "U.S. Const. art. I, § 9, cl. 7"),
+            (None, "XIV", None, None, "U.S. Const. amend. XIV"),
+            (None, "XIV", "1", None, "U.S. Const. amend. XIV, § 1"),
+        ],
+    )
+    def test_constitution_citation_parametrized(
+        self, article, amendment, section, clause, expected
+    ):
         """Test Constitutional citations with various formats."""
-        result = format_constitution_citation(article=article, amendment=amendment, section=section, clause=clause)
+        result = format_constitution_citation(
+            article=article, amendment=amendment, section=section, clause=clause
+        )
         assert result == expected
 
 

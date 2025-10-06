@@ -127,7 +127,6 @@ class TestGetCourtListenerToken:
         assert result == "   \t\n  "
 
 
-
 class TestGetOpenAIApiKey:
     """
     Test suite for get_openai_api_key() function.
@@ -225,7 +224,6 @@ class TestGetOpenAIApiKey:
         # Assert: Newline is preserved
         assert result == test_key
         assert result.endswith("\n")
-
 
 
 class TestConfigurationIntegration:
@@ -367,4 +365,3 @@ class TestConfigurationEdgeCases:
         # Act & Assert: Should not find the lowercase version
         with pytest.raises(ValueError, match="OPENAI_API_KEY not found"):
             get_openai_api_key()
-

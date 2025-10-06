@@ -234,15 +234,11 @@ class ExecutiveOrderMetadata(SharedMetadata):
     )
 
     # LLM-generated fields specific to Executive Orders
-    plain_summary: str = Field(
-        description="Brief plain-language summary of the order"
-    )
+    plain_summary: str = Field(description="Brief plain-language summary of the order")
     action_plain: str = Field(
         description="Plain-language description of the primary action or directive"
     )
-    impact_simple: str = Field(
-        description="Simple description of the order's impact"
-    )
+    impact_simple: str = Field(description="Simple description of the order's impact")
     implementation_requirements: str = Field(
         description="Key implementation requirements in plain language"
     )
@@ -336,7 +332,7 @@ def create_scotus_chunk_metadata(
         )
         combined = create_scotus_chunk_metadata(doc_meta, chunk_meta)
     """
-    return {**doc_metadata.dict(), **chunk_metadata.dict()}
+    return {**doc_metadata.model_dump(), **chunk_metadata.model_dump()}
 
 
 def create_eo_chunk_metadata(
@@ -373,4 +369,4 @@ def create_eo_chunk_metadata(
         )
         combined = create_eo_chunk_metadata(doc_meta, chunk_meta)
     """
-    return {**doc_metadata.dict(), **chunk_metadata.dict()}
+    return {**doc_metadata.model_dump(), **chunk_metadata.model_dump()}

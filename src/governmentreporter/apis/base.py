@@ -407,7 +407,7 @@ class GovernmentAPIClient(ABC):
         pass
 
     def validate_date_format(self, date_str: str) -> None:
-        """
+        r"""
         Validate that a date string follows the YYYY-MM-DD format and is a valid date.
 
         This concrete method provides date validation functionality to all API clients.
@@ -438,11 +438,11 @@ class GovernmentAPIClient(ABC):
             - Then uses datetime.strptime to validate the date is real
             - Pattern breakdown:
                 ^ : Start of string
-                \\d{4} : Exactly 4 digits (year)
+                \d{4} : Exactly 4 digits (year)
                 - : Literal hyphen
-                \\d{2} : Exactly 2 digits (month)
+                \d{2} : Exactly 2 digits (month)
                 - : Literal hyphen
-                \\d{2} : Exactly 2 digits (day)
+                \d{2} : Exactly 2 digits (day)
                 $ : End of string
 
         Python Learning Notes:

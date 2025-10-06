@@ -31,7 +31,6 @@ from governmentreporter.utils.monitoring import (
 )
 
 
-
 class TestDocumentRecording:
     """
     Test suite for recording document processing results.
@@ -582,4 +581,3 @@ class TestPerformanceMonitorIntegration:
         assert stats["documents_processed"] == 33  # ~2/3 successful
         assert stats["documents_failed"] == 17  # ~1/3 failed
         assert stats["success_rate"] < 70  # Lower success rate
-

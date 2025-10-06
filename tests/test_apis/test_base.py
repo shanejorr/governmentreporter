@@ -100,7 +100,10 @@ class MockGovernmentAPIClient(GovernmentAPIClient):
         return 0.1
 
     def search_documents(
-        self, query: str, start_date: Optional[str] = None, end_date: Optional[str] = None
+        self,
+        query: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
     ) -> list:
         return [
             Document(
@@ -214,6 +217,7 @@ class TestGovernmentAPIClient:
         class IncompleteClient(GovernmentAPIClient):
             def search_documents(self, query, start_date=None, end_date=None):
                 return []
+
             # Missing get_document and get_document_text
 
         with pytest.raises(TypeError) as exc_info:
