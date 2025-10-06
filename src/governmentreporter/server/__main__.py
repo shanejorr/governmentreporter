@@ -8,13 +8,17 @@ This module allows the MCP server to be run using:
 It executes the main server functionality.
 """
 
-import os
-import sys
+import asyncio
+import logging
 
-# Execute the server.py file directly
-server_py_path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "server.py"
-)
+from .mcp_server import create_and_run_server
 
-# Execute the server.py script
-exec(compile(open(server_py_path).read(), server_py_path, "exec"))
+if __name__ == "__main__":
+    # Set up logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
+
+    # Run the server
+    asyncio.run(create_and_run_server())

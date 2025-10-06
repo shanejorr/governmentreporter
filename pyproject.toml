@@ -55,3 +55,6 @@ governmentreporter = "governmentreporter.cli.main:main"
 [tool.setuptools]
 packages = ["governmentreporter", "governmentreporter.apis", "governmentreporter.cli", "governmentreporter.database", "governmentreporter.ingestion", "governmentreporter.processors", "governmentreporter.processors.chunking", "governmentreporter.utils", "governmentreporter.server"]
 package-dir = {"" = "src"}
+
+[tool.isort]
+profile = "black"
