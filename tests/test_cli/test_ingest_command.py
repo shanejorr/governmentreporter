@@ -74,8 +74,11 @@ class TestIngestSCOTUSCommand:
         # Should show error about missing end-date
         assert result.exit_code != 0
 
+    @patch("governmentreporter.utils.monitoring.setup_logging")
     @patch("governmentreporter.ingestion.scotus.SCOTUSIngester")
-    def test_scotus_accepts_valid_dates(self, mock_ingester_class, cli_runner):
+    def test_scotus_accepts_valid_dates(
+        self, mock_ingester_class, mock_setup_logging, cli_runner
+    ):
         """Test scotus accepts valid date range."""
         mock_ingester = MagicMock()
         mock_ingester.run.return_value = None
@@ -106,8 +109,11 @@ class TestIngestSCOTUSCommand:
         if result.exit_code != 0:
             assert "date" in result.output.lower() or "format" in result.output.lower()
 
+    @patch("governmentreporter.utils.monitoring.setup_logging")
     @patch("governmentreporter.ingestion.scotus.SCOTUSIngester")
-    def test_scotus_accepts_batch_size_option(self, mock_ingester_class, cli_runner):
+    def test_scotus_accepts_batch_size_option(
+        self, mock_ingester_class, mock_setup_logging, cli_runner
+    ):
         """Test scotus accepts --batch-size option."""
         mock_ingester = MagicMock()
         mock_ingester.run.return_value = None
@@ -130,8 +136,11 @@ class TestIngestSCOTUSCommand:
         call_kwargs = mock_ingester_class.call_args[1]
         assert call_kwargs.get("batch_size") == 100
 
+    @patch("governmentreporter.utils.monitoring.setup_logging")
     @patch("governmentreporter.ingestion.scotus.SCOTUSIngester")
-    def test_scotus_accepts_dry_run_flag(self, mock_ingester_class, cli_runner):
+    def test_scotus_accepts_dry_run_flag(
+        self, mock_ingester_class, mock_setup_logging, cli_runner
+    ):
         """Test scotus accepts --dry-run flag."""
         mock_ingester = MagicMock()
         mock_ingester.run.return_value = None
@@ -153,8 +162,11 @@ class TestIngestSCOTUSCommand:
         call_kwargs = mock_ingester_class.call_args[1]
         assert call_kwargs.get("dry_run") is True
 
+    @patch("governmentreporter.utils.monitoring.setup_logging")
     @patch("governmentreporter.ingestion.scotus.SCOTUSIngester")
-    def test_scotus_accepts_progress_db_path(self, mock_ingester_class, cli_runner):
+    def test_scotus_accepts_progress_db_path(
+        self, mock_ingester_class, mock_setup_logging, cli_runner
+    ):
         """Test scotus accepts custom progress database path."""
         mock_ingester = MagicMock()
         mock_ingester.run.return_value = None
@@ -176,8 +188,11 @@ class TestIngestSCOTUSCommand:
         call_kwargs = mock_ingester_class.call_args[1]
         assert "./custom_progress.db" in str(call_kwargs.get("progress_db", ""))
 
+    @patch("governmentreporter.utils.monitoring.setup_logging")
     @patch("governmentreporter.ingestion.scotus.SCOTUSIngester")
-    def test_scotus_handles_ingestion_errors(self, mock_ingester_class, cli_runner):
+    def test_scotus_handles_ingestion_errors(
+        self, mock_ingester_class, mock_setup_logging, cli_runner
+    ):
         """Test scotus handles ingestion errors gracefully."""
         mock_ingester = MagicMock()
         mock_ingester.run.side_effect = Exception("Ingestion failed")
@@ -217,8 +232,11 @@ class TestIngestExecutiveOrdersCommand:
 
         assert result.exit_code != 0
 
+    @patch("governmentreporter.utils.monitoring.setup_logging")
     @patch("governmentreporter.ingestion.executive_orders.ExecutiveOrderIngester")
-    def test_eo_accepts_valid_dates(self, mock_ingester_class, cli_runner):
+    def test_eo_accepts_valid_dates(
+        self, mock_ingester_class, mock_setup_logging, cli_runner
+    ):
         """Test eo accepts valid date range."""
         mock_ingester = MagicMock()
         mock_ingester.run.return_value = None
@@ -231,8 +249,11 @@ class TestIngestExecutiveOrdersCommand:
         mock_ingester_class.assert_called_once()
         mock_ingester.run.assert_called_once()
 
+    @patch("governmentreporter.utils.monitoring.setup_logging")
     @patch("governmentreporter.ingestion.executive_orders.ExecutiveOrderIngester")
-    def test_eo_accepts_batch_size_option(self, mock_ingester_class, cli_runner):
+    def test_eo_accepts_batch_size_option(
+        self, mock_ingester_class, mock_setup_logging, cli_runner
+    ):
         """Test eo accepts --batch-size option."""
         mock_ingester = MagicMock()
         mock_ingester.run.return_value = None
@@ -254,8 +275,11 @@ class TestIngestExecutiveOrdersCommand:
         call_kwargs = mock_ingester_class.call_args[1]
         assert call_kwargs.get("batch_size") == 50
 
+    @patch("governmentreporter.utils.monitoring.setup_logging")
     @patch("governmentreporter.ingestion.executive_orders.ExecutiveOrderIngester")
-    def test_eo_accepts_dry_run_flag(self, mock_ingester_class, cli_runner):
+    def test_eo_accepts_dry_run_flag(
+        self, mock_ingester_class, mock_setup_logging, cli_runner
+    ):
         """Test eo accepts --dry-run flag."""
         mock_ingester = MagicMock()
         mock_ingester.run.return_value = None
@@ -280,8 +304,17 @@ class TestIngestExecutiveOrdersCommand:
 class TestIngestCommandValidation:
     """Test input validation for ingest commands."""
 
-    def test_validates_start_date_before_end_date(self, cli_runner):
+    @patch("governmentreporter.utils.monitoring.setup_logging")
+    @patch("governmentreporter.ingestion.scotus.SCOTUSIngester")
+    def test_validates_start_date_before_end_date(
+        self, mock_ingester_class, mock_setup_logging, cli_runner
+    ):
         """Test validation that start_date is before end_date."""
+        # Mock the ingester to prevent actual execution
+        mock_ingester = MagicMock()
+        mock_ingester.run.return_value = None
+        mock_ingester_class.return_value = mock_ingester
+
         # This validation might be in the ingester class, not CLI
         # But we can test that invalid dates are handled
         result = cli_runner.invoke(
@@ -292,8 +325,17 @@ class TestIngestCommandValidation:
         # (Implementation specific)
         assert isinstance(result.output, str)
 
-    def test_validates_reasonable_batch_size(self, cli_runner):
+    @patch("governmentreporter.utils.monitoring.setup_logging")
+    @patch("governmentreporter.ingestion.scotus.SCOTUSIngester")
+    def test_validates_reasonable_batch_size(
+        self, mock_ingester_class, mock_setup_logging, cli_runner
+    ):
         """Test validation of batch size parameter."""
+        # Mock the ingester to prevent actual execution
+        mock_ingester = MagicMock()
+        mock_ingester.run.return_value = None
+        mock_ingester_class.return_value = mock_ingester
+
         # Test with unreasonably large batch size
         result = cli_runner.invoke(
             ingest,
@@ -333,8 +375,11 @@ class TestIngestCommandValidation:
 class TestIngestCommandOutput:
     """Test output and feedback from ingest commands."""
 
+    @patch("governmentreporter.utils.monitoring.setup_logging")
     @patch("governmentreporter.ingestion.scotus.SCOTUSIngester")
-    def test_provides_progress_feedback(self, mock_ingester_class, cli_runner):
+    def test_provides_progress_feedback(
+        self, mock_ingester_class, mock_setup_logging, cli_runner
+    ):
         """Test that ingest commands provide progress feedback."""
         mock_ingester = MagicMock()
         mock_ingester.run.return_value = None
@@ -347,8 +392,11 @@ class TestIngestCommandOutput:
         # Should provide some output (not silent)
         assert len(result.output) >= 0  # May be empty in test environment
 
+    @patch("governmentreporter.utils.monitoring.setup_logging")
     @patch("governmentreporter.ingestion.scotus.SCOTUSIngester")
-    def test_dry_run_indicates_no_storage(self, mock_ingester_class, cli_runner):
+    def test_dry_run_indicates_no_storage(
+        self, mock_ingester_class, mock_setup_logging, cli_runner
+    ):
         """Test dry-run mode indicates no data will be stored."""
         mock_ingester = MagicMock()
         mock_ingester.run.return_value = None

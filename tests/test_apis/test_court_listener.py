@@ -541,8 +541,9 @@ class TestCourtListenerClient:
         assert client.validate_date_format("2024") is False
         assert client.validate_date_format("") is False
 
+    @patch("time.sleep")  # Mock sleep to avoid 15s delay in retries
     @patch("httpx.Client")
-    def test_network_error_handling(self, mock_httpx_client, client):
+    def test_network_error_handling(self, mock_httpx_client, mock_sleep, client):
         """
         Test handling of network connectivity errors.
 
@@ -557,8 +558,9 @@ class TestCourtListenerClient:
         with pytest.raises(httpx.ConnectError):
             client.get_document("123456")
 
+    @patch("time.sleep")  # Mock sleep to avoid 15s delay in retries
     @patch("httpx.Client")
-    def test_timeout_handling(self, mock_httpx_client, client):
+    def test_timeout_handling(self, mock_httpx_client, mock_sleep, client):
         """
         Test handling of request timeouts.
 

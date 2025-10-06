@@ -443,11 +443,11 @@ class GovernmentAPIClient(ABC):
             - Uses regular expression for pattern matching
             - Pattern breakdown:
                 ^ : Start of string
-                \d{4} : Exactly 4 digits (year)
+                \\d{4} : Exactly 4 digits (year)
                 - : Literal hyphen
-                \d{2} : Exactly 2 digits (month)
+                \\d{2} : Exactly 2 digits (month)
                 - : Literal hyphen
-                \d{2} : Exactly 2 digits (day)
+                \\d{2} : Exactly 2 digits (day)
                 $ : End of string
 
         Python Learning Notes:

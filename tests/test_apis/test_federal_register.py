@@ -559,8 +559,9 @@ class TestFederalRegisterClient:
         assert documents[0].id == "2024-00000"
         assert documents[19].id == "2024-00019"
 
+    @patch("time.sleep")  # Mock sleep to avoid 15s delay in retries
     @patch("httpx.Client")
-    def test_error_handling_network(self, mock_httpx_client, client):
+    def test_error_handling_network(self, mock_httpx_client, mock_sleep, client):
         """
         Test handling of network connectivity errors.
 
@@ -574,8 +575,9 @@ class TestFederalRegisterClient:
         with pytest.raises(httpx.ConnectError):
             client.get_document("2024-12345")
 
+    @patch("time.sleep")  # Mock sleep to avoid 15s delay in retries
     @patch("httpx.Client")
-    def test_error_handling_timeout(self, mock_httpx_client, client):
+    def test_error_handling_timeout(self, mock_httpx_client, mock_sleep, client):
         """
         Test handling of request timeouts.
 
