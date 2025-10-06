@@ -17,13 +17,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Copy dependency files first (for layer caching)
-COPY pyproject.toml ./
+# Copy dependency files and source code
+COPY pyproject.toml uv.lock* ./
+COPY src/ ./src/
 
-# Create virtual environment and install dependencies
-RUN uv venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-RUN uv pip install -e .
+# Install dependencies using uv sync
+RUN uv sync --frozen
 
 # Stage 2: Runtime stage with minimal footprint
 FROM python:3.11-slim
@@ -45,7 +44,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy virtual environment from builder
-COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /build/.venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONPATH="/app/src:$PYTHONPATH"
 

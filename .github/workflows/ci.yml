@@ -31,26 +31,20 @@ jobs:
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
+      - name: Add uv to PATH
+        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
       - name: Install dependencies
-        run: |
-          uv venv
-          source .venv/bin/activate
-          uv pip install -e ".[dev]"
+        run: uv sync
 
       - name: Check code formatting with black
-        run: |
-          source .venv/bin/activate
-          black --check src/ tests/
+        run: uv run black --check src/ tests/
 
       - name: Check import sorting with isort
-        run: |
-          source .venv/bin/activate
-          isort --check-only src/ tests/
+        run: uv run isort --check-only src/ tests/
 
       - name: Run mypy type checking
-        run: |
-          source .venv/bin/activate
-          mypy src/ --ignore-missing-imports
+        run: uv run mypy src/ --ignore-missing-imports
         continue-on-error: true  # Don't fail build on type errors yet
 
   # Job 2: Run test suite
@@ -74,16 +68,14 @@ jobs:
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
+      - name: Add uv to PATH
+        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
       - name: Install dependencies
-        run: |
-          uv venv
-          source .venv/bin/activate || . .venv/bin/activate
-          uv pip install -e ".[dev]"
+        run: uv sync
 
       - name: Run tests with pytest
-        run: |
-          source .venv/bin/activate || . .venv/bin/activate
-          pytest tests/ -v --tb=short --maxfail=5
+        run: uv run pytest tests/ -v --tb=short --maxfail=5
         env:
           # Provide minimal test environment
           OPENAI_API_KEY: test-key
@@ -91,9 +83,10 @@ jobs:
 
       - name: Generate coverage report
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
-        run: |
-          source .venv/bin/activate
-          pytest tests/ --cov=governmentreporter --cov-report=xml --cov-report=html
+        run: uv run pytest tests/ --cov=governmentreporter --cov-report=xml --cov-report=html
+        env:
+          OPENAI_API_KEY: test-key
+          COURT_LISTENER_API_TOKEN: test-token
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
@@ -181,23 +174,20 @@ jobs:
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
+      - name: Add uv to PATH
+        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
       - name: Install dependencies
         run: |
-          uv venv
-          source .venv/bin/activate
-          uv pip install -e ".[dev]"
-          pip install safety bandit
+          uv sync
+          uv pip install safety bandit
 
       - name: Run safety check
-        run: |
-          source .venv/bin/activate
-          safety check --json || true
+        run: uv run safety check --json || true
         continue-on-error: true
 
       - name: Run bandit security scan
-        run: |
-          source .venv/bin/activate
-          bandit -r src/ -f json -o bandit-report.json || true
+        run: uv run bandit -r src/ -f json -o bandit-report.json || true
         continue-on-error: true
 
       - name: Upload security reports
@@ -226,17 +216,14 @@ jobs:
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
+      - name: Add uv to PATH
+        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
       - name: Install dependencies
-        run: |
-          uv venv
-          source .venv/bin/activate
-          uv pip install -e ".[dev]"
+        run: uv sync
 
       - name: Build Sphinx documentation
-        run: |
-          source .venv/bin/activate
-          cd docs
-          make html
+        run: uv run sphinx-build -b html docs docs/_build/html
         continue-on-error: true  # Don't fail if docs have warnings
 
       - name: Upload documentation
