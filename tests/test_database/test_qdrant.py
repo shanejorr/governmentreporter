@@ -58,7 +58,7 @@ class TestQdrantDBClientInitialization:
         - Multiple assertions verify complete behavior
     """
 
-    @patch('governmentreporter.database.qdrant.QdrantBaseClient')
+    @patch("governmentreporter.database.qdrant.QdrantBaseClient")
     def test_local_initialization(self, mock_qdrant_base):
         """
         Test local file-based Qdrant initialization.
@@ -76,7 +76,7 @@ class TestQdrantDBClientInitialization:
         assert client.db_path == "./test_qdrant"
         mock_qdrant_base.assert_called_once_with(path="./test_qdrant")
 
-    @patch('governmentreporter.database.qdrant.QdrantBaseClient')
+    @patch("governmentreporter.database.qdrant.QdrantBaseClient")
     def test_remote_initialization_with_host(self, mock_qdrant_base):
         """
         Test remote server connection initialization.
@@ -87,21 +87,15 @@ class TestQdrantDBClientInitialization:
             - Default port is used when not specified
         """
         # Initialize with host and port
-        client = QdrantDBClient(
-            host="localhost",
-            port=6333,
-            api_key="test-api-key"
-        )
+        client = QdrantDBClient(host="localhost", port=6333, api_key="test-api-key")
 
         # Verify initialization
         assert client.connection_mode == "remote"
         mock_qdrant_base.assert_called_once_with(
-            host="localhost",
-            port=6333,
-            api_key="test-api-key"
+            host="localhost", port=6333, api_key="test-api-key"
         )
 
-    @patch('governmentreporter.database.qdrant.QdrantBaseClient')
+    @patch("governmentreporter.database.qdrant.QdrantBaseClient")
     def test_remote_initialization_default_port(self, mock_qdrant_base):
         """
         Test remote initialization with default port.
@@ -113,12 +107,10 @@ class TestQdrantDBClientInitialization:
 
         # Verify default port is used
         mock_qdrant_base.assert_called_once_with(
-            host="localhost",
-            port=6333,
-            api_key=None
+            host="localhost", port=6333, api_key=None
         )
 
-    @patch('governmentreporter.database.qdrant.QdrantBaseClient')
+    @patch("governmentreporter.database.qdrant.QdrantBaseClient")
     def test_cloud_initialization(self, mock_qdrant_base):
         """
         Test Qdrant cloud initialization with URL.
@@ -127,15 +119,13 @@ class TestQdrantDBClientInitialization:
         """
         # Initialize with cloud URL
         client = QdrantDBClient(
-            url="https://my-cluster.qdrant.io",
-            api_key="cloud-api-key"
+            url="https://my-cluster.qdrant.io", api_key="cloud-api-key"
         )
 
         # Verify initialization
         assert client.connection_mode == "cloud"
         mock_qdrant_base.assert_called_once_with(
-            url="https://my-cluster.qdrant.io",
-            api_key="cloud-api-key"
+            url="https://my-cluster.qdrant.io", api_key="cloud-api-key"
         )
 
     def test_initialization_without_parameters(self):
@@ -175,7 +165,7 @@ class TestCollectionManagement:
         Returns:
             Tuple of (client, mock_qdrant_client)
         """
-        with patch('governmentreporter.database.qdrant.QdrantBaseClient') as mock_class:
+        with patch("governmentreporter.database.qdrant.QdrantBaseClient") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
             client = QdrantDBClient(db_path="./test")
@@ -205,9 +195,8 @@ class TestCollectionManagement:
         mock_qdrant.create_collection.assert_called_once_with(
             collection_name="test_collection",
             vectors_config=VectorParams(
-                size=1536,  # OpenAI embedding dimension
-                distance=Distance.COSINE
-            )
+                size=1536, distance=Distance.COSINE  # OpenAI embedding dimension
+            ),
         )
 
     def test_create_collection_existing(self, client_with_mock):
@@ -366,7 +355,7 @@ class TestDocumentStorage:
     @pytest.fixture
     def client_with_mock(self):
         """Create a client with mocked Qdrant connection."""
-        with patch('governmentreporter.database.qdrant.QdrantBaseClient') as mock_class:
+        with patch("governmentreporter.database.qdrant.QdrantBaseClient") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
 
@@ -390,7 +379,7 @@ class TestDocumentStorage:
             id="test-doc-123",
             text="This is test content",
             embedding=[0.1] * 1536,  # Mock embedding
-            metadata={"author": "Test Author", "year": 2024}
+            metadata={"author": "Test Author", "year": 2024},
         )
 
     def test_store_document_success(self, client_with_mock, sample_document):
@@ -430,10 +419,7 @@ class TestDocumentStorage:
         Verifies validation of required document fields.
         """
         doc = Document(
-            id="",  # Empty ID
-            text="Test content",
-            embedding=[0.1] * 1536,
-            metadata={}
+            id="", text="Test content", embedding=[0.1] * 1536, metadata={}  # Empty ID
         )
 
         client, _ = client_with_mock
@@ -453,7 +439,7 @@ class TestDocumentStorage:
             id="test-123",
             text="Test content",
             embedding=[],  # Empty embedding
-            metadata={}
+            metadata={},
         )
 
         client, _ = client_with_mock
@@ -473,7 +459,7 @@ class TestDocumentStorage:
             id="test-123",
             text="Test content",
             embedding=[0.1] * 100,  # Wrong dimension
-            metadata={}
+            metadata={},
         )
 
         client, _ = client_with_mock
@@ -501,7 +487,7 @@ class TestDocumentStorage:
                 id=f"doc-{i}",
                 text=f"Content {i}",
                 embedding=[0.1] * 1536,
-                metadata={"index": i}
+                metadata={"index": i},
             )
             documents.append(doc)
 
@@ -529,10 +515,7 @@ class TestDocumentStorage:
         client, mock_qdrant = client_with_mock
 
         # Mock first batch fails, second succeeds
-        mock_qdrant.upsert.side_effect = [
-            Exception("Network error"),
-            None  # Success
-        ]
+        mock_qdrant.upsert.side_effect = [Exception("Network error"), None]  # Success
 
         # Create documents
         documents = []
@@ -541,7 +524,7 @@ class TestDocumentStorage:
                 id=f"doc-{i}",
                 text=f"Content {i}",
                 embedding=[0.1] * 1536,
-                metadata={"index": i}
+                metadata={"index": i},
             )
             documents.append(doc)
 
@@ -572,20 +555,14 @@ class TestDocumentStorage:
         # Create documents
         documents = [
             Document(
-                id=f"doc-{i}",
-                text=f"Content {i}",
-                embedding=[0.1] * 1536,
-                metadata={}
+                id=f"doc-{i}", text=f"Content {i}", embedding=[0.1] * 1536, metadata={}
             )
             for i in range(5)
         ]
 
         # Store with progress callback
         client.store_documents_batch(
-            documents,
-            "test_collection",
-            batch_size=2,
-            on_progress=progress_callback
+            documents, "test_collection", batch_size=2, on_progress=progress_callback
         )
 
         # Verify progress was reported
@@ -602,9 +579,7 @@ class TestDocumentStorage:
         """
         client, _ = client_with_mock
 
-        success_count, failed_ids = client.store_documents_batch(
-            [], "test_collection"
-        )
+        success_count, failed_ids = client.store_documents_batch([], "test_collection")
 
         assert success_count == 0
         assert failed_ids == []
@@ -626,7 +601,7 @@ class TestDocumentRetrieval:
     @pytest.fixture
     def client_with_mock(self):
         """Create a client with mocked Qdrant connection."""
-        with patch('governmentreporter.database.qdrant.QdrantBaseClient') as mock_class:
+        with patch("governmentreporter.database.qdrant.QdrantBaseClient") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
             client = QdrantDBClient(db_path="./test")
@@ -651,7 +626,7 @@ class TestDocumentRetrieval:
             "text": "Test content",
             "original_id": "test-123",
             "author": "Test Author",
-            "year": 2024
+            "year": 2024,
         }
         mock_qdrant.retrieve.return_value = [mock_point]
 
@@ -696,10 +671,7 @@ class TestDocumentRetrieval:
         mock_point = MagicMock()
         mock_point.id = str(uuid.uuid5(uuid.NAMESPACE_DNS, "test-123"))
         mock_point.vector = [[0.1] * 1536]  # Nested list
-        mock_point.payload = {
-            "text": "Test content",
-            "original_id": "test-123"
-        }
+        mock_point.payload = {"text": "Test content", "original_id": "test-123"}
         mock_qdrant.retrieve.return_value = [mock_point]
 
         # Retrieve document
@@ -768,8 +740,7 @@ class TestDocumentRetrieval:
         # Verify UUID conversion
         expected_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, "test-123"))
         mock_qdrant.delete.assert_called_once_with(
-            collection_name="test_collection",
-            points_selector=[expected_uuid]
+            collection_name="test_collection", points_selector=[expected_uuid]
         )
 
     def test_delete_document_failure(self, client_with_mock):
@@ -804,7 +775,7 @@ class TestSearchOperations:
     @pytest.fixture
     def client_with_mock(self):
         """Create a client with mocked Qdrant connection."""
-        with patch('governmentreporter.database.qdrant.QdrantBaseClient') as mock_class:
+        with patch("governmentreporter.database.qdrant.QdrantBaseClient") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
             client = QdrantDBClient(db_path="./test")
@@ -833,17 +804,15 @@ class TestSearchOperations:
             payload={
                 "text": "Result content",
                 "original_id": "doc-1",
-                "title": "Test Document"
+                "title": "Test Document",
             },
-            version=1
+            version=1,
         )
         mock_qdrant.search.return_value = [mock_point]
 
         # Perform search
         results = client.search(
-            query_embedding=query_embedding,
-            collection_name="test_collection",
-            limit=10
+            query_embedding=query_embedding, collection_name="test_collection", limit=10
         )
 
         # Verify results
@@ -871,7 +840,7 @@ class TestSearchOperations:
             query_embedding=query_embedding,
             collection_name="test_collection",
             limit=10,
-            metadata_filter={"year": 2024, "type": "opinion"}
+            metadata_filter={"year": 2024, "type": "opinion"},
         )
 
         # Verify filter was applied
@@ -899,7 +868,7 @@ class TestSearchOperations:
             query_embedding=query_embedding,
             collection_name="test_collection",
             limit=10,
-            score_threshold=0.8
+            score_threshold=0.8,
         )
 
         # Verify threshold was applied
@@ -920,7 +889,7 @@ class TestSearchOperations:
         complex_filter = {
             "must": [
                 {"key": "year", "match": {"value": 2024}},
-                {"key": "type", "match": {"value": "opinion"}}
+                {"key": "type", "match": {"value": "opinion"}},
             ]
         }
 
@@ -929,7 +898,7 @@ class TestSearchOperations:
             query_embedding=query_embedding,
             collection_name="test_collection",
             limit=10,
-            query_filter=complex_filter
+            query_filter=complex_filter,
         )
 
         # Verify filter was passed through
@@ -951,7 +920,7 @@ class TestSearchOperations:
             client.search(
                 query_embedding=bad_embedding,
                 collection_name="test_collection",
-                limit=10
+                limit=10,
             )
 
         assert "1536 dimensions" in str(exc_info.value)
@@ -971,11 +940,8 @@ class TestSearchOperations:
             point = ScoredPoint(
                 id=str(uuid.uuid5(uuid.NAMESPACE_DNS, f"doc-{i}")),
                 score=0.9 - (i * 0.1),  # Decreasing scores
-                payload={
-                    "text": f"Result {i}",
-                    "original_id": f"doc-{i}"
-                },
-                version=1
+                payload={"text": f"Result {i}", "original_id": f"doc-{i}"},
+                version=1,
             )
             results_data.append(point)
 
@@ -983,9 +949,7 @@ class TestSearchOperations:
 
         # Perform search
         results = client.search(
-            query_embedding=query_embedding,
-            collection_name="test_collection",
-            limit=3
+            query_embedding=query_embedding, collection_name="test_collection", limit=3
         )
 
         # Verify results
@@ -1011,7 +975,7 @@ class TestSearchOperations:
             collection_name="test_collection",
             query_vector=query_embedding,
             limit=5,
-            query_filter={"type": "opinion"}
+            query_filter={"type": "opinion"},
         )
 
         # Verify delegation
@@ -1036,7 +1000,7 @@ class TestSearchOperations:
             client.search(
                 query_embedding=query_embedding,
                 collection_name="test_collection",
-                limit=10
+                limit=10,
             )
 
         assert "Connection timeout" in str(exc_info.value)
@@ -1058,7 +1022,7 @@ class TestEdgeCasesAndErrorHandling:
     @pytest.fixture
     def client_with_mock(self):
         """Create a client with mocked Qdrant connection."""
-        with patch('governmentreporter.database.qdrant.QdrantBaseClient') as mock_class:
+        with patch("governmentreporter.database.qdrant.QdrantBaseClient") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
             client = QdrantDBClient(db_path="./test")
@@ -1073,10 +1037,7 @@ class TestEdgeCasesAndErrorHandling:
         client, mock_qdrant = client_with_mock
 
         doc = Document(
-            id="test-123",
-            text="Test content",
-            embedding=[0.1] * 1536,
-            metadata=None
+            id="test-123", text="Test content", embedding=[0.1] * 1536, metadata=None
         )
 
         # Mock collection exists
@@ -1127,10 +1088,7 @@ class TestEdgeCasesAndErrorHandling:
         mock_point = MagicMock()
         mock_point.id = "test-uuid"
         mock_point.vector = None  # No vector
-        mock_point.payload = {
-            "text": "Test content",
-            "original_id": "test-123"
-        }
+        mock_point.payload = {"text": "Test content", "original_id": "test-123"}
         mock_qdrant.retrieve.return_value = [mock_point]
 
         # Retrieve document
@@ -1175,17 +1133,14 @@ class TestEdgeCasesAndErrorHandling:
         # Mix of valid and invalid documents
         documents = [
             Document(
-                id="valid-1",
-                text="Valid content",
-                embedding=[0.1] * 1536,
-                metadata={}
+                id="valid-1", text="Valid content", embedding=[0.1] * 1536, metadata={}
             ),
             Document(
                 id="",  # Invalid: empty ID
                 text="Invalid content",
                 embedding=[0.1] * 1536,
-                metadata={}
-            )
+                metadata={},
+            ),
         ]
 
         # Should raise error during validation
@@ -1217,7 +1172,7 @@ class TestIntegrationWorkflows:
         This fixture provides a fully functional mock that
         simulates a complete Qdrant instance.
         """
-        with patch('governmentreporter.database.qdrant.QdrantBaseClient') as mock_class:
+        with patch("governmentreporter.database.qdrant.QdrantBaseClient") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
 
@@ -1246,7 +1201,7 @@ class TestIntegrationWorkflows:
                         id=point_id,
                         score=0.9,  # Mock score
                         payload=point.payload,
-                        version=1
+                        version=1,
                     )
                     results.append(scored)
                 return results
@@ -1277,7 +1232,7 @@ class TestIntegrationWorkflows:
             id="workflow-test-123",
             text="This is a workflow test document",
             embedding=[0.1] * 1536,
-            metadata={"workflow": "test", "step": 1}
+            metadata={"workflow": "test", "step": 1},
         )
 
         # Store document
@@ -1309,7 +1264,7 @@ class TestIntegrationWorkflows:
                 id=f"batch-doc-{i}",
                 text=f"Document number {i} about testing",
                 embedding=[0.1 + (i * 0.01)] * 1536,  # Slightly different embeddings
-                metadata={"batch": "test", "index": i}
+                metadata={"batch": "test", "index": i},
             )
             documents.append(doc)
 
@@ -1324,9 +1279,7 @@ class TestIntegrationWorkflows:
         # Search for similar documents
         query_embedding = [0.15] * 1536
         results = client.search(
-            query_embedding=query_embedding,
-            collection_name="batch_collection",
-            limit=5
+            query_embedding=query_embedding, collection_name="batch_collection", limit=5
         )
 
         # Verify search results
@@ -1355,7 +1308,7 @@ class TestIntegrationWorkflows:
             id="lifecycle-doc",
             text="Lifecycle test document",
             embedding=[0.1] * 1536,
-            metadata={}
+            metadata={},
         )
         stored = client.store_document(doc, collection_name)
         assert stored is True
@@ -1389,7 +1342,7 @@ class TestAdvancedFilteringAndSearch:
     @pytest.fixture
     def client_with_mock(self):
         """Create a client with mocked Qdrant connection."""
-        with patch('governmentreporter.database.qdrant.QdrantBaseClient') as mock_class:
+        with patch("governmentreporter.database.qdrant.QdrantBaseClient") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
             client = QdrantDBClient(db_path="./test")
@@ -1410,7 +1363,7 @@ class TestAdvancedFilteringAndSearch:
         range_filter = {
             "must": [
                 {"key": "year", "range": {"gte": 2020, "lte": 2024}},
-                {"key": "score", "range": {"gt": 0.5}}
+                {"key": "score", "range": {"gt": 0.5}},
             ]
         }
 
@@ -1419,7 +1372,7 @@ class TestAdvancedFilteringAndSearch:
             query_embedding=[0.1] * 1536,
             collection_name="test_collection",
             limit=10,
-            query_filter=range_filter
+            query_filter=range_filter,
         )
 
         # Verify filter was applied
@@ -1449,7 +1402,7 @@ class TestAdvancedFilteringAndSearch:
             query_embedding=[0.1] * 1536,
             collection_name="test_collection",
             limit=10,
-            query_filter=match_any_filter
+            query_filter=match_any_filter,
         )
 
         # Verify filter was applied
@@ -1467,16 +1420,12 @@ class TestAdvancedFilteringAndSearch:
 
         # Create complex combined filter
         complex_filter = {
-            "must": [
-                {"key": "year", "match": {"value": 2024}}
-            ],
+            "must": [{"key": "year", "match": {"value": 2024}}],
             "should": [
                 {"key": "court", "match": {"value": "SCOTUS"}},
-                {"key": "court", "match": {"value": "Federal"}}
+                {"key": "court", "match": {"value": "Federal"}},
             ],
-            "must_not": [
-                {"key": "status", "match": {"value": "draft"}}
-            ]
+            "must_not": [{"key": "status", "match": {"value": "draft"}}],
         }
 
         # Search with complex filter
@@ -1484,7 +1433,7 @@ class TestAdvancedFilteringAndSearch:
             query_embedding=[0.1] * 1536,
             collection_name="test_collection",
             limit=10,
-            query_filter=complex_filter
+            query_filter=complex_filter,
         )
 
         # Verify complex filter was applied
@@ -1507,26 +1456,21 @@ class TestAdvancedFilteringAndSearch:
                 "text": "Result content",
                 "original_id": "doc-1",
                 "metadata": {
-                    "author": {
-                        "name": "John Doe",
-                        "affiliation": "Supreme Court"
-                    },
+                    "author": {"name": "John Doe", "affiliation": "Supreme Court"},
                     "citations": ["Case A", "Case B"],
                     "topics": {
                         "primary": "Constitutional Law",
-                        "secondary": ["Civil Rights", "Due Process"]
-                    }
-                }
+                        "secondary": ["Civil Rights", "Due Process"],
+                    },
+                },
             },
-            version=1
+            version=1,
         )
         mock_qdrant.search.return_value = [mock_point]
 
         # Perform search
         results = client.search(
-            query_embedding=[0.1] * 1536,
-            collection_name="test_collection",
-            limit=10
+            query_embedding=[0.1] * 1536, collection_name="test_collection", limit=10
         )
 
         # Verify nested metadata is preserved
@@ -1550,7 +1494,7 @@ class TestConnectionManagementAndRetries:
         - Timeout handling prevents hanging operations
     """
 
-    @patch('governmentreporter.database.qdrant.QdrantBaseClient')
+    @patch("governmentreporter.database.qdrant.QdrantBaseClient")
     def test_connection_timeout_handling(self, mock_qdrant_base):
         """
         Test handling of connection timeouts.
@@ -1564,7 +1508,7 @@ class TestConnectionManagementAndRetries:
         with pytest.raises(TimeoutError):
             QdrantDBClient(host="unreachable-host", port=6333)
 
-    @patch('governmentreporter.database.qdrant.QdrantBaseClient')
+    @patch("governmentreporter.database.qdrant.QdrantBaseClient")
     def test_authentication_failure(self, mock_qdrant_base):
         """
         Test handling of authentication failures.
@@ -1572,14 +1516,13 @@ class TestConnectionManagementAndRetries:
         Verifies proper error handling for invalid API keys.
         """
         # Mock authentication error
-        mock_qdrant_base.side_effect = Exception("Authentication failed: Invalid API key")
+        mock_qdrant_base.side_effect = Exception(
+            "Authentication failed: Invalid API key"
+        )
 
         # Should raise error with clear message
         with pytest.raises(Exception) as exc_info:
-            QdrantDBClient(
-                url="https://cloud.qdrant.io",
-                api_key="invalid-key"
-            )
+            QdrantDBClient(url="https://cloud.qdrant.io", api_key="invalid-key")
 
         assert "Authentication failed" in str(exc_info.value)
 
@@ -1589,7 +1532,7 @@ class TestConnectionManagementAndRetries:
 
         Verifies that network failures are handled gracefully.
         """
-        with patch('governmentreporter.database.qdrant.QdrantBaseClient') as mock_class:
+        with patch("governmentreporter.database.qdrant.QdrantBaseClient") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
             client = QdrantDBClient(db_path="./test")
@@ -1602,7 +1545,7 @@ class TestConnectionManagementAndRetries:
                 client.search(
                     query_embedding=[0.1] * 1536,
                     collection_name="test_collection",
-                    limit=10
+                    limit=10,
                 )
 
 
@@ -1621,7 +1564,7 @@ class TestDataConsistencyAndValidation:
     @pytest.fixture
     def client_with_mock(self):
         """Create a client with mocked Qdrant connection."""
-        with patch('governmentreporter.database.qdrant.QdrantBaseClient') as mock_class:
+        with patch("governmentreporter.database.qdrant.QdrantBaseClient") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
 
@@ -1645,10 +1588,7 @@ class TestDataConsistencyAndValidation:
         small_embedding = [1e-10] * 1536
 
         doc = Document(
-            id="test-doc",
-            text="Test content",
-            embedding=small_embedding,
-            metadata={}
+            id="test-doc", text="Test content", embedding=small_embedding, metadata={}
         )
 
         # Should store successfully
@@ -1677,8 +1617,8 @@ class TestDataConsistencyAndValidation:
                 "title": "Case № 123: Smith v. O'Brien",
                 "summary": "Contains special chars: €£¥₹",
                 "unicode": "测试中文字符",
-                "emoji": "📚🔍⚖️"
-            }
+                "emoji": "📚🔍⚖️",
+            },
         )
 
         # Store document
@@ -1714,7 +1654,7 @@ class TestDataConsistencyAndValidation:
             id="large-doc",
             text="Document with large metadata",
             embedding=[0.1] * 1536,
-            metadata=large_metadata
+            metadata=large_metadata,
         )
 
         # Should handle large metadata
@@ -1746,8 +1686,8 @@ class TestDataConsistencyAndValidation:
                 "field2": None,
                 "field3": "",
                 "field4": 0,
-                "field5": False
-            }
+                "field5": False,
+            },
         )
 
         # Store document
@@ -1803,7 +1743,7 @@ class TestPerformanceAndOptimization:
     @pytest.fixture
     def client_with_mock(self):
         """Create a client with mocked Qdrant connection."""
-        with patch('governmentreporter.database.qdrant.QdrantBaseClient') as mock_class:
+        with patch("governmentreporter.database.qdrant.QdrantBaseClient") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
 
@@ -1829,17 +1769,13 @@ class TestPerformanceAndOptimization:
                 id=f"doc-{i}",
                 text=f"Document {i}",
                 embedding=[0.1] * 1536,
-                metadata={"index": i}
+                metadata={"index": i},
             )
             for i in range(250)  # Large batch
         ]
 
         # Store with small batch size
-        client.store_documents_batch(
-            documents,
-            "test_collection",
-            batch_size=50
-        )
+        client.store_documents_batch(documents, "test_collection", batch_size=50)
 
         # Should make 5 calls (250 / 50)
         assert mock_qdrant.upsert.call_count == 5
@@ -1871,15 +1807,13 @@ class TestPerformanceAndOptimization:
                     id=f"doc-{i}",
                     text=f"Document {i}",
                     embedding=[0.1] * 1536,
-                    metadata={"batch": start_idx // chunk_size}
+                    metadata={"batch": start_idx // chunk_size},
                 )
                 for i in range(start_idx, end_idx)
             ]
 
             success_count, failed_ids = client.store_documents_batch(
-                documents,
-                "large_collection",
-                batch_size=100
+                documents, "large_collection", batch_size=100
             )
 
             processed += success_count
@@ -1907,20 +1841,14 @@ class TestPerformanceAndOptimization:
 
         documents = [
             Document(
-                id=f"doc-{i}",
-                text=f"Document {i}",
-                embedding=[0.1] * 1536,
-                metadata={}
+                id=f"doc-{i}", text=f"Document {i}", embedding=[0.1] * 1536, metadata={}
             )
             for i in range(100)
         ]
 
         # Store with progress callback
         client.store_documents_batch(
-            documents,
-            "test_collection",
-            batch_size=25,
-            on_progress=progress_callback
+            documents, "test_collection", batch_size=25, on_progress=progress_callback
         )
 
         # Should have 4 progress updates (100 / 25)

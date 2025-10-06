@@ -116,9 +116,9 @@ def mock_qdrant_client():
                 "text": "Test document content",
                 "title": "Test Document",
                 "date": "2024-01-01",
-                "metadata": {"type": "scotus_opinion"}
+                "metadata": {"type": "scotus_opinion"},
             },
-            version=1  # Required field for ScoredPoint
+            version=1,  # Required field for ScoredPoint
         )
     ]
     mock_client.search.return_value = mock_search_results
@@ -129,8 +129,7 @@ def mock_qdrant_client():
     mock_client.upsert.return_value = True
     mock_client.retrieve.return_value = [
         MagicMock(
-            id="test-id-1",
-            payload={"text": "Retrieved document", "metadata": {}}
+            id="test-id-1", payload={"text": "Retrieved document", "metadata": {}}
         )
     ]
 
@@ -182,7 +181,7 @@ def sample_document():
             "decision_type": "unanimous",
             "citations": ["123 U.S. 456", "789 F.3d 012"],
         },
-        url="https://www.courtlistener.com/opinion/test-doc-123/"
+        url="https://www.courtlistener.com/opinion/test-doc-123/",
     )
 
 
@@ -227,7 +226,7 @@ def sample_executive_order():
             "federal_register_number": "2024-12345",
             "agencies": ["All Federal Agencies"],
         },
-        url="https://www.federalregister.gov/documents/2024/01/20/2024-12345/"
+        url="https://www.federalregister.gov/documents/2024/01/20/2024-12345/",
     )
 
 
@@ -254,8 +253,8 @@ def sample_qdrant_document():
             "title": "Test Qdrant Document",
             "date": "2024-01-15",
             "type": "test_document",
-            "source": "test_fixture"
-        }
+            "source": "test_fixture",
+        },
     )
 
 
@@ -300,7 +299,7 @@ processing:
   overlap: 50
 """
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write(config_content)
         temp_path = Path(f.name)
 
@@ -328,11 +327,11 @@ def mock_environment_variables():
         - monkeypatch is pytest's way to temporarily modify objects
     """
     env_vars = {
-        'OPENAI_API_KEY': 'test-api-key-123',
-        'COURT_LISTENER_API_TOKEN': 'test-court-listener-token',
-        'QDRANT_HOST': 'localhost',
-        'QDRANT_PORT': '6333',
-        'LOG_LEVEL': 'DEBUG'
+        "OPENAI_API_KEY": "test-api-key-123",
+        "COURT_LISTENER_API_TOKEN": "test-court-listener-token",
+        "QDRANT_HOST": "localhost",
+        "QDRANT_PORT": "6333",
+        "LOG_LEVEL": "DEBUG",
     }
 
     # Store original values
@@ -372,7 +371,7 @@ def mock_httpx_client():
     mock_response.json.return_value = {
         "results": [
             {"id": "1", "title": "Test Result 1"},
-            {"id": "2", "title": "Test Result 2"}
+            {"id": "2", "title": "Test Result 2"},
         ]
     }
     mock_response.text = '{"status": "success"}'

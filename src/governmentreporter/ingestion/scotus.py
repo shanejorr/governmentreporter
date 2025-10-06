@@ -157,7 +157,9 @@ class SCOTUSIngester(DocumentIngester):
                         datetime.strptime(self.end_date, "%Y-%m-%d")
                         - datetime.strptime(self.start_date, "%Y-%m-%d")
                     ).days / 365
-                    expected_max = int(years_in_range * 100)  # ~100 opinions per year max
+                    expected_max = int(
+                        years_in_range * 100
+                    )  # ~100 opinions per year max
 
                     if total_count > max(1000, expected_max * 2):
                         logger.error(
@@ -170,7 +172,9 @@ class SCOTUSIngester(DocumentIngester):
 
                     max_opinions = total_count
                 else:
-                    logger.warning("Could not determine total count, proceeding with caution")
+                    logger.warning(
+                        "Could not determine total count, proceeding with caution"
+                    )
                     max_opinions = 1000  # Conservative default
 
                 # Paginate through results
@@ -216,7 +220,9 @@ class SCOTUSIngester(DocumentIngester):
 
                     # Safety check to prevent infinite loops
                     if page > 100:  # Maximum 100 pages
-                        logger.warning("Reached maximum page limit (100 pages), stopping pagination")
+                        logger.warning(
+                            "Reached maximum page limit (100 pages), stopping pagination"
+                        )
                         break
 
             logger.info(f"Successfully fetched {len(all_opinion_ids)} opinion IDs")
@@ -224,7 +230,9 @@ class SCOTUSIngester(DocumentIngester):
         except Exception as e:
             logger.error(f"Error fetching opinion IDs: {e}")
             if len(all_opinion_ids) > 0:
-                logger.info(f"Partial results: fetched {len(all_opinion_ids)} opinion IDs before error")
+                logger.info(
+                    f"Partial results: fetched {len(all_opinion_ids)} opinion IDs before error"
+                )
 
         return all_opinion_ids
 

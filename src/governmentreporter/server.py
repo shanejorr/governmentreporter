@@ -49,6 +49,7 @@ from governmentreporter.server.mcp_server import GovernmentReporterMCP
 from governmentreporter.server.config import ServerConfig, get_config, set_config
 from governmentreporter.utils.config import get_openai_api_key
 
+
 # Configure logging
 def setup_logging(log_level: str = "INFO") -> None:
     """
@@ -59,12 +60,12 @@ def setup_logging(log_level: str = "INFO") -> None:
     """
     logging.basicConfig(
         level=getattr(logging, log_level.upper()),
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[
             logging.StreamHandler(sys.stdout),
             # Optionally add file handler
             # logging.FileHandler('mcp_server.log')
-        ]
+        ],
     )
 
 
@@ -141,8 +142,7 @@ async def main(config: Optional[ServerConfig] = None) -> None:
 
         # Wait for either server error or shutdown signal
         done, pending = await asyncio.wait(
-            [server_task, shutdown_task],
-            return_when=asyncio.FIRST_COMPLETED
+            [server_task, shutdown_task], return_when=asyncio.FIRST_COMPLETED
         )
 
         # Cancel pending tasks

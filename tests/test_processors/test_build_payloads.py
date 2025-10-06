@@ -89,7 +89,9 @@ class TestExtractYearFromDate:
         current_year = datetime.now().year
 
         # Should handle None gracefully
-        with patch('governmentreporter.processors.build_payloads.logger') as mock_logger:
+        with patch(
+            "governmentreporter.processors.build_payloads.logger"
+        ) as mock_logger:
             result = extract_year_from_date(None)
             assert result == current_year
             mock_logger.warning.assert_called()
@@ -129,9 +131,9 @@ class TestNormalizeSCOTUSMetadata:
                 "decided_date": "1954-05-17",
                 "majority_author": "Warren",
                 "vote_majority": 9,
-                "vote_minority": 0
+                "vote_minority": 0,
             },
-            url="https://www.courtlistener.com/opinion/123/"
+            url="https://www.courtlistener.com/opinion/123/",
         )
 
         # Act
@@ -163,7 +165,7 @@ class TestNormalizeSCOTUSMetadata:
             source="courtlistener",
             content="Opinion text...",
             metadata={},  # Empty metadata
-            url="https://example.com"
+            url="https://example.com",
         )
 
         # Act
@@ -195,7 +197,7 @@ class TestNormalizeSCOTUSMetadata:
             source="courtlistener",
             content="Opinion text...",
             metadata={},
-            url="https://example.com"
+            url="https://example.com",
         )
 
         # Act
@@ -239,9 +241,9 @@ class TestNormalizeEOMetadata:
                 "effective_date": "2024-02-01",
                 "federal_register_number": "2024-12345",
                 "agencies": ["EPA", "DOE", "DOD"],
-                "revokes": ["13990", "13834"]
+                "revokes": ["13990", "13834"],
             },
-            url="https://www.federalregister.gov/documents/2024/01/20/"
+            url="https://www.federalregister.gov/documents/2024/01/20/",
         )
 
         # Act
@@ -273,7 +275,7 @@ class TestNormalizeEOMetadata:
             source="federal_register",
             content="Order text...",
             metadata={},
-            url="https://example.com"
+            url="https://example.com",
         )
 
         # Act
@@ -312,8 +314,8 @@ class TestValidatePayload:
             "metadata": {
                 "document_id": "doc-123",
                 "title": "Test Document",
-                "type": "Test Type"
-            }
+                "type": "Test Type",
+            },
         }
 
         # Act & Assert
@@ -329,7 +331,7 @@ class TestValidatePayload:
         payload = {
             # "id": missing
             "text": "This is the chunk text",
-            "metadata": {}
+            "metadata": {},
         }
 
         # Act & Assert
@@ -345,7 +347,7 @@ class TestValidatePayload:
         payload = {
             "id": "test-123",
             # "text": missing
-            "metadata": {}
+            "metadata": {},
         }
 
         # Act & Assert
@@ -360,7 +362,7 @@ class TestValidatePayload:
         # Arrange
         payload = {
             "id": "test-123",
-            "text": "Text"
+            "text": "Text",
             # "metadata": missing
         }
 
@@ -380,8 +382,8 @@ class TestBuildPayloadsFromDocument:
         - Integration testing verifies component interaction
     """
 
-    @patch('governmentreporter.processors.build_payloads.generate_scotus_llm_fields')
-    @patch('governmentreporter.processors.build_payloads.chunk_supreme_court_opinion')
+    @patch("governmentreporter.processors.build_payloads.generate_scotus_llm_fields")
+    @patch("governmentreporter.processors.build_payloads.chunk_supreme_court_opinion")
     def test_build_payloads_scotus_document(self, mock_chunk, mock_llm):
         """
         Test payload building for SCOTUS document.
@@ -400,13 +402,13 @@ class TestBuildPayloadsFromDocument:
             type="scotus_opinion",
             source="courtlistener",
             content="Opinion text",
-            url="https://example.com"
+            url="https://example.com",
         )
 
         # chunk_supreme_court_opinion returns (chunks, syllabus) tuple
         mock_chunk.return_value = (
             [("Chunk 1 text", {"chunk_index": 0, "chunk_total": 1})],
-            "This is the syllabus"  # syllabus text
+            "This is the syllabus",  # syllabus text
         )
 
         mock_llm.return_value = {
@@ -419,7 +421,7 @@ class TestBuildPayloadsFromDocument:
             "holding_plain": "Holding",
             "outcome_simple": "Outcome",
             "issue_plain": "Issue",
-            "reasoning": "Reasoning"
+            "reasoning": "Reasoning",
         }
 
         # Act
@@ -429,8 +431,8 @@ class TestBuildPayloadsFromDocument:
         assert len(payloads) >= 1
         assert payloads[0]["text"] == "Chunk 1 text"
 
-    @patch('governmentreporter.processors.build_payloads.generate_eo_llm_fields')
-    @patch('governmentreporter.processors.build_payloads.chunk_executive_order')
+    @patch("governmentreporter.processors.build_payloads.generate_eo_llm_fields")
+    @patch("governmentreporter.processors.build_payloads.chunk_executive_order")
     def test_build_payloads_eo_document(self, mock_chunk, mock_llm):
         """
         Test payload building for EO document.
@@ -449,7 +451,7 @@ class TestBuildPayloadsFromDocument:
             type="executive_order",
             source="federal_register",
             content="Order text",
-            url="https://example.com"
+            url="https://example.com",
         )
 
         mock_chunk.return_value = [
@@ -464,7 +466,7 @@ class TestBuildPayloadsFromDocument:
             "topics_or_policy_areas": ["t1", "t2", "t3", "t4", "t5"],
             "action_plain": "Action",
             "impact_simple": "Impact",
-            "implementation_requirements": "Requirements"
+            "implementation_requirements": "Requirements",
         }
 
         # Act
@@ -487,11 +489,13 @@ class TestBuildPayloadsFromDocument:
             type="unknown_type",
             source="unknown_source",
             content="Unknown content",
-            url="https://example.com"
+            url="https://example.com",
         )
 
         # Act
-        with patch('governmentreporter.processors.build_payloads.logger') as mock_logger:
+        with patch(
+            "governmentreporter.processors.build_payloads.logger"
+        ) as mock_logger:
             payloads = build_payloads_from_document(doc)
 
             # Should return empty list for unknown types
@@ -533,9 +537,9 @@ def sample_scotus_document():
             "docket_number": "23-FIX",
             "majority_author": "Fixture",
             "vote_majority": 9,
-            "vote_minority": 0
+            "vote_minority": 0,
         },
-        url="https://fixture.test/scotus"
+        url="https://fixture.test/scotus",
     )
 
 
@@ -567,7 +571,7 @@ def sample_eo_document():
         metadata={
             "executive_order_number": "14999",
             "president": "Test President",
-            "agencies": ["Test Agency"]
+            "agencies": ["Test Agency"],
         },
-        url="https://fixture.test/eo"
+        url="https://fixture.test/eo",
     )

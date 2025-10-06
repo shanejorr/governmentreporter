@@ -83,9 +83,7 @@ class ServerConfig:
     )
 
     # Qdrant connection settings
-    qdrant_url: Optional[str] = field(
-        default_factory=lambda: os.getenv("QDRANT_URL")
-    )
+    qdrant_url: Optional[str] = field(default_factory=lambda: os.getenv("QDRANT_URL"))
     qdrant_host: str = field(
         default_factory=lambda: os.getenv("QDRANT_HOST", "localhost")
     )
@@ -143,9 +141,7 @@ class ServerConfig:
     rate_limit_requests_per_minute: int = 60
 
     # Logging
-    log_level: str = field(
-        default_factory=lambda: os.getenv("MCP_LOG_LEVEL", "INFO")
-    )
+    log_level: str = field(default_factory=lambda: os.getenv("MCP_LOG_LEVEL", "INFO"))
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
     # API client configuration
@@ -303,5 +299,3 @@ def set_config(config: ServerConfig) -> None:
     """
     global _config
     _config = config
-
-

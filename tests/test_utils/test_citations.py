@@ -133,13 +133,16 @@ class TestFormatCFRCitation:
         assert result == "14 C.F.R. § 91.817"
         assert "(" not in result
 
-    @pytest.mark.parametrize("title,section,year,expected", [
-        ("14", "91.817", None, "14 C.F.R. § 91.817"),
-        ("14", "91.817", "2024", "14 C.F.R. § 91.817 (2024)"),
-        ("5", "1.1", "2023", "5 C.F.R. § 1.1 (2023)"),
-        ("42", "450.303(a)", None, "42 C.F.R. § 450.303(a)"),
-        ("49", "571.208(b)(1)(ii)", "2025", "49 C.F.R. § 571.208(b)(1)(ii) (2025)"),
-    ])
+    @pytest.mark.parametrize(
+        "title,section,year,expected",
+        [
+            ("14", "91.817", None, "14 C.F.R. § 91.817"),
+            ("14", "91.817", "2024", "14 C.F.R. § 91.817 (2024)"),
+            ("5", "1.1", "2023", "5 C.F.R. § 1.1 (2023)"),
+            ("42", "450.303(a)", None, "42 C.F.R. § 450.303(a)"),
+            ("49", "571.208(b)(1)(ii)", "2025", "49 C.F.R. § 571.208(b)(1)(ii) (2025)"),
+        ],
+    )
     def test_cfr_citation_parametrized(self, title, section, year, expected):
         """
         Parametrized test for various CFR citation formats.
@@ -260,13 +263,16 @@ class TestFormatUSCCitation:
         # Assert: Verify formatting
         assert result == "42 U.S.C. § 12101 (2024)"
 
-    @pytest.mark.parametrize("title,section,year,expected", [
-        ("18", "1001", None, "18 U.S.C. § 1001"),
-        ("26", "501", "2023", "26 U.S.C. § 501 (2023)"),
-        ("42", "1983(a)(1)", None, "42 U.S.C. § 1983(a)(1)"),
-        ("5", "552b(c)(1)", "2024", "5 U.S.C. § 552b(c)(1) (2024)"),
-        ("12", "5497", "2018", "12 U.S.C. § 5497 (2018)"),
-    ])
+    @pytest.mark.parametrize(
+        "title,section,year,expected",
+        [
+            ("18", "1001", None, "18 U.S.C. § 1001"),
+            ("26", "501", "2023", "26 U.S.C. § 501 (2023)"),
+            ("42", "1983(a)(1)", None, "42 U.S.C. § 1983(a)(1)"),
+            ("5", "552b(c)(1)", "2024", "5 U.S.C. § 552b(c)(1) (2024)"),
+            ("12", "5497", "2018", "12 U.S.C. § 5497 (2018)"),
+        ],
+    )
     def test_usc_citation_parametrized(self, title, section, year, expected):
         """
         Parametrized test for various USC citation formats.
@@ -444,15 +450,18 @@ class TestFormatConstitutionCitation:
         # Assert: Clause is still added
         assert result == "U.S. Const. art. II, cl. 3"
 
-    @pytest.mark.parametrize("article,amendment,section,clause,expected", [
-        ("I", None, None, None, "U.S. Const. art. I"),
-        ("II", None, "2", None, "U.S. Const. art. II, § 2"),
-        ("III", None, "3", "2", "U.S. Const. art. III, § 3, cl. 2"),
-        (None, "V", None, None, "U.S. Const. amend. V"),
-        (None, "XIV", "1", None, "U.S. Const. amend. XIV, § 1"),
-        ("I", "XIV", None, None, None),  # Both article and amendment
-        (None, None, None, None, None),  # Neither
-    ])
+    @pytest.mark.parametrize(
+        "article,amendment,section,clause,expected",
+        [
+            ("I", None, None, None, "U.S. Const. art. I"),
+            ("II", None, "2", None, "U.S. Const. art. II, § 2"),
+            ("III", None, "3", "2", "U.S. Const. art. III, § 3, cl. 2"),
+            (None, "V", None, None, "U.S. Const. amend. V"),
+            (None, "XIV", "1", None, "U.S. Const. amend. XIV, § 1"),
+            ("I", "XIV", None, None, None),  # Both article and amendment
+            (None, None, None, None, None),  # Neither
+        ],
+    )
     def test_constitution_citation_parametrized(
         self, article, amendment, section, clause, expected
     ):
@@ -477,19 +486,22 @@ class TestFormatConstitutionCitation:
         assert format_constitution_citation(amendment="I") == "U.S. Const. amend. I"
 
         # Commerce Clause
-        assert format_constitution_citation(
-            article="I", section="8", clause="3"
-        ) == "U.S. Const. art. I, § 8, cl. 3"
+        assert (
+            format_constitution_citation(article="I", section="8", clause="3")
+            == "U.S. Const. art. I, § 8, cl. 3"
+        )
 
         # Due Process Clause (14th Amendment)
-        assert format_constitution_citation(
-            amendment="XIV", section="1"
-        ) == "U.S. Const. amend. XIV, § 1"
+        assert (
+            format_constitution_citation(amendment="XIV", section="1")
+            == "U.S. Const. amend. XIV, § 1"
+        )
 
         # Presidential Powers
-        assert format_constitution_citation(
-            article="II", section="2"
-        ) == "U.S. Const. art. II, § 2"
+        assert (
+            format_constitution_citation(article="II", section="2")
+            == "U.S. Const. art. II, § 2"
+        )
 
 
 class TestParseCFRCitations:
@@ -1177,7 +1189,9 @@ class TestCitationEdgeCases:
             - Citations should be extracted regardless of surrounding text
         """
         # Arrange: Unicode text with citations
-        text = "Según 42 U.S.C. § 1983, la protección es garantizada. 参见14 CFR 91.817。"
+        text = (
+            "Según 42 U.S.C. § 1983, la protección es garantizada. 参见14 CFR 91.817。"
+        )
 
         # Act: Parse citations
         usc_citations = parse_usc_citations(text)

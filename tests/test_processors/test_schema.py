@@ -67,7 +67,13 @@ class TestSharedMetadata:
             "federal_statutes_cited": ["42 U.S.C. § 1983"],
             "federal_regulations_cited": ["40 C.F.R. Part 60"],
             "cases_cited": ["Brown v. Board, 347 U.S. 483 (1954)"],
-            "topics_or_policy_areas": ["civil rights", "free speech", "education", "testing", "law"]
+            "topics_or_policy_areas": [
+                "civil rights",
+                "free speech",
+                "education",
+                "testing",
+                "law",
+            ],
         }
 
         # Act
@@ -96,7 +102,7 @@ class TestSharedMetadata:
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
             "url": "https://example.com/doc-12345",
-            "plain_language_summary": "Test summary"
+            "plain_language_summary": "Test summary",
         }
 
         # Act & Assert
@@ -123,7 +129,7 @@ class TestSharedMetadata:
             "type": "Supreme Court Opinion",
             "url": "https://example.com",
             "plain_language_summary": "Summary",
-            "topics_or_policy_areas": ["topic1", "topic2"]  # Only 2, need 5-8
+            "topics_or_policy_areas": ["topic1", "topic2"],  # Only 2, need 5-8
         }
 
         with pytest.raises(ValidationError) as exc_info:
@@ -131,14 +137,18 @@ class TestSharedMetadata:
         assert "at least 5 items" in str(exc_info.value).lower()
 
         # Test too many topics
-        metadata_dict["topics_or_policy_areas"] = [f"topic{i}" for i in range(10)]  # 10 topics
+        metadata_dict["topics_or_policy_areas"] = [
+            f"topic{i}" for i in range(10)
+        ]  # 10 topics
 
         with pytest.raises(ValidationError) as exc_info:
             SharedMetadata(**metadata_dict)
         assert "at most 8 items" in str(exc_info.value).lower()
 
         # Test valid number of topics
-        metadata_dict["topics_or_policy_areas"] = [f"topic{i}" for i in range(6)]  # 6 topics
+        metadata_dict["topics_or_policy_areas"] = [
+            f"topic{i}" for i in range(6)
+        ]  # 6 topics
         metadata = SharedMetadata(**metadata_dict)
         assert len(metadata.topics_or_policy_areas) == 6
 
@@ -159,7 +169,7 @@ class TestSharedMetadata:
             "type": "Supreme Court Opinion",
             "url": "https://example.com",
             "plain_language_summary": "Summary",
-            "topics_or_policy_areas": ["t1", "t2", "t3", "t4", "t5"]
+            "topics_or_policy_areas": ["t1", "t2", "t3", "t4", "t5"],
         }
 
         # Act
@@ -201,7 +211,7 @@ class TestChunkMetadata:
             "chunk_total": 5,
             "section_name": "Syllabus",
             "start_char": 0,
-            "end_char": 1000
+            "end_char": 1000,
         }
 
         # Act
@@ -221,10 +231,7 @@ class TestChunkMetadata:
         Ensures section_name and character positions are optional.
         """
         # Arrange - Minimal chunk metadata
-        chunk_dict = {
-            "chunk_index": 2,
-            "chunk_total": 10
-        }
+        chunk_dict = {"chunk_index": 2, "chunk_total": 10}
 
         # Act
         chunk_meta = ChunkMetadata(**chunk_dict)
@@ -285,7 +292,13 @@ class TestSupremeCourtMetadata:
             "type": "Supreme Court Opinion",
             "url": "https://example.com/miranda",
             "plain_language_summary": "Police must inform suspects of their rights.",
-            "topics_or_policy_areas": ["criminal law", "civil rights", "police", "confession", "Fifth Amendment"],
+            "topics_or_policy_areas": [
+                "criminal law",
+                "civil rights",
+                "police",
+                "confession",
+                "Fifth Amendment",
+            ],
             # SCOTUS-specific fields
             "docket_number": "759",
             "case_name_short": "Miranda",
@@ -297,7 +310,7 @@ class TestSupremeCourtMetadata:
             "vote_majority": 5,
             "vote_minority": 4,
             "argued_date": "1966-02-28",
-            "decided_date": "1966-06-13"
+            "decided_date": "1966-06-13",
         }
 
         # Act
@@ -308,7 +321,10 @@ class TestSupremeCourtMetadata:
         assert metadata.majority_author == "Warren"
         assert metadata.vote_majority == 5
         assert metadata.vote_minority == 4
-        assert metadata.holding_plain == "Police must give Miranda warnings before interrogation."
+        assert (
+            metadata.holding_plain
+            == "Police must give Miranda warnings before interrogation."
+        )
 
     def test_scotus_metadata_optional_fields(self):
         """
@@ -332,7 +348,7 @@ class TestSupremeCourtMetadata:
             "holding_plain": "The Court held...",
             "outcome_simple": "Affirmed",
             "issue_plain": "Whether...",
-            "reasoning": "Because..."
+            "reasoning": "Because...",
         }
 
         # Act
@@ -366,7 +382,7 @@ class TestSupremeCourtMetadata:
             "holding_plain": "Held...",
             "outcome_simple": "Reversed",
             "issue_plain": "Issue...",
-            "reasoning": "Reasoning..."
+            "reasoning": "Reasoning...",
         }
 
         # Act
@@ -407,7 +423,13 @@ class TestExecutiveOrderMetadata:
             "type": "Executive Order",
             "url": "https://federalregister.gov/eo-14123",
             "plain_language_summary": "Requires federal agencies to reduce emissions.",
-            "topics_or_policy_areas": ["climate", "environment", "energy", "federal operations", "sustainability"],
+            "topics_or_policy_areas": [
+                "climate",
+                "environment",
+                "energy",
+                "federal operations",
+                "sustainability",
+            ],
             # EO-specific fields
             "executive_order_number": "14123",
             "president": "Test President",
@@ -419,7 +441,7 @@ class TestExecutiveOrderMetadata:
             "signing_date": "2024-01-20",
             "effective_date": "2024-02-01",
             "federal_register_number": "2024-12345",
-            "revokes": ["EO 13990", "EO 13834"]
+            "revokes": ["EO 13990", "EO 13834"],
         }
 
         # Act
@@ -454,7 +476,7 @@ class TestExecutiveOrderMetadata:
             "plain_summary": "Summary",
             "action_plain": "Action",
             "impact_simple": "Impact",
-            "implementation_requirements": "Requirements"
+            "implementation_requirements": "Requirements",
         }
 
         # Act
@@ -489,7 +511,7 @@ class TestExecutiveOrderMetadata:
             "impact_simple": "Impact",
             "implementation_requirements": "Requirements",
             "agencies_or_entities": ["EPA", "DOE", "DOD", "NASA", "NOAA"],
-            "revokes": []  # Empty list is valid
+            "revokes": [],  # Empty list is valid
         }
 
         # Act
@@ -534,13 +556,13 @@ class TestQdrantPayload:
             "issue_plain": "Issue...",
             "reasoning": "Reasoning...",
             "chunk_index": 0,
-            "chunk_total": 3
+            "chunk_total": 3,
         }
 
         payload_dict = {
             "id": "scotus-123-chunk-0",
             "text": "This is the chunk text from the opinion.",
-            "metadata": scotus_metadata
+            "metadata": scotus_metadata,
         }
 
         # Act
@@ -568,19 +590,25 @@ class TestQdrantPayload:
             "type": "Executive Order",
             "url": "https://federalregister.gov",
             "plain_language_summary": "Climate order",
-            "topics_or_policy_areas": ["climate", "energy", "environment", "federal", "sustainability"],
+            "topics_or_policy_areas": [
+                "climate",
+                "energy",
+                "environment",
+                "federal",
+                "sustainability",
+            ],
             "plain_summary": "Summary",
             "action_plain": "Action",
             "impact_simple": "Impact",
             "implementation_requirements": "Requirements",
             "chunk_index": 1,
-            "chunk_total": 5
+            "chunk_total": 5,
         }
 
         payload_dict = {
             "id": "eo-14123-chunk-1",
             "text": "Section 2. Policy. The United States shall...",
-            "metadata": eo_metadata
+            "metadata": eo_metadata,
         }
 
         # Act
@@ -624,7 +652,7 @@ class TestSchemaSerializationDeserialization:
             url="https://example.com",
             plain_language_summary="Summary",
             constitution_cited=["First Amendment"],
-            topics_or_policy_areas=["t1", "t2", "t3", "t4", "t5"]
+            topics_or_policy_areas=["t1", "t2", "t3", "t4", "t5"],
         )
 
         # Act - Convert to JSON and back
@@ -660,7 +688,7 @@ class TestSchemaSerializationDeserialization:
             reasoning="Reasoning...",
             majority_author="Roberts",
             vote_majority=5,
-            vote_minority=4
+            vote_minority=4,
         )
 
         # Act
@@ -696,8 +724,8 @@ class TestSchemaSerializationDeserialization:
                 "plain_language_summary": "Summary",
                 "topics_or_policy_areas": ["t1", "t2", "t3", "t4", "t5"],
                 "chunk_index": 0,
-                "chunk_total": 1
-            }
+                "chunk_total": 1,
+            },
         )
 
         # Act
@@ -736,7 +764,7 @@ def valid_shared_metadata_dict():
         "federal_statutes_cited": ["42 U.S.C. § 1983"],
         "federal_regulations_cited": ["40 C.F.R. Part 60"],
         "cases_cited": ["Test v. Case, 123 U.S. 456 (2024)"],
-        "topics_or_policy_areas": ["topic1", "topic2", "topic3", "topic4", "topic5"]
+        "topics_or_policy_areas": ["topic1", "topic2", "topic3", "topic4", "topic5"],
     }
 
 
@@ -756,17 +784,19 @@ def valid_scotus_metadata_dict(valid_shared_metadata_dict):
         - Dictionary update modifies in place
     """
     scotus_dict = valid_shared_metadata_dict.copy()
-    scotus_dict.update({
-        "source": "CourtListener",
-        "type": "Supreme Court Opinion",
-        "holding_plain": "The Court held that...",
-        "outcome_simple": "Reversed and remanded",
-        "issue_plain": "Whether the law violates...",
-        "reasoning": "The Court reasoned that...",
-        "majority_author": "Roberts",
-        "vote_majority": 5,
-        "vote_minority": 4
-    })
+    scotus_dict.update(
+        {
+            "source": "CourtListener",
+            "type": "Supreme Court Opinion",
+            "holding_plain": "The Court held that...",
+            "outcome_simple": "Reversed and remanded",
+            "issue_plain": "Whether the law violates...",
+            "reasoning": "The Court reasoned that...",
+            "majority_author": "Roberts",
+            "vote_majority": 5,
+            "vote_minority": 4,
+        }
+    )
     return scotus_dict
 
 
@@ -782,14 +812,16 @@ def valid_eo_metadata_dict(valid_shared_metadata_dict):
         dict: Complete EO metadata dictionary
     """
     eo_dict = valid_shared_metadata_dict.copy()
-    eo_dict.update({
-        "source": "Federal Register",
-        "type": "Executive Order",
-        "plain_summary": "Order summary",
-        "action_plain": "Requires agencies to...",
-        "impact_simple": "Federal operations must...",
-        "implementation_requirements": "Agencies shall submit...",
-        "agencies_or_entities": ["EPA", "DOE"],
-        "executive_order_number": "14123"
-    })
+    eo_dict.update(
+        {
+            "source": "Federal Register",
+            "type": "Executive Order",
+            "plain_summary": "Order summary",
+            "action_plain": "Requires agencies to...",
+            "impact_simple": "Federal operations must...",
+            "implementation_requirements": "Agencies shall submit...",
+            "agencies_or_entities": ["EPA", "DOE"],
+            "executive_order_number": "14123",
+        }
+    )
     return eo_dict

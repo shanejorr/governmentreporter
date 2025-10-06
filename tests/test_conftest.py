@@ -29,16 +29,14 @@ def test_mock_openai_client_fixture(mock_openai_client):
     """
     # Test that embeddings.create method exists and returns expected structure
     response = mock_openai_client.embeddings.create(
-        input="test text",
-        model="text-embedding-3-small"
+        input="test text", model="text-embedding-3-small"
     )
     assert response.data[0].embedding is not None
     assert len(response.data[0].embedding) == 1536
 
     # Test chat completions for metadata generation
     chat_response = mock_openai_client.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": "test"}]
+        model="gpt-4", messages=[{"role": "user", "content": "test"}]
     )
     assert chat_response.choices[0].message.content is not None
 
@@ -52,9 +50,7 @@ def test_mock_qdrant_client_fixture(mock_qdrant_client):
     """
     # Test search functionality
     results = mock_qdrant_client.search(
-        collection_name="test",
-        query_vector=[0.1] * 1536,
-        limit=5
+        collection_name="test", query_vector=[0.1] * 1536, limit=5
     )
     assert len(results) > 0
     assert results[0].score > 0
@@ -108,13 +104,13 @@ def test_temp_config_file_fixture(temp_config_file):
 
     assert temp_config_file.exists()
 
-    with open(temp_config_file, 'r') as f:
+    with open(temp_config_file, "r") as f:
         config = yaml.safe_load(f)
 
-    assert 'database' in config
-    assert config['database']['path'] == '/tmp/test_db'
-    assert 'openai' in config
-    assert 'apis' in config
+    assert "database" in config
+    assert config["database"]["path"] == "/tmp/test_db"
+    assert "openai" in config
+    assert "apis" in config
 
 
 def test_mock_environment_variables_fixture(mock_environment_variables):
@@ -123,9 +119,9 @@ def test_mock_environment_variables_fixture(mock_environment_variables):
     """
     import os
 
-    assert os.environ.get('OPENAI_API_KEY') == 'test-api-key-123'
-    assert os.environ.get('COURT_LISTENER_API_TOKEN') == 'test-court-listener-token'
-    assert 'OPENAI_API_KEY' in mock_environment_variables
+    assert os.environ.get("OPENAI_API_KEY") == "test-api-key-123"
+    assert os.environ.get("COURT_LISTENER_API_TOKEN") == "test-court-listener-token"
+    assert "OPENAI_API_KEY" in mock_environment_variables
 
 
 def test_mock_httpx_client_fixture(mock_httpx_client):
@@ -138,7 +134,9 @@ def test_mock_httpx_client_fixture(mock_httpx_client):
     assert len(response.json()["results"]) == 2
 
 
-def test_multiple_fixtures_together(sample_document, mock_openai_client, mock_qdrant_client):
+def test_multiple_fixtures_together(
+    sample_document, mock_openai_client, mock_qdrant_client
+):
     """
     Test that multiple fixtures can be used together in a single test.
 

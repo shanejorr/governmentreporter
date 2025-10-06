@@ -227,7 +227,7 @@ class QdrantPayload(BaseModel):
     text: str = Field(description="The actual text content of the chunk")
     embedding: list = Field(
         default_factory=list,
-        description="Vector embedding (initially empty, filled after generation)"
+        description="Vector embedding (initially empty, filled after generation)",
     )
     metadata: dict = Field(
         description="Combined metadata including document-level, LLM-generated, and chunk-level fields"

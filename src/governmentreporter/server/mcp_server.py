@@ -28,7 +28,14 @@ from typing import Any, Dict, List, Optional
 from mcp.server import Server
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource, ServerCapabilities, ToolsCapability
+from mcp.types import (
+    Tool,
+    TextContent,
+    ImageContent,
+    EmbeddedResource,
+    ServerCapabilities,
+    ToolsCapability,
+)
 
 from ..database.qdrant import QdrantDBClient
 from ..processors.embeddings import generate_embedding
@@ -275,21 +282,23 @@ class GovernmentReporterMCP:
             if not self.qdrant_client:
                 # Initialize Qdrant client with configured settings
                 # Check for cloud URL first (highest priority)
-                if hasattr(self.config, 'qdrant_url') and self.config.qdrant_url:
+                if hasattr(self.config, "qdrant_url") and self.config.qdrant_url:
                     self.qdrant_client = QdrantDBClient(
-                        url=self.config.qdrant_url,
-                        api_key=self.config.qdrant_api_key
+                        url=self.config.qdrant_url, api_key=self.config.qdrant_api_key
                     )
                 # Then check for remote host/port
-                elif self.config.qdrant_host != 'localhost' or self.config.qdrant_port != 6333:
+                elif (
+                    self.config.qdrant_host != "localhost"
+                    or self.config.qdrant_port != 6333
+                ):
                     self.qdrant_client = QdrantDBClient(
                         host=self.config.qdrant_host,
                         port=self.config.qdrant_port,
-                        api_key=self.config.qdrant_api_key
+                        api_key=self.config.qdrant_api_key,
                     )
                 # Default to local file-based storage
                 else:
-                    db_path = getattr(self.config, 'qdrant_db_path', './qdrant_db')
+                    db_path = getattr(self.config, "qdrant_db_path", "./qdrant_db")
                     self.qdrant_client = QdrantDBClient(db_path=db_path)
 
             try:
@@ -339,21 +348,20 @@ class GovernmentReporterMCP:
 
         # Initialize Qdrant client with configured settings
         # Check for cloud URL first (highest priority)
-        if hasattr(self.config, 'qdrant_url') and self.config.qdrant_url:
+        if hasattr(self.config, "qdrant_url") and self.config.qdrant_url:
             self.qdrant_client = QdrantDBClient(
-                url=self.config.qdrant_url,
-                api_key=self.config.qdrant_api_key
+                url=self.config.qdrant_url, api_key=self.config.qdrant_api_key
             )
         # Then check for remote host/port
-        elif self.config.qdrant_host != 'localhost' or self.config.qdrant_port != 6333:
+        elif self.config.qdrant_host != "localhost" or self.config.qdrant_port != 6333:
             self.qdrant_client = QdrantDBClient(
                 host=self.config.qdrant_host,
                 port=self.config.qdrant_port,
-                api_key=self.config.qdrant_api_key
+                api_key=self.config.qdrant_api_key,
             )
         # Default to local file-based storage
         else:
-            db_path = getattr(self.config, 'qdrant_db_path', './qdrant_db')
+            db_path = getattr(self.config, "qdrant_db_path", "./qdrant_db")
             self.qdrant_client = QdrantDBClient(db_path=db_path)
 
         # Verify connection and log available collections
@@ -387,10 +395,8 @@ class GovernmentReporterMCP:
                 InitializationOptions(
                     server_name=self.config.server_name,
                     server_version=self.config.server_version,
-                    capabilities=ServerCapabilities(
-                        tools=ToolsCapability()
-                    )
-                )
+                    capabilities=ServerCapabilities(tools=ToolsCapability()),
+                ),
             )
 
     async def shutdown(self):

@@ -61,7 +61,7 @@ class TestDocumentDataclass:
             title="Test Document",
             date="2024-01-15",
             type="test_type",
-            source="test_source"
+            source="test_source",
         )
 
         # Assert: Required fields are set correctly
@@ -94,7 +94,7 @@ class TestDocumentDataclass:
         metadata = {
             "court": "Supreme Court",
             "docket": "20-123",
-            "judges": ["Roberts", "Thomas"]
+            "judges": ["Roberts", "Thomas"],
         }
 
         # Act: Create fully populated document
@@ -106,7 +106,7 @@ class TestDocumentDataclass:
             source="courtlistener",
             content="This is the full text content of the opinion.",
             metadata=metadata,
-            url="https://example.com/opinion/456"
+            url="https://example.com/opinion/456",
         )
 
         # Assert: All fields are set correctly
@@ -141,15 +141,23 @@ class TestDocumentDataclass:
 
         # Assert: Field names are correct
         field_names = [f.name for f in doc_fields]
-        expected_fields = ['id', 'title', 'date', 'type', 'source',
-                          'content', 'metadata', 'url']
+        expected_fields = [
+            "id",
+            "title",
+            "date",
+            "type",
+            "source",
+            "content",
+            "metadata",
+            "url",
+        ]
         assert field_names == expected_fields
 
         # Assert: Check field types
         field_types = {f.name: f.type for f in doc_fields}
-        assert field_types['id'] == str
-        assert field_types['content'] == Optional[str]
-        assert field_types['metadata'] == Optional[Dict[str, Any]]
+        assert field_types["id"] == str
+        assert field_types["content"] == Optional[str]
+        assert field_types["metadata"] == Optional[Dict[str, Any]]
 
     def test_document_equality(self):
         """
@@ -169,7 +177,7 @@ class TestDocumentDataclass:
             title="Equality Test",
             date="2024-01-01",
             type="test",
-            source="test"
+            source="test",
         )
 
         doc2 = Document(
@@ -177,7 +185,7 @@ class TestDocumentDataclass:
             title="Equality Test",
             date="2024-01-01",
             type="test",
-            source="test"
+            source="test",
         )
 
         # Act & Assert: Documents are equal
@@ -190,7 +198,7 @@ class TestDocumentDataclass:
             title="Equality Test",
             date="2024-01-01",
             type="test",
-            source="test"
+            source="test",
         )
 
         # Assert: Different documents are not equal
@@ -215,7 +223,7 @@ class TestDocumentDataclass:
             title="Repr Test",
             date="2024-02-15",
             type="test_type",
-            source="test_source"
+            source="test_source",
         )
 
         # Act: Get string representation
@@ -244,13 +252,7 @@ class TestDocumentDataclass:
             - Validation logic would be separate from dataclass
         """
         # Act: Create document with empty strings
-        doc = Document(
-            id="",
-            title="",
-            date="",
-            type="",
-            source=""
-        )
+        doc = Document(id="", title="", date="", type="", source="")
 
         # Assert: Empty strings are accepted
         assert doc.id == ""
@@ -278,7 +280,7 @@ class TestDocumentDataclass:
             date="2024-01-01",
             type="test",
             source="test",
-            metadata={"initial": "value"}
+            metadata={"initial": "value"},
         )
 
         # Act: Modify metadata
@@ -314,7 +316,7 @@ class TestDocumentDataclass:
             title="Original Title",
             date="2024-01-01",
             type="original_type",
-            source="original_source"
+            source="original_source",
         )
 
         # Act: Modify fields
@@ -348,7 +350,7 @@ class TestDocumentDataclass:
             title="No Metadata",
             date="2024-01-01",
             type="test",
-            source="test"
+            source="test",
         )
 
         # Assert: Metadata is None
@@ -380,7 +382,7 @@ class TestDocumentDataclass:
             title=None,  # Should be str
             date=["2024", "01", "01"],  # Should be str
             type=True,  # Should be str
-            source={"source": "dict"}  # Should be str
+            source={"source": "dict"},  # Should be str
         )
 
         # Assert: Wrong types are accepted (no runtime validation)
@@ -412,7 +414,7 @@ class TestDocumentDataclass:
             date="2024-01-01",
             type="test",
             source="test",
-            metadata={"key": "value"}
+            metadata={"key": "value"},
         )
 
         # Act: Create shallow copy
@@ -478,7 +480,7 @@ class MockGovernmentAPIClient(GovernmentAPIClient):
                 title=f"Mock Result {i}",
                 date="2024-01-01",
                 type="mock",
-                source="mock_api"
+                source="mock_api",
             )
             for i in range(min(3, limit))
         ]
@@ -491,7 +493,7 @@ class MockGovernmentAPIClient(GovernmentAPIClient):
             date="2024-01-01",
             type="mock",
             source="mock_api",
-            content=f"Mock content for {document_id}"
+            content=f"Mock content for {document_id}",
         )
 
     def get_document_text(self, document_id: str) -> str:
@@ -600,8 +602,12 @@ class TestGovernmentAPIClient:
         assert client.validate_date_format("1999-09-09") is True
 
         # Edge cases that are format-valid
-        assert client.validate_date_format("0000-00-00") is True  # Invalid date, valid format
-        assert client.validate_date_format("9999-99-99") is True  # Invalid date, valid format
+        assert (
+            client.validate_date_format("0000-00-00") is True
+        )  # Invalid date, valid format
+        assert (
+            client.validate_date_format("9999-99-99") is True
+        )  # Invalid date, valid format
 
     def test_validate_date_format_invalid_dates(self):
         """
@@ -620,7 +626,9 @@ class TestGovernmentAPIClient:
         # Act & Assert: Invalid formats return False
         assert client.validate_date_format("2024-1-1") is False  # Missing zeros
         assert client.validate_date_format("2024-01-1") is False  # Missing zero in day
-        assert client.validate_date_format("2024-1-01") is False  # Missing zero in month
+        assert (
+            client.validate_date_format("2024-1-01") is False
+        )  # Missing zero in month
         assert client.validate_date_format("01/01/2024") is False  # Wrong delimiter
         assert client.validate_date_format("01-01-2024") is False  # Wrong order
         assert client.validate_date_format("2024/01/01") is False  # Slashes not hyphens
@@ -630,7 +638,9 @@ class TestGovernmentAPIClient:
         assert client.validate_date_format("2024-01") is False  # Year-month only
         assert client.validate_date_format("") is False  # Empty string
         assert client.validate_date_format("not-a-date") is False  # Random string
-        assert client.validate_date_format("2024-13-01") is True  # Invalid month, valid format
+        assert (
+            client.validate_date_format("2024-13-01") is True
+        )  # Invalid month, valid format
 
     def test_validate_date_format_edge_cases(self):
         """
@@ -654,7 +664,9 @@ class TestGovernmentAPIClient:
         # Extra characters
         assert client.validate_date_format("2024-01-01 ") is False  # Trailing space
         assert client.validate_date_format(" 2024-01-01") is False  # Leading space
-        assert client.validate_date_format("2024-01-01T00:00:00") is False  # ISO datetime
+        assert (
+            client.validate_date_format("2024-01-01T00:00:00") is False
+        )  # ISO datetime
         assert client.validate_date_format("2024-01-01Z") is False  # With timezone
 
         # SQL injection attempt (should just return False)
@@ -694,9 +706,7 @@ class TestGovernmentAPIClient:
 
         # Act: Search with dates (ignored in mock)
         date_results = client.search_documents(
-            "test",
-            start_date="2024-01-01",
-            end_date="2024-12-31"
+            "test", start_date="2024-01-01", end_date="2024-12-31"
         )
 
         # Assert: Dates don't affect mock results
@@ -769,10 +779,7 @@ class TestGovernmentAPIClient:
                 self.custom_param = custom_param
 
         # Act: Create extended client
-        client = ExtendedMockClient(
-            api_key="extended-key",
-            custom_param="custom-value"
-        )
+        client = ExtendedMockClient(api_key="extended-key", custom_param="custom-value")
 
         # Assert: Both parent and child attributes are set
         assert client.api_key == "extended-key"
@@ -843,7 +850,7 @@ class TestDocumentUsagePatterns:
                 title=f"Document {i}",
                 date=f"2024-01-{i:02d}",
                 type="opinion" if i % 2 == 0 else "order",
-                source="courtlistener"
+                source="courtlistener",
             )
             for i in range(1, 6)
         ]
@@ -854,7 +861,7 @@ class TestDocumentUsagePatterns:
 
         # Assert: Filtering works correctly
         assert len(opinions) == 2  # doc-2, doc-4
-        assert len(orders) == 3    # doc-1, doc-3, doc-5
+        assert len(orders) == 3  # doc-1, doc-3, doc-5
         assert all(doc.type == "opinion" for doc in opinions)
         assert all(doc.type == "order" for doc in orders)
 
@@ -894,7 +901,7 @@ class TestDocumentUsagePatterns:
             source="test",
             content="Test content",
             metadata={"nested": {"data": "value"}},
-            url="https://example.com"
+            url="https://example.com",
         )
 
         # Act: Convert to dictionary
@@ -906,8 +913,14 @@ class TestDocumentUsagePatterns:
         assert doc_dict["title"] == "Dictionary Test"
         assert doc_dict["metadata"]["nested"]["data"] == "value"
         assert set(doc_dict.keys()) == {
-            "id", "title", "date", "type", "source",
-            "content", "metadata", "url"
+            "id",
+            "title",
+            "date",
+            "type",
+            "source",
+            "content",
+            "metadata",
+            "url",
         }
 
     def test_document_from_dict_creation(self):
@@ -931,7 +944,7 @@ class TestDocumentUsagePatterns:
             "source": "api",
             "content": "Content from API",
             "metadata": {"api_version": "v1"},
-            "url": "https://api.example.com/doc"
+            "url": "https://api.example.com/doc",
         }
 
         # Act: Create document from dictionary
@@ -948,7 +961,7 @@ class TestDocumentUsagePatterns:
             "title": "Partial Data",
             "date": "2024-01-01",
             "type": "test",
-            "source": "api"
+            "source": "api",
         }
 
         partial_doc = Document(**partial_data)
@@ -973,7 +986,7 @@ class TestDocumentUsagePatterns:
             title="Cached Document 1",
             date="2024-01-01",
             type="test",
-            source="cache"
+            source="cache",
         )
 
         doc2 = Document(
@@ -981,7 +994,7 @@ class TestDocumentUsagePatterns:
             title="Cached Document 2",
             date="2024-01-02",
             type="test",
-            source="cache"
+            source="cache",
         )
 
         # Act: Use IDs as cache keys
@@ -1071,8 +1084,7 @@ class TestAPIClientIntegration:
             def search_documents(self, query, **kwargs):
                 # Simulate real implementation using HTTP client
                 response = self.http_client.get(
-                    f"{self.base_url}/search",
-                    params={"q": query}
+                    f"{self.base_url}/search", params={"q": query}
                 )
                 # Would normally parse response here
                 return super().search_documents(query, **kwargs)
@@ -1090,8 +1102,7 @@ class TestAPIClientIntegration:
 
         # Assert: HTTP client was called correctly
         mock_http.get.assert_called_once_with(
-            "https://mock.api.gov/v1/search",
-            params={"q": "test query"}
+            "https://mock.api.gov/v1/search", params={"q": "test query"}
         )
         assert len(results) == 3  # From mock implementation
 

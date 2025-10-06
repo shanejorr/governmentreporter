@@ -40,7 +40,14 @@ from typing import Optional
     is_flag=True,
     help="Show full chunk text in results",
 )
-def query(query_text: str, collection: str, limit: int, min_score: float, qdrant_path: str, show_text: bool):
+def query(
+    query_text: str,
+    collection: str,
+    limit: int,
+    min_score: float,
+    qdrant_path: str,
+    show_text: bool,
+):
     """
     Search for documents using semantic similarity.
 
@@ -81,17 +88,17 @@ def query(query_text: str, collection: str, limit: int, min_score: float, qdrant
             try:
                 client = QdrantClient(coll_name, qdrant_path)
                 results = client.search(
-                    query_vector=query_embedding,
-                    limit=limit,
-                    score_threshold=min_score
+                    query_vector=query_embedding, limit=limit, score_threshold=min_score
                 )
 
                 for result in results:
-                    all_results.append({
-                        "collection": coll_name,
-                        "score": result.score,
-                        "payload": result.payload
-                    })
+                    all_results.append(
+                        {
+                            "collection": coll_name,
+                            "score": result.score,
+                            "payload": result.payload,
+                        }
+                    )
 
             except Exception as e:
                 click.echo(f"Warning: Could not search {coll_name}: {e}", err=True)

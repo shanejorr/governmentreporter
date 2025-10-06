@@ -23,18 +23,26 @@ def shell_complete_install():
         click.echo("\nAdd this to your shell's RC file:\n")
 
         if shell == "bash":
-            click.echo('eval "$(_GOVERNMENTREPORTER_COMPLETE=bash_source governmentreporter)"')
+            click.echo(
+                'eval "$(_GOVERNMENTREPORTER_COMPLETE=bash_source governmentreporter)"'
+            )
             click.echo("\nFor bash, add to ~/.bashrc or ~/.bash_profile")
         elif shell == "zsh":
-            click.echo('eval "$(_GOVERNMENTREPORTER_COMPLETE=zsh_source governmentreporter)"')
+            click.echo(
+                'eval "$(_GOVERNMENTREPORTER_COMPLETE=zsh_source governmentreporter)"'
+            )
             click.echo("\nFor zsh, add to ~/.zshrc")
         elif shell == "fish":
-            click.echo('_GOVERNMENTREPORTER_COMPLETE=fish_source governmentreporter | source')
+            click.echo(
+                "_GOVERNMENTREPORTER_COMPLETE=fish_source governmentreporter | source"
+            )
             click.echo("\nFor fish, add to ~/.config/fish/config.fish")
 
         click.echo("\nThen restart your shell or run: source <your-rc-file>")
     else:
-        click.echo(f"Unknown shell: {shell}. Completion supported for bash, zsh, and fish.")
+        click.echo(
+            f"Unknown shell: {shell}. Completion supported for bash, zsh, and fish."
+        )
         sys.exit(1)
 
 
@@ -43,13 +51,21 @@ def shell_complete_show():
     shell = os.path.basename(os.environ.get("SHELL", ""))
 
     if shell == "bash":
-        click.echo('eval "$(_GOVERNMENTREPORTER_COMPLETE=bash_source governmentreporter)"')
+        click.echo(
+            'eval "$(_GOVERNMENTREPORTER_COMPLETE=bash_source governmentreporter)"'
+        )
     elif shell == "zsh":
-        click.echo('eval "$(_GOVERNMENTREPORTER_COMPLETE=zsh_source governmentreporter)"')
+        click.echo(
+            'eval "$(_GOVERNMENTREPORTER_COMPLETE=zsh_source governmentreporter)"'
+        )
     elif shell == "fish":
-        click.echo('_GOVERNMENTREPORTER_COMPLETE=fish_source governmentreporter | source')
+        click.echo(
+            "_GOVERNMENTREPORTER_COMPLETE=fish_source governmentreporter | source"
+        )
     else:
-        click.echo(f"Unknown shell: {shell}. Completion supported for bash, zsh, and fish.")
+        click.echo(
+            f"Unknown shell: {shell}. Completion supported for bash, zsh, and fish."
+        )
         sys.exit(1)
 
 

@@ -61,7 +61,6 @@ import re
 from typing import Any, Dict, Optional
 
 
-
 def format_cfr_citation(title: str, section: str, year: Optional[str] = None) -> str:
     """Format a Code of Federal Regulations (CFR) citation in Bluebook style.
 

@@ -131,7 +131,7 @@ class TestCourtListenerClient:
             "opinions_cited": [],
             "cluster_id": 789012,
             "date_created": "2024-01-15T10:00:00Z",
-            "date_modified": "2024-01-16T15:30:00Z"
+            "date_modified": "2024-01-16T15:30:00Z",
         }
 
     @pytest.fixture
@@ -182,9 +182,9 @@ class TestCourtListenerClient:
             "correction": "",
             "citations": [
                 {"volume": 600, "reporter": "U.S.", "page": "123", "type": "official"},
-                {"volume": 2024, "reporter": "WL", "page": "456789", "type": "westlaw"}
+                {"volume": 2024, "reporter": "WL", "page": "456789", "type": "westlaw"},
             ],
-            "docket_number": "22-123"
+            "docket_number": "22-123",
         }
 
     @pytest.fixture
@@ -203,18 +203,18 @@ class TestCourtListenerClient:
                 {
                     "id": 123456,
                     "cluster": {"case_name": "Test Case v. United States"},
-                    "plain_text": "Sample opinion text for first case..."
+                    "plain_text": "Sample opinion text for first case...",
                 },
                 {
                     "id": 654321,
                     "cluster": {"case_name": "Another Case v. United States"},
-                    "plain_text": "Sample opinion text for second case..."
-                }
-            ]
+                    "plain_text": "Sample opinion text for second case...",
+                },
+            ],
         }
 
     @pytest.fixture
-    @patch('governmentreporter.apis.court_listener.get_court_listener_token')
+    @patch("governmentreporter.apis.court_listener.get_court_listener_token")
     def client(self, mock_get_token, mock_token):
         """
         Create a CourtListenerClient instance with mocked configuration.
@@ -243,7 +243,7 @@ class TestCourtListenerClient:
         assert client.base_url == "https://www.courtlistener.com/api/rest/v4"
         assert client.rate_limit_delay == 0.1
 
-    @patch('governmentreporter.apis.court_listener.get_court_listener_token')
+    @patch("governmentreporter.apis.court_listener.get_court_listener_token")
     def test_client_initialization_from_environment(self, mock_get_token):
         """
         Test client initialization with token from environment.
@@ -265,9 +265,10 @@ class TestCourtListenerClient:
         """Test that the correct rate limit delay is returned."""
         assert client._get_rate_limit_delay() == 0.1
 
-    @patch('httpx.Client')
-    def test_get_document_success(self, mock_httpx_client, client,
-                                   mock_opinion_data, mock_cluster_data):
+    @patch("httpx.Client")
+    def test_get_document_success(
+        self, mock_httpx_client, client, mock_opinion_data, mock_cluster_data
+    ):
         """
         Test successful document retrieval by ID.
 
@@ -315,7 +316,7 @@ class TestCourtListenerClient:
         assert "opinions/123456" in calls[0][0][0]
         assert "clusters/789012" in calls[1][0][0]
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_get_document_not_found(self, mock_httpx_client, client):
         """
         Test document retrieval with non-existent ID.
@@ -327,9 +328,7 @@ class TestCourtListenerClient:
 
         # Mock 404 response
         mock_client_instance.get.side_effect = httpx.HTTPStatusError(
-            "Not Found",
-            request=MagicMock(),
-            response=MagicMock(status_code=404)
+            "Not Found", request=MagicMock(), response=MagicMock(status_code=404)
         )
 
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
@@ -337,8 +336,10 @@ class TestCourtListenerClient:
 
         assert exc_info.value.response.status_code == 404
 
-    @patch('httpx.Client')
-    def test_get_document_text_success(self, mock_httpx_client, client, mock_opinion_data):
+    @patch("httpx.Client")
+    def test_get_document_text_success(
+        self, mock_httpx_client, client, mock_opinion_data
+    ):
         """
         Test successful text-only retrieval.
 
@@ -360,7 +361,7 @@ class TestCourtListenerClient:
         assert "CHIEF JUSTICE ROBERTS" in text
         assert "It is so ordered." in text
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_get_document_text_empty(self, mock_httpx_client, client):
         """
         Test text retrieval when opinion has no plain text.
@@ -380,8 +381,10 @@ class TestCourtListenerClient:
         text = client.get_document_text("123456")
         assert text == ""
 
-    @patch('httpx.Client')
-    def test_search_documents_basic(self, mock_httpx_client, client, mock_search_results):
+    @patch("httpx.Client")
+    def test_search_documents_basic(
+        self, mock_httpx_client, client, mock_search_results
+    ):
         """
         Test basic document search functionality.
 
@@ -401,7 +404,11 @@ class TestCourtListenerClient:
         cluster_response.json.return_value = {"case_name": "Test Case v. United States"}
         cluster_response.raise_for_status = MagicMock()
 
-        mock_client_instance.get.side_effect = [search_response, cluster_response, cluster_response]
+        mock_client_instance.get.side_effect = [
+            search_response,
+            cluster_response,
+            cluster_response,
+        ]
 
         # Perform search
         documents = client.search_documents("test query", limit=2)
@@ -417,7 +424,7 @@ class TestCourtListenerClient:
         # Check that scotus filter is applied (actual param name may vary)
         assert "scotus" in str(search_call).lower()
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_search_documents_with_date_filters(self, mock_httpx_client, client):
         """
         Test document search with date range filters.
@@ -435,9 +442,7 @@ class TestCourtListenerClient:
         mock_client_instance.get.return_value = search_response
 
         documents = client.search_documents(
-            "test",
-            start_date="2024-01-01",
-            end_date="2024-12-31"
+            "test", start_date="2024-01-01", end_date="2024-12-31"
         )
 
         # Verify date parameters in API call
@@ -450,8 +455,10 @@ class TestCourtListenerClient:
     # Note: list_scotus_opinions doesn't exist in the actual implementation
     # These tests are removed as the method doesn't exist
 
-    @patch('httpx.Client')
-    def test_get_opinion_cluster_success(self, mock_httpx_client, client, mock_cluster_data):
+    @patch("httpx.Client")
+    def test_get_opinion_cluster_success(
+        self, mock_httpx_client, client, mock_cluster_data
+    ):
         """
         Test successful opinion cluster retrieval.
 
@@ -474,7 +481,7 @@ class TestCourtListenerClient:
         assert len(cluster["citations"]) == 2
         assert cluster["citations"][0]["reporter"] == "U.S."
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_api_error_handling(self, mock_httpx_client, client):
         """
         Test handling of various API errors.
@@ -486,9 +493,7 @@ class TestCourtListenerClient:
 
         # Test 401 Unauthorized
         mock_client_instance.get.side_effect = httpx.HTTPStatusError(
-            "Unauthorized",
-            request=MagicMock(),
-            response=MagicMock(status_code=401)
+            "Unauthorized", request=MagicMock(), response=MagicMock(status_code=401)
         )
 
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
@@ -499,7 +504,7 @@ class TestCourtListenerClient:
         mock_client_instance.get.side_effect = httpx.HTTPStatusError(
             "Too Many Requests",
             request=MagicMock(),
-            response=MagicMock(status_code=429)
+            response=MagicMock(status_code=429),
         )
 
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
@@ -510,7 +515,7 @@ class TestCourtListenerClient:
         mock_client_instance.get.side_effect = httpx.HTTPStatusError(
             "Internal Server Error",
             request=MagicMock(),
-            response=MagicMock(status_code=500)
+            response=MagicMock(status_code=500),
         )
 
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
@@ -536,7 +541,7 @@ class TestCourtListenerClient:
         assert client.validate_date_format("2024") is False
         assert client.validate_date_format("") is False
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_network_error_handling(self, mock_httpx_client, client):
         """
         Test handling of network connectivity errors.
@@ -552,7 +557,7 @@ class TestCourtListenerClient:
         with pytest.raises(httpx.ConnectError):
             client.get_document("123456")
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_timeout_handling(self, mock_httpx_client, client):
         """
         Test handling of request timeouts.
@@ -563,7 +568,9 @@ class TestCourtListenerClient:
         mock_httpx_client.return_value.__enter__.return_value = mock_client_instance
 
         # Simulate timeout
-        mock_client_instance.get.side_effect = httpx.TimeoutException("Request timed out")
+        mock_client_instance.get.side_effect = httpx.TimeoutException(
+            "Request timed out"
+        )
 
         with pytest.raises(httpx.TimeoutException):
             client.get_document("123456")

@@ -51,11 +51,7 @@ class QueryProcessor:
         """Initialize the QueryProcessor."""
         pass
 
-    def format_search_results(
-        self,
-        query: str,
-        results: List[Dict[str, Any]]
-    ) -> str:
+    def format_search_results(self, query: str, results: List[Dict[str, Any]]) -> str:
         """
         Format general search results from multiple document types.
 
@@ -69,7 +65,7 @@ class QueryProcessor:
         if not results:
             return f"No results found for query: '{query}'"
 
-        output = [f"## Search Results for: \"{query}\"\n"]
+        output = [f'## Search Results for: "{query}"\n']
         output.append(f"Found {len(results)} relevant document chunks.\n")
 
         for i, result in enumerate(results, 1):
@@ -88,11 +84,7 @@ class QueryProcessor:
 
         return "\n".join(output)
 
-    def format_scotus_results(
-        self,
-        query: str,
-        results: List[Dict[str, Any]]
-    ) -> str:
+    def format_scotus_results(self, query: str, results: List[Dict[str, Any]]) -> str:
         """
         Format Supreme Court opinion search results with legal context.
 
@@ -107,7 +99,7 @@ class QueryProcessor:
             return f"No Supreme Court opinions found for query: '{query}'"
 
         output = [f"## Supreme Court Opinion Search Results\n"]
-        output.append(f"Query: \"{query}\"")
+        output.append(f'Query: "{query}"')
         output.append(f"Found {len(results)} relevant opinion chunks.\n")
 
         for i, result in enumerate(results, 1):
@@ -118,11 +110,7 @@ class QueryProcessor:
 
         return "\n".join(output)
 
-    def format_eo_results(
-        self,
-        query: str,
-        results: List[Dict[str, Any]]
-    ) -> str:
+    def format_eo_results(self, query: str, results: List[Dict[str, Any]]) -> str:
         """
         Format Executive Order search results with policy context.
 
@@ -137,7 +125,7 @@ class QueryProcessor:
             return f"No Executive Orders found for query: '{query}'"
 
         output = [f"## Executive Order Search Results\n"]
-        output.append(f"Query: \"{query}\"")
+        output.append(f'Query: "{query}"')
         output.append(f"Found {len(results)} relevant order chunks.\n")
 
         for i, result in enumerate(results, 1):
@@ -149,10 +137,7 @@ class QueryProcessor:
         return "\n".join(output)
 
     def format_document_chunk(
-        self,
-        collection: str,
-        document_id: str,
-        payload: Dict[str, Any]
+        self, collection: str, document_id: str, payload: Dict[str, Any]
     ) -> str:
         """
         Format a single document chunk with its metadata.
@@ -194,10 +179,7 @@ class QueryProcessor:
         return "\n".join(output)
 
     def format_full_document(
-        self,
-        doc_type: str,
-        full_document: Any,
-        chunk_metadata: Dict[str, Any]
+        self, doc_type: str, full_document: Any, chunk_metadata: Dict[str, Any]
     ) -> str:
         """
         Format a complete document retrieved from government API.
@@ -214,7 +196,9 @@ class QueryProcessor:
 
         if doc_type == "scotus":
             # Format full SCOTUS opinion
-            output.append(f"### {chunk_metadata.get('case_name', 'Supreme Court Opinion')}")
+            output.append(
+                f"### {chunk_metadata.get('case_name', 'Supreme Court Opinion')}"
+            )
             output.append(f"**Date:** {chunk_metadata.get('date', '')}\n")
             output.append("### Full Opinion Text:")
             # Note: full_document would need proper parsing
@@ -222,7 +206,9 @@ class QueryProcessor:
         elif doc_type == "executive_order":
             # Format full Executive Order
             output.append(f"### {chunk_metadata.get('title', 'Executive Order')}")
-            output.append(f"**EO Number:** {chunk_metadata.get('executive_order_number', '')}")
+            output.append(
+                f"**EO Number:** {chunk_metadata.get('executive_order_number', '')}"
+            )
             output.append(f"**President:** {chunk_metadata.get('president', '')}")
             output.append(f"**Date:** {chunk_metadata.get('signing_date', '')}\n")
             output.append("### Full Order Text:")
@@ -247,7 +233,9 @@ class QueryProcessor:
             output.append(f"### {i}. {name}")
 
             if "error" in collection:
-                output.append(f"*Error retrieving collection info: {collection['error']}*")
+                output.append(
+                    f"*Error retrieving collection info: {collection['error']}*"
+                )
             else:
                 vectors_count = collection.get("vectors_count", 0)
                 points_count = collection.get("points_count", 0)
@@ -275,11 +263,7 @@ class QueryProcessor:
         return "\n".join(output)
 
     def _format_scotus_chunk(
-        self,
-        index: int,
-        payload: Dict[str, Any],
-        score: float,
-        detailed: bool = False
+        self, index: int, payload: Dict[str, Any], score: float, detailed: bool = False
     ) -> str:
         """
         Format a Supreme Court opinion chunk.
@@ -332,7 +316,9 @@ class QueryProcessor:
             # Constitutional provisions
             constitutional = payload.get("constitutional_provisions", [])
             if constitutional:
-                lines.append(f"- **Constitutional Provisions:** {', '.join(constitutional)}")
+                lines.append(
+                    f"- **Constitutional Provisions:** {', '.join(constitutional)}"
+                )
 
             # Statutes
             statutes = payload.get("statutes_interpreted", [])
@@ -355,11 +341,7 @@ class QueryProcessor:
         return "\n".join(lines)
 
     def _format_eo_chunk(
-        self,
-        index: int,
-        payload: Dict[str, Any],
-        score: float,
-        detailed: bool = False
+        self, index: int, payload: Dict[str, Any], score: float, detailed: bool = False
     ) -> str:
         """
         Format an Executive Order chunk.
@@ -444,10 +426,7 @@ class QueryProcessor:
         return "\n".join(lines)
 
     def _format_generic_chunk(
-        self,
-        index: int,
-        payload: Dict[str, Any],
-        score: float
+        self, index: int, payload: Dict[str, Any], score: float
     ) -> str:
         """
         Format a generic document chunk (fallback formatter).
@@ -481,9 +460,7 @@ class QueryProcessor:
         return "\n".join(lines)
 
     def _extract_relevant_metadata(
-        self,
-        collection: str,
-        payload: Dict[str, Any]
+        self, collection: str, payload: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Extract relevant metadata fields based on collection type.
@@ -499,15 +476,25 @@ class QueryProcessor:
 
         if collection == "supreme_court_opinions":
             fields = [
-                "opinion_type", "justice", "section", "date",
-                "legal_topics", "constitutional_provisions",
-                "statutes_interpreted", "vote_breakdown"
+                "opinion_type",
+                "justice",
+                "section",
+                "date",
+                "legal_topics",
+                "constitutional_provisions",
+                "statutes_interpreted",
+                "vote_breakdown",
             ]
         elif collection == "executive_orders":
             fields = [
-                "president", "signing_date", "chunk_type", "section_title",
-                "policy_topics", "impacted_agencies", "legal_authorities",
-                "economic_sectors"
+                "president",
+                "signing_date",
+                "chunk_type",
+                "section_title",
+                "policy_topics",
+                "impacted_agencies",
+                "legal_authorities",
+                "economic_sectors",
             ]
         else:
             # For unknown collections, take first 10 non-text fields

@@ -41,7 +41,9 @@ def info():
     default=None,
     help="Qdrant port for remote connection (default: 6333)",
 )
-def collections(qdrant_path: Optional[str], qdrant_host: Optional[str], qdrant_port: Optional[int]):
+def collections(
+    qdrant_path: Optional[str], qdrant_host: Optional[str], qdrant_port: Optional[int]
+):
     """
     List all collections in the database with statistics.
 
@@ -69,8 +71,12 @@ def collections(qdrant_path: Optional[str], qdrant_host: Optional[str], qdrant_p
         if not collection_names:
             click.echo("No collections found in the database.")
             click.echo("\nTo add documents, use:")
-            click.echo("  governmentreporter ingest scotus --start-date YYYY-MM-DD --end-date YYYY-MM-DD")
-            click.echo("  governmentreporter ingest eo --start-date YYYY-MM-DD --end-date YYYY-MM-DD")
+            click.echo(
+                "  governmentreporter ingest scotus --start-date YYYY-MM-DD --end-date YYYY-MM-DD"
+            )
+            click.echo(
+                "  governmentreporter ingest eo --start-date YYYY-MM-DD --end-date YYYY-MM-DD"
+            )
             sys.exit(0)
 
         click.echo("=" * 80)
@@ -88,14 +94,26 @@ def collections(qdrant_path: Optional[str], qdrant_host: Optional[str], qdrant_p
                 click.echo("-" * 80)
 
                 # Handle None values gracefully
-                points_count = info.get('points_count')
-                vectors_count = info.get('vectors_count')
-                indexed_count = info.get('indexed_vectors_count')
-                status = info.get('status', 'unknown')
+                points_count = info.get("points_count")
+                vectors_count = info.get("vectors_count")
+                indexed_count = info.get("indexed_vectors_count")
+                status = info.get("status", "unknown")
 
-                click.echo(f"Documents:        {points_count:,}" if points_count is not None else "Documents:        N/A")
-                click.echo(f"Vectors:          {vectors_count:,}" if vectors_count is not None else "Vectors:          N/A")
-                click.echo(f"Indexed Vectors:  {indexed_count:,}" if indexed_count is not None else "Indexed Vectors:  N/A")
+                click.echo(
+                    f"Documents:        {points_count:,}"
+                    if points_count is not None
+                    else "Documents:        N/A"
+                )
+                click.echo(
+                    f"Vectors:          {vectors_count:,}"
+                    if vectors_count is not None
+                    else "Vectors:          N/A"
+                )
+                click.echo(
+                    f"Indexed Vectors:  {indexed_count:,}"
+                    if indexed_count is not None
+                    else "Indexed Vectors:  N/A"
+                )
                 click.echo(f"Status:           {status}")
 
                 # Get a sample document to extract metadata
@@ -103,7 +121,7 @@ def collections(qdrant_path: Optional[str], qdrant_host: Optional[str], qdrant_p
                     sample_results = client.search(
                         query_embedding=[0.0] * 1536,  # Dummy vector for sampling
                         collection_name=collection_name,
-                        limit=1
+                        limit=1,
                     )
 
                     if sample_results:
@@ -113,11 +131,15 @@ def collections(qdrant_path: Optional[str], qdrant_host: Optional[str], qdrant_p
                         if collection_name == "supreme_court_opinions":
                             click.echo(f"Type:             Supreme Court Opinions")
                             if "date" in metadata:
-                                click.echo(f"Sample Date:      {metadata.get('date', 'N/A')}")
+                                click.echo(
+                                    f"Sample Date:      {metadata.get('date', 'N/A')}"
+                                )
                         elif collection_name == "executive_orders":
                             click.echo(f"Type:             Executive Orders")
                             if "signing_date" in metadata:
-                                click.echo(f"Sample Date:      {metadata.get('signing_date', 'N/A')}")
+                                click.echo(
+                                    f"Sample Date:      {metadata.get('signing_date', 'N/A')}"
+                                )
 
                 except Exception as e:
                     # Sampling failed, skip metadata display
@@ -138,7 +160,10 @@ def collections(qdrant_path: Optional[str], qdrant_host: Optional[str], qdrant_p
 @info.command()
 @click.argument(
     "collection",
-    type=click.Choice(["scotus", "eo", "supreme_court_opinions", "executive_orders"], case_sensitive=False)
+    type=click.Choice(
+        ["scotus", "eo", "supreme_court_opinions", "executive_orders"],
+        case_sensitive=False,
+    ),
 )
 @click.option(
     "--limit",
@@ -173,7 +198,7 @@ def sample(
     show_text: bool,
     qdrant_path: Optional[str],
     qdrant_host: Optional[str],
-    qdrant_port: Optional[int]
+    qdrant_port: Optional[int],
 ):
     """
     Show sample documents from a collection.
@@ -192,7 +217,7 @@ def sample(
         "scotus": "supreme_court_opinions",
         "eo": "executive_orders",
         "supreme_court_opinions": "supreme_court_opinions",
-        "executive_orders": "executive_orders"
+        "executive_orders": "executive_orders",
     }
     collection_name = collection_map[collection.lower()]
 
@@ -208,9 +233,7 @@ def sample(
         # Use a dummy query vector to get random samples
         # (Qdrant doesn't have a "get random" method, so we search with a zero vector)
         results = client.search(
-            query_embedding=[0.0] * 1536,
-            collection_name=collection_name,
-            limit=limit
+            query_embedding=[0.0] * 1536, collection_name=collection_name, limit=limit
         )
 
         if not results:
@@ -225,9 +248,9 @@ def sample(
             doc = result.document
             # Check if metadata is nested
             metadata = doc.metadata
-            if 'metadata' in metadata and isinstance(metadata['metadata'], dict):
+            if "metadata" in metadata and isinstance(metadata["metadata"], dict):
                 # Flatten nested metadata
-                nested = metadata.pop('metadata')
+                nested = metadata.pop("metadata")
                 metadata.update(nested)
 
             click.echo(f"\n[{i}] Document ID: {doc.id}")
@@ -235,22 +258,30 @@ def sample(
 
             # Display metadata based on collection type
             if collection_name == "supreme_court_opinions":
-                click.echo(f"Case Name:        {metadata.get('case_name', metadata.get('title', 'N/A'))}")
+                click.echo(
+                    f"Case Name:        {metadata.get('case_name', metadata.get('title', 'N/A'))}"
+                )
                 click.echo(f"Citation:         {metadata.get('citation', 'N/A')}")
-                click.echo(f"Date:             {metadata.get('date', metadata.get('publication_date', 'N/A'))}")
+                click.echo(
+                    f"Date:             {metadata.get('date', metadata.get('publication_date', 'N/A'))}"
+                )
                 click.echo(f"Opinion Type:     {metadata.get('opinion_type', 'N/A')}")
-                if metadata.get('justice'):
+                if metadata.get("justice"):
                     click.echo(f"Justice:          {metadata['justice']}")
-                if metadata.get('section_label'):
+                if metadata.get("section_label"):
                     click.echo(f"Section:          {metadata['section_label']}")
                 click.echo(f"Chunk Index:      {metadata.get('chunk_index', 'N/A')}")
 
             elif collection_name == "executive_orders":
                 click.echo(f"Title:            {metadata.get('title', 'N/A')}")
-                click.echo(f"EO Number:        {metadata.get('executive_order_number', 'N/A')}")
+                click.echo(
+                    f"EO Number:        {metadata.get('executive_order_number', 'N/A')}"
+                )
                 click.echo(f"President:        {metadata.get('president', 'N/A')}")
-                click.echo(f"Signing Date:     {metadata.get('signing_date', metadata.get('publication_date', 'N/A'))}")
-                if metadata.get('section_title'):
+                click.echo(
+                    f"Signing Date:     {metadata.get('signing_date', metadata.get('publication_date', 'N/A'))}"
+                )
+                if metadata.get("section_title"):
                     click.echo(f"Section:          {metadata['section_title']}")
                 click.echo(f"Chunk Index:      {metadata.get('chunk_index', 'N/A')}")
 
@@ -272,7 +303,10 @@ def sample(
 @info.command()
 @click.argument(
     "collection",
-    type=click.Choice(["scotus", "eo", "supreme_court_opinions", "executive_orders"], case_sensitive=False)
+    type=click.Choice(
+        ["scotus", "eo", "supreme_court_opinions", "executive_orders"],
+        case_sensitive=False,
+    ),
 )
 @click.option(
     "--qdrant-path",
@@ -294,7 +328,7 @@ def stats(
     collection: str,
     qdrant_path: Optional[str],
     qdrant_host: Optional[str],
-    qdrant_port: Optional[int]
+    qdrant_port: Optional[int],
 ):
     """
     Show detailed statistics for a specific collection.
@@ -314,7 +348,7 @@ def stats(
         "scotus": "supreme_court_opinions",
         "eo": "executive_orders",
         "supreme_court_opinions": "supreme_court_opinions",
-        "executive_orders": "executive_orders"
+        "executive_orders": "executive_orders",
     }
     collection_name = collection_map[collection.lower()]
 
@@ -334,11 +368,11 @@ def stats(
             sys.exit(1)
 
         # Sample documents to analyze metadata
-        sample_size = min(1000, info['points_count'])
+        sample_size = min(1000, info["points_count"])
         results = client.search(
             query_embedding=[0.0] * 1536,
             collection_name=collection_name,
-            limit=sample_size
+            limit=sample_size,
         )
 
         click.echo("=" * 80)
@@ -350,14 +384,26 @@ def stats(
         click.echo("-" * 80)
 
         # Handle None values gracefully
-        points_count = info.get('points_count')
-        vectors_count = info.get('vectors_count')
-        indexed_count = info.get('indexed_vectors_count')
-        status = info.get('status', 'unknown')
+        points_count = info.get("points_count")
+        vectors_count = info.get("vectors_count")
+        indexed_count = info.get("indexed_vectors_count")
+        status = info.get("status", "unknown")
 
-        click.echo(f"Total Documents:     {points_count:,}" if points_count is not None else "Total Documents:     N/A")
-        click.echo(f"Total Vectors:       {vectors_count:,}" if vectors_count is not None else "Total Vectors:       N/A")
-        click.echo(f"Indexed Vectors:     {indexed_count:,}" if indexed_count is not None else "Indexed Vectors:     N/A")
+        click.echo(
+            f"Total Documents:     {points_count:,}"
+            if points_count is not None
+            else "Total Documents:     N/A"
+        )
+        click.echo(
+            f"Total Vectors:       {vectors_count:,}"
+            if vectors_count is not None
+            else "Total Vectors:       N/A"
+        )
+        click.echo(
+            f"Indexed Vectors:     {indexed_count:,}"
+            if indexed_count is not None
+            else "Indexed Vectors:     N/A"
+        )
         click.echo(f"Collection Status:   {status}")
         click.echo(f"Sample Size:         {len(results):,} documents analyzed")
 
@@ -375,17 +421,17 @@ def stats(
             for result in results:
                 metadata = result.document.metadata
                 # Flatten nested metadata if present
-                if 'metadata' in metadata and isinstance(metadata['metadata'], dict):
-                    nested = metadata.get('metadata', {})
+                if "metadata" in metadata and isinstance(metadata["metadata"], dict):
+                    nested = metadata.get("metadata", {})
                     metadata = {**metadata, **nested}
-                if 'opinion_type' in metadata:
-                    opinion_types.append(metadata['opinion_type'])
-                if 'justice' in metadata:
-                    justices.append(metadata['justice'])
-                if 'date' in metadata:
-                    dates.append(metadata['date'])
-                if 'case_name' in metadata:
-                    cases.add(metadata['case_name'])
+                if "opinion_type" in metadata:
+                    opinion_types.append(metadata["opinion_type"])
+                if "justice" in metadata:
+                    justices.append(metadata["justice"])
+                if "date" in metadata:
+                    dates.append(metadata["date"])
+                if "case_name" in metadata:
+                    cases.add(metadata["case_name"])
 
             # Opinion type distribution
             if opinion_types:
@@ -426,17 +472,19 @@ def stats(
             for result in results:
                 metadata = result.document.metadata
                 # Flatten nested metadata if present
-                if 'metadata' in metadata and isinstance(metadata['metadata'], dict):
-                    nested = metadata.get('metadata', {})
+                if "metadata" in metadata and isinstance(metadata["metadata"], dict):
+                    nested = metadata.get("metadata", {})
                     metadata = {**metadata, **nested}
-                if 'president' in metadata:
-                    presidents.append(metadata['president'])
-                if 'signing_date' in metadata:
-                    dates.append(metadata['signing_date'])
-                if 'executive_order_number' in metadata:
-                    eo_numbers.add(metadata['executive_order_number'])
-                if 'impacted_agencies' in metadata and isinstance(metadata['impacted_agencies'], list):
-                    agencies.extend(metadata['impacted_agencies'])
+                if "president" in metadata:
+                    presidents.append(metadata["president"])
+                if "signing_date" in metadata:
+                    dates.append(metadata["signing_date"])
+                if "executive_order_number" in metadata:
+                    eo_numbers.add(metadata["executive_order_number"])
+                if "impacted_agencies" in metadata and isinstance(
+                    metadata["impacted_agencies"], list
+                ):
+                    agencies.extend(metadata["impacted_agencies"])
 
             # President distribution
             if presidents:
@@ -445,7 +493,9 @@ def stats(
                 president_counts = Counter(presidents)
                 for president, count in president_counts.most_common():
                     percentage = (count / len(presidents)) * 100
-                    click.echo(f"{president:20s} {count:5,} chunks ({percentage:5.1f}%)")
+                    click.echo(
+                        f"{president:20s} {count:5,} chunks ({percentage:5.1f}%)"
+                    )
 
             # Date range
             if dates:

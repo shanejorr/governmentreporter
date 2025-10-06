@@ -30,40 +30,40 @@ logger = logging.getLogger(__name__)
 class QdrantIngestionClient:
     """
     Specialized client for ingesting document chunks into Qdrant.
-    
+
     This class provides a high-level interface for storing document chunks
     with their embeddings into Qdrant. It handles the conversion between
     the payload format used by the processing pipeline and the Document
     format used by the base QdrantClient.
-    
+
     The client automatically:
         - Creates collections if they don't exist
         - Converts payloads to the correct format
         - Handles batch operations efficiently
         - Provides detailed error reporting
-    
+
     Attributes:
         collection_name (str): Name of the Qdrant collection to use
         client (QdrantClient): The underlying Qdrant client
-    
+
     Example:
         # Initialize for Supreme Court opinions
         client = QdrantIngestionClient("supreme_court_opinions", "./data/qdrant/qdrant_db")
-        
+
         # Process documents and generate payloads
         payloads = build_payloads_from_document(document)
         embeddings = embedding_generator.generate_batch_embeddings(texts)
-        
+
         # Store in Qdrant
         success, failed = client.batch_upsert_documents(payloads, embeddings)
         print(f"Stored {success} chunks, {failed} failed")
-    
+
     Python Learning Notes:
         - __init__ initializes the client with collection configuration
         - Type hints clarify expected data structures
         - Logging provides visibility into operations
     """
-    
+
     def __init__(self, collection_name: str, db_path: str = "./data/qdrant/qdrant_db"):
         """
         Initialize the ingestion client for a specific collection.
@@ -73,11 +73,11 @@ class QdrantIngestionClient:
                                   Common values: "supreme_court_opinions", "executive_orders"
             db_path (str): Path to the Qdrant database directory.
                           Defaults to "./data/qdrant/qdrant_db" in the current directory.
-        
+
         Raises:
             ValueError: If collection_name is empty
             Exception: If Qdrant initialization fails
-        
+
         Python Learning Notes:
             - Default parameters provide sensible defaults
             - Instance variables store configuration
@@ -85,33 +85,33 @@ class QdrantIngestionClient:
         """
         if not collection_name:
             raise ValueError("collection_name is required")
-        
+
         self.collection_name = collection_name
         self.client = QdrantDBClient(db_path)
-        
+
         # Ensure collection exists
         self.client.create_collection(collection_name)
         logger.info(f"Initialized ingestion client for collection: {collection_name}")
-    
+
     def batch_upsert_documents(
         self,
         payloads: List[Dict[str, Any]],
         embeddings: List[List[float]],
-        batch_size: int = 100
+        batch_size: int = 100,
     ) -> Tuple[int, int]:
         """
         Store multiple document chunks with their embeddings in Qdrant.
-        
+
         This method takes document payloads (as dictionaries) and their corresponding
         embeddings, then stores them in Qdrant. It processes documents in batches
         for efficiency and provides detailed success/failure counts.
-        
+
         The payloads should be dictionaries containing:
             - chunk_metadata: Chunk-specific information (text, position, etc.)
             - document_metadata: Document-level metadata
             - llm_extracted_metadata: AI-generated metadata
             - document_id: Original document identifier
-        
+
         Args:
             payloads (List[Dict[str, Any]]): List of document chunk payloads.
                                             Each should be a dict from QdrantPayload.dict()
@@ -119,14 +119,14 @@ class QdrantIngestionClient:
                                            Must match payloads in order and count.
             batch_size (int): Number of documents to process per batch.
                              Larger batches are faster but use more memory.
-        
+
         Returns:
             Tuple[int, int]: (successful_count, failed_count)
-        
+
         Raises:
             ValueError: If payloads and embeddings have different lengths
             Exception: If storage fails completely
-        
+
         Example:
             # Generate payloads and embeddings
             payloads = []
@@ -136,13 +136,13 @@ class QdrantIngestionClient:
                 embedding = generate_embedding(chunk.text)
                 payloads.append(payload.dict())
                 embeddings.append(embedding)
-            
+
             # Store in Qdrant
             success, failed = client.batch_upsert_documents(
                 payloads, embeddings, batch_size=50
             )
             print(f"Stored {success}/{len(payloads)} chunks")
-        
+
         Python Learning Notes:
             - Batch processing reduces API calls
             - zip() pairs corresponding items from lists
@@ -154,14 +154,14 @@ class QdrantIngestionClient:
                 f"Payloads ({len(payloads)}) and embeddings ({len(embeddings)}) "
                 f"must have the same length"
             )
-        
+
         if not payloads:
             return 0, 0
-        
+
         successful = 0
         failed = 0
         documents = []
-        
+
         # Convert payloads to Document format
         for i, (payload, embedding) in enumerate(zip(payloads, embeddings)):
             try:
@@ -169,30 +169,33 @@ class QdrantIngestionClient:
                 chunk_text = ""
                 if isinstance(payload.get("chunk_metadata"), dict):
                     chunk_text = payload["chunk_metadata"].get("text", "")
-                
+
                 # Generate unique ID for this chunk
                 # Use document_id + chunk index if available
                 doc_id = payload.get("document_id", str(uuid4()))
                 chunk_index = i
-                if "chunk_metadata" in payload and "chunk_index" in payload["chunk_metadata"]:
+                if (
+                    "chunk_metadata" in payload
+                    and "chunk_index" in payload["chunk_metadata"]
+                ):
                     chunk_index = payload["chunk_metadata"]["chunk_index"]
-                
+
                 chunk_id = f"{doc_id}_chunk_{chunk_index}"
-                
+
                 # Create Document object
                 doc = Document(
                     id=chunk_id,
                     text=chunk_text,
                     embedding=embedding,
-                    metadata=payload  # Store entire payload as metadata
+                    metadata=payload,  # Store entire payload as metadata
                 )
                 documents.append(doc)
-                
+
             except Exception as e:
                 logger.error(f"Failed to convert payload {i}: {e}")
                 failed += 1
                 continue
-        
+
         # Store documents in batches
         if documents:
             try:
@@ -200,43 +203,45 @@ class QdrantIngestionClient:
                     documents,
                     self.collection_name,
                     batch_size=batch_size,
-                    create_collection=False  # Already created in __init__
+                    create_collection=False,  # Already created in __init__
                 )
                 successful += success_count
                 failed += len(failed_ids)
-                
+
                 if failed_ids:
-                    logger.warning(f"Failed to store {len(failed_ids)} documents: {failed_ids[:5]}...")
-                
+                    logger.warning(
+                        f"Failed to store {len(failed_ids)} documents: {failed_ids[:5]}..."
+                    )
+
             except Exception as e:
                 logger.error(f"Batch storage failed: {e}")
                 failed += len(documents)
-        
+
         logger.info(
             f"Batch upsert complete: {successful} successful, {failed} failed "
             f"out of {len(payloads)} total"
         )
-        
+
         return successful, failed
-    
+
     def get_collection_stats(self) -> Dict[str, Any]:
         """
         Get statistics about the collection.
-        
+
         Returns information about the collection including document count,
         collection name, and configuration details.
-        
+
         Returns:
             Dict[str, Any]: Collection statistics including:
                 - collection_name: Name of the collection
                 - total_documents: Number of documents stored
                 - vector_size: Embedding dimension
                 - distance_metric: Distance metric used
-        
+
         Example:
             stats = client.get_collection_stats()
             print(f"Collection {stats['collection_name']} has {stats['total_documents']} documents")
-        
+
         Python Learning Notes:
             - Dictionary returns allow flexible data structures
             - try/except provides graceful error handling
@@ -245,30 +250,34 @@ class QdrantIngestionClient:
             # Get collection info from Qdrant
             collections = self.client.client.get_collections().collections
             collection_info = None
-            
+
             for col in collections:
                 if col.name == self.collection_name:
-                    collection_info = self.client.client.get_collection(self.collection_name)
+                    collection_info = self.client.client.get_collection(
+                        self.collection_name
+                    )
                     break
-            
+
             if collection_info:
                 return {
                     "collection_name": self.collection_name,
                     "total_documents": collection_info.points_count,
                     "vector_size": collection_info.config.params.vectors.size,
-                    "distance_metric": str(collection_info.config.params.vectors.distance)
+                    "distance_metric": str(
+                        collection_info.config.params.vectors.distance
+                    ),
                 }
             else:
                 return {
                     "collection_name": self.collection_name,
                     "total_documents": 0,
-                    "error": "Collection not found"
+                    "error": "Collection not found",
                 }
-                
+
         except Exception as e:
             logger.error(f"Failed to get collection stats: {e}")
             return {
                 "collection_name": self.collection_name,
                 "total_documents": 0,
-                "error": str(e)
+                "error": str(e),
             }

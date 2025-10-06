@@ -59,7 +59,9 @@ def ingest():
     is_flag=True,
     help="Enable verbose logging",
 )
-def scotus(start_date, end_date, batch_size, progress_db, qdrant_db_path, dry_run, verbose):
+def scotus(
+    start_date, end_date, batch_size, progress_db, qdrant_db_path, dry_run, verbose
+):
     """
     Ingest Supreme Court opinions from CourtListener API.
 

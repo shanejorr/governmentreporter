@@ -206,20 +206,31 @@ Remember: Write for someone with NO legal training. Use concrete examples and si
                 break  # Success, exit retry loop
             except RateLimitError as e:
                 if attempt < max_retries - 1:
-                    wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                    wait_time = 2**attempt  # Exponential backoff: 1s, 2s, 4s
                     logger.warning(
                         "Rate limited on attempt %d/%d, waiting %ds: %s",
-                        attempt + 1, max_retries, wait_time, str(e)
+                        attempt + 1,
+                        max_retries,
+                        wait_time,
+                        str(e),
                     )
                     time.sleep(wait_time)
                     continue
                 raise  # Re-raise on final attempt
             except APIError as e:
-                if attempt < max_retries - 1 and hasattr(e, 'status_code') and e.status_code in [502, 503, 504]:
-                    wait_time = 2 ** attempt
+                if (
+                    attempt < max_retries - 1
+                    and hasattr(e, "status_code")
+                    and e.status_code in [502, 503, 504]
+                ):
+                    wait_time = 2**attempt
                     logger.warning(
                         "API error %d on attempt %d/%d, waiting %ds: %s",
-                        e.status_code, attempt + 1, max_retries, wait_time, str(e)
+                        e.status_code,
+                        attempt + 1,
+                        max_retries,
+                        wait_time,
+                        str(e),
                     )
                     time.sleep(wait_time)
                     continue
@@ -238,7 +249,9 @@ Remember: Write for someone with NO legal training. Use concrete examples and si
             result = json.loads(response_content)
         except json.JSONDecodeError as e:
             logger.error("Failed to parse OpenAI JSON response: %s", str(e))
-            logger.debug("Response content: %s", response_content[:500])  # Log first 500 chars
+            logger.debug(
+                "Response content: %s", response_content[:500]
+            )  # Log first 500 chars
             raise
 
         # Ensure all required fields are present with defaults
@@ -436,20 +449,31 @@ REMEMBER:
                 break  # Success, exit retry loop
             except RateLimitError as e:
                 if attempt < max_retries - 1:
-                    wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                    wait_time = 2**attempt  # Exponential backoff: 1s, 2s, 4s
                     logger.warning(
                         "Rate limited on attempt %d/%d, waiting %ds: %s",
-                        attempt + 1, max_retries, wait_time, str(e)
+                        attempt + 1,
+                        max_retries,
+                        wait_time,
+                        str(e),
                     )
                     time.sleep(wait_time)
                     continue
                 raise  # Re-raise on final attempt
             except APIError as e:
-                if attempt < max_retries - 1 and hasattr(e, 'status_code') and e.status_code in [502, 503, 504]:
-                    wait_time = 2 ** attempt
+                if (
+                    attempt < max_retries - 1
+                    and hasattr(e, "status_code")
+                    and e.status_code in [502, 503, 504]
+                ):
+                    wait_time = 2**attempt
                     logger.warning(
                         "API error %d on attempt %d/%d, waiting %ds: %s",
-                        e.status_code, attempt + 1, max_retries, wait_time, str(e)
+                        e.status_code,
+                        attempt + 1,
+                        max_retries,
+                        wait_time,
+                        str(e),
                     )
                     time.sleep(wait_time)
                     continue
@@ -468,7 +492,9 @@ REMEMBER:
             result = json.loads(response_content)
         except json.JSONDecodeError as e:
             logger.error("Failed to parse OpenAI JSON response: %s", str(e))
-            logger.debug("Response content: %s", response_content[:500])  # Log first 500 chars
+            logger.debug(
+                "Response content: %s", response_content[:500]
+            )  # Log first 500 chars
             raise
 
         # Ensure all required fields are present with defaults
@@ -526,7 +552,9 @@ REMEMBER:
         return result
 
     except Exception as e:
-        logger.error("Failed to extract Executive Order metadata: %s", str(e), exc_info=True)
+        logger.error(
+            "Failed to extract Executive Order metadata: %s", str(e), exc_info=True
+        )
         # Return minimal valid metadata on error
         return {
             "plain_language_summary": "Unable to generate summary.",

@@ -57,10 +57,7 @@ class TestChunkingConfig:
         """
         # Arrange & Act
         config = ChunkingConfig(
-            min_tokens=100,
-            target_tokens=300,
-            max_tokens=500,
-            overlap_ratio=0.15
+            min_tokens=100, target_tokens=300, max_tokens=500, overlap_ratio=0.15
         )
 
         # Assert
@@ -79,10 +76,7 @@ class TestChunkingConfig:
         # Arrange, Act & Assert
         with pytest.raises(ValueError, match="Token counts must be positive"):
             ChunkingConfig(
-                min_tokens=-1,
-                target_tokens=300,
-                max_tokens=500,
-                overlap_ratio=0.15
+                min_tokens=-1, target_tokens=300, max_tokens=500, overlap_ratio=0.15
             )
 
     def test_invalid_min_exceeds_max(self):
@@ -95,10 +89,7 @@ class TestChunkingConfig:
         # Arrange, Act & Assert
         with pytest.raises(ValueError, match="min_tokens cannot exceed max_tokens"):
             ChunkingConfig(
-                min_tokens=600,
-                target_tokens=300,
-                max_tokens=500,
-                overlap_ratio=0.15
+                min_tokens=600, target_tokens=300, max_tokens=500, overlap_ratio=0.15
             )
 
     def test_invalid_overlap_ratio(self):
@@ -111,19 +102,13 @@ class TestChunkingConfig:
         # Test negative ratio
         with pytest.raises(ValueError, match="overlap_ratio must be between 0 and 1"):
             ChunkingConfig(
-                min_tokens=100,
-                target_tokens=300,
-                max_tokens=500,
-                overlap_ratio=-0.1
+                min_tokens=100, target_tokens=300, max_tokens=500, overlap_ratio=-0.1
             )
 
         # Test ratio >= 1
         with pytest.raises(ValueError, match="overlap_ratio must be between 0 and 1"):
             ChunkingConfig(
-                min_tokens=100,
-                target_tokens=300,
-                max_tokens=500,
-                overlap_ratio=1.0
+                min_tokens=100, target_tokens=300, max_tokens=500, overlap_ratio=1.0
             )
 
 
@@ -151,7 +136,7 @@ class TestLoadConfig:
             "min_tokens": 100,
             "target_tokens": 200,
             "max_tokens": 300,
-            "overlap_ratio": 0.1
+            "overlap_ratio": 0.1,
         }
 
         # Act
@@ -183,7 +168,7 @@ class TestLoadConfig:
             "min_tokens": 100,
             "target_tokens": 200,
             "max_tokens": 300,
-            "overlap_ratio": 0.1
+            "overlap_ratio": 0.1,
         }
 
         # Act
@@ -216,10 +201,7 @@ class TestOverlapTokens:
         """
         # Arrange
         config = ChunkingConfig(
-            min_tokens=100,
-            target_tokens=200,
-            max_tokens=300,
-            overlap_ratio=0.15
+            min_tokens=100, target_tokens=200, max_tokens=300, overlap_ratio=0.15
         )
 
         # Act
@@ -284,7 +266,7 @@ class TestCountTokens:
         - Different encodings produce different counts
     """
 
-    @patch('governmentreporter.processors.chunking.base.tiktoken')
+    @patch("governmentreporter.processors.chunking.base.tiktoken")
     def test_count_tokens_normal_text(self, mock_tiktoken):
         """
         Test token counting for normal text.
@@ -308,7 +290,7 @@ class TestCountTokens:
         assert count == 5
         mock_encoder.encode.assert_called_once_with(text)
 
-    @patch('governmentreporter.processors.chunking.base.tiktoken')
+    @patch("governmentreporter.processors.chunking.base.tiktoken")
     def test_count_tokens_empty_text(self, mock_tiktoken):
         """
         Test token counting for empty text.
@@ -386,7 +368,7 @@ class TestChunkTextWithTokens:
         - Overlapping chunks preserve context
     """
 
-    @patch('governmentreporter.processors.chunking.count_tokens')
+    @patch("governmentreporter.processors.chunking.count_tokens")
     def test_chunk_text_normal(self, mock_count):
         """
         Test chunking normal text with token limits.
@@ -403,10 +385,7 @@ class TestChunkTextWithTokens:
         mock_count.side_effect = lambda t: len(t.split()) * 2
 
         config = ChunkingConfig(
-            min_tokens=10,
-            target_tokens=15,
-            max_tokens=20,
-            overlap_ratio=0.2
+            min_tokens=10, target_tokens=15, max_tokens=20, overlap_ratio=0.2
         )
 
         # Act
@@ -416,7 +395,7 @@ class TestChunkTextWithTokens:
             min_tokens=config.min_tokens,
             target_tokens=config.target_tokens,
             max_tokens=config.max_tokens,
-            overlap_tokens=int(config.target_tokens * config.overlap_ratio)
+            overlap_tokens=int(config.target_tokens * config.overlap_ratio),
         )
 
         # Assert
@@ -424,7 +403,7 @@ class TestChunkTextWithTokens:
         assert all(isinstance(chunk, tuple) for chunk in chunks)
         assert all(len(chunk) == 2 for chunk in chunks)  # (text, metadata) tuples
 
-    @patch('governmentreporter.processors.chunking.count_tokens')
+    @patch("governmentreporter.processors.chunking.count_tokens")
     def test_chunk_text_small(self, mock_count):
         """
         Test chunking text smaller than min_tokens.
@@ -439,10 +418,7 @@ class TestChunkTextWithTokens:
         mock_count.return_value = 5
 
         config = ChunkingConfig(
-            min_tokens=10,
-            target_tokens=20,
-            max_tokens=30,
-            overlap_ratio=0.2
+            min_tokens=10, target_tokens=20, max_tokens=30, overlap_ratio=0.2
         )
 
         # Act
@@ -452,7 +428,7 @@ class TestChunkTextWithTokens:
             min_tokens=config.min_tokens,
             target_tokens=config.target_tokens,
             max_tokens=config.max_tokens,
-            overlap_tokens=int(config.target_tokens * config.overlap_ratio)
+            overlap_tokens=int(config.target_tokens * config.overlap_ratio),
         )
 
         # Assert
@@ -472,8 +448,8 @@ class TestChunkSupremeCourtOpinion:
         - Mocking isolates the function under test
     """
 
-    @patch('governmentreporter.processors.chunking.count_tokens')
-    @patch('governmentreporter.processors.chunking.base.tiktoken')
+    @patch("governmentreporter.processors.chunking.count_tokens")
+    @patch("governmentreporter.processors.chunking.base.tiktoken")
     def test_chunk_scotus_opinion_success(self, mock_tiktoken, mock_count):
         """
         Test successful chunking of Supreme Court opinion.
@@ -512,8 +488,8 @@ class TestChunkSupremeCourtOpinion:
         # Syllabus should be extracted
         assert syllabus is not None
 
-    @patch('governmentreporter.processors.chunking.count_tokens')
-    @patch('governmentreporter.processors.chunking.base.tiktoken')
+    @patch("governmentreporter.processors.chunking.count_tokens")
+    @patch("governmentreporter.processors.chunking.base.tiktoken")
     def test_chunk_scotus_opinion_empty(self, mock_tiktoken, mock_count):
         """
         Test chunking empty Supreme Court opinion.
@@ -550,8 +526,8 @@ class TestChunkExecutiveOrder:
         - Section boundaries are strictly preserved
     """
 
-    @patch('governmentreporter.processors.chunking.count_tokens')
-    @patch('governmentreporter.processors.chunking.base.tiktoken')
+    @patch("governmentreporter.processors.chunking.count_tokens")
+    @patch("governmentreporter.processors.chunking.base.tiktoken")
     def test_chunk_executive_order_success(self, mock_tiktoken, mock_count):
         """
         Test successful chunking of Executive Order.
@@ -587,8 +563,8 @@ class TestChunkExecutiveOrder:
         assert all(isinstance(chunk, tuple) for chunk in chunks)
         assert all(len(chunk) == 2 for chunk in chunks)  # (text, metadata)
 
-    @patch('governmentreporter.processors.chunking.count_tokens')
-    @patch('governmentreporter.processors.chunking.base.tiktoken')
+    @patch("governmentreporter.processors.chunking.count_tokens")
+    @patch("governmentreporter.processors.chunking.base.tiktoken")
     def test_chunk_executive_order_empty(self, mock_tiktoken, mock_count):
         """
         Test chunking empty Executive Order.

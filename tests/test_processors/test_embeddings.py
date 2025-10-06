@@ -41,8 +41,8 @@ class TestEmbeddingGenerator:
         - Mocking prevents actual API calls during testing
     """
 
-    @patch('governmentreporter.processors.embeddings.get_openai_api_key')
-    @patch('governmentreporter.processors.embeddings.OpenAI')
+    @patch("governmentreporter.processors.embeddings.get_openai_api_key")
+    @patch("governmentreporter.processors.embeddings.OpenAI")
     def test_init_with_provided_api_key(self, mock_openai_class, mock_get_key):
         """
         Test initialization with explicitly provided API key.
@@ -69,8 +69,8 @@ class TestEmbeddingGenerator:
         mock_openai_class.assert_called_once_with(api_key=test_api_key)
         mock_get_key.assert_not_called()  # Should not fetch from env
 
-    @patch('governmentreporter.processors.embeddings.get_openai_api_key')
-    @patch('governmentreporter.processors.embeddings.OpenAI')
+    @patch("governmentreporter.processors.embeddings.get_openai_api_key")
+    @patch("governmentreporter.processors.embeddings.OpenAI")
     def test_init_with_env_api_key(self, mock_openai_class, mock_get_key):
         """
         Test initialization fetching API key from environment.
@@ -96,7 +96,7 @@ class TestEmbeddingGenerator:
         mock_get_key.assert_called_once()
         mock_openai_class.assert_called_once_with(api_key=env_api_key)
 
-    @patch('governmentreporter.processors.embeddings.OpenAI')
+    @patch("governmentreporter.processors.embeddings.OpenAI")
     def test_generate_embedding_success(self, mock_openai_class):
         """
         Test successful generation of single text embedding.
@@ -127,11 +127,10 @@ class TestEmbeddingGenerator:
         assert result == mock_embedding
         assert len(result) == 1536
         mock_client.embeddings.create.assert_called_once_with(
-            model="text-embedding-3-small",
-            input=test_text
+            model="text-embedding-3-small", input=test_text
         )
 
-    @patch('governmentreporter.processors.embeddings.OpenAI')
+    @patch("governmentreporter.processors.embeddings.OpenAI")
     def test_generate_embedding_empty_text(self, mock_openai_class):
         """
         Test embedding generation for empty text.
@@ -161,9 +160,11 @@ class TestEmbeddingGenerator:
         assert len(result) == 1536
         assert all(v == 0.0 for v in result)
 
-    @patch('governmentreporter.processors.embeddings.time.sleep')
-    @patch('governmentreporter.processors.embeddings.OpenAI')
-    def test_generate_embedding_with_retry_on_rate_limit(self, mock_openai_class, mock_sleep):
+    @patch("governmentreporter.processors.embeddings.time.sleep")
+    @patch("governmentreporter.processors.embeddings.OpenAI")
+    def test_generate_embedding_with_retry_on_rate_limit(
+        self, mock_openai_class, mock_sleep
+    ):
         """
         Test retry logic when encountering rate limit errors.
 
@@ -185,7 +186,7 @@ class TestEmbeddingGenerator:
 
         mock_client.embeddings.create.side_effect = [
             RateLimitError("Rate limit exceeded", response=MagicMock(), body=None),
-            mock_response
+            mock_response,
         ]
 
         generator = EmbeddingGenerator(api_key="test-key")
@@ -199,7 +200,7 @@ class TestEmbeddingGenerator:
         assert mock_client.embeddings.create.call_count == 2
         mock_sleep.assert_called()  # Verify retry delay
 
-    @patch('governmentreporter.processors.embeddings.OpenAI')
+    @patch("governmentreporter.processors.embeddings.OpenAI")
     def test_generate_embedding_api_error(self, mock_openai_class):
         """
         Test handling of OpenAI API errors.
@@ -218,9 +219,7 @@ class TestEmbeddingGenerator:
         # APIError signature: (message, request, *, body)
         mock_request = MagicMock()
         mock_client.embeddings.create.side_effect = APIError(
-            "Internal server error",
-            request=mock_request,
-            body=None
+            "Internal server error", request=mock_request, body=None
         )
 
         generator = EmbeddingGenerator(api_key="test-key")
@@ -229,7 +228,7 @@ class TestEmbeddingGenerator:
         with pytest.raises(APIError):
             generator.generate_embedding("Test text")
 
-    @patch('governmentreporter.processors.embeddings.OpenAI')
+    @patch("governmentreporter.processors.embeddings.OpenAI")
     def test_generate_batch_embeddings_success(self, mock_openai_class):
         """
         Test successful batch embedding generation.
@@ -248,18 +247,12 @@ class TestEmbeddingGenerator:
         texts = [
             "First document text.",
             "Second document text.",
-            "Third document text."
+            "Third document text.",
         ]
-        mock_embeddings = [
-            [0.1] * 1536,
-            [0.2] * 1536,
-            [0.3] * 1536
-        ]
+        mock_embeddings = [[0.1] * 1536, [0.2] * 1536, [0.3] * 1536]
 
         mock_response = MagicMock()
-        mock_response.data = [
-            MagicMock(embedding=emb) for emb in mock_embeddings
-        ]
+        mock_response.data = [MagicMock(embedding=emb) for emb in mock_embeddings]
         mock_client.embeddings.create.return_value = mock_response
 
         generator = EmbeddingGenerator(api_key="test-key")
@@ -271,11 +264,10 @@ class TestEmbeddingGenerator:
         assert len(results) == 3
         assert results == mock_embeddings
         mock_client.embeddings.create.assert_called_once_with(
-            model="text-embedding-3-small",
-            input=texts
+            model="text-embedding-3-small", input=texts
         )
 
-    @patch('governmentreporter.processors.embeddings.OpenAI')
+    @patch("governmentreporter.processors.embeddings.OpenAI")
     def test_generate_batch_embeddings_empty_list(self, mock_openai_class):
         """
         Test batch embedding generation with empty list.
@@ -298,7 +290,7 @@ class TestEmbeddingGenerator:
         assert results == []
         mock_client.embeddings.create.assert_not_called()
 
-    @patch('governmentreporter.processors.embeddings.OpenAI')
+    @patch("governmentreporter.processors.embeddings.OpenAI")
     def test_generate_batch_embeddings_partial_failure(self, mock_openai_class):
         """
         Test batch embedding with partial failure handling.
@@ -320,7 +312,7 @@ class TestEmbeddingGenerator:
         mock_client.embeddings.create.side_effect = [
             APIError("Batch processing failed", request=mock_request, body=None),
             MagicMock(data=[MagicMock(embedding=[0.1] * 1536)]),
-            MagicMock(data=[MagicMock(embedding=[0.2] * 1536)])
+            MagicMock(data=[MagicMock(embedding=[0.2] * 1536)]),
         ]
 
         generator = EmbeddingGenerator(api_key="test-key")
@@ -345,7 +337,7 @@ class TestGenerateEmbeddingFunction:
         - These often wrap class-based functionality
     """
 
-    @patch('governmentreporter.processors.embeddings.EmbeddingGenerator')
+    @patch("governmentreporter.processors.embeddings.EmbeddingGenerator")
     def test_generate_embedding_function_success(self, mock_generator_class):
         """
         Test the convenience function for generating embeddings.
@@ -372,7 +364,7 @@ class TestGenerateEmbeddingFunction:
         mock_generator_class.assert_called_once()  # No api_key argument
         mock_generator.generate_embedding.assert_called_once_with(test_text)
 
-    @patch('governmentreporter.processors.embeddings.EmbeddingGenerator')
+    @patch("governmentreporter.processors.embeddings.EmbeddingGenerator")
     def test_generate_embedding_function_no_api_key(self, mock_generator_class):
         """
         Test convenience function without explicit API key.
@@ -409,7 +401,7 @@ class TestEmbeddingIntegration:
         - They catch issues that unit tests might miss
     """
 
-    @patch('governmentreporter.processors.embeddings.OpenAI')
+    @patch("governmentreporter.processors.embeddings.OpenAI")
     def test_embeddings_for_document_chunks(self, mock_openai_class):
         """
         Test generating embeddings for document chunks.
@@ -430,18 +422,14 @@ class TestEmbeddingIntegration:
             "In reaching this conclusion, we consider three factors.",
             "First, the law imposes a substantial burden on protected speech.",
             "Second, the government has not demonstrated a compelling interest.",
-            "Third, less restrictive alternatives are available."
+            "Third, less restrictive alternatives are available.",
         ]
 
         # Mock different embeddings for each chunk
-        mock_embeddings = [
-            [i * 0.1] * 1536 for i in range(len(chunks))
-        ]
+        mock_embeddings = [[i * 0.1] * 1536 for i in range(len(chunks))]
 
         mock_response = MagicMock()
-        mock_response.data = [
-            MagicMock(embedding=emb) for emb in mock_embeddings
-        ]
+        mock_response.data = [MagicMock(embedding=emb) for emb in mock_embeddings]
         mock_client.embeddings.create.return_value = mock_response
 
         generator = EmbeddingGenerator(api_key="test-key")
@@ -456,8 +444,8 @@ class TestEmbeddingIntegration:
         # Verify embeddings are different (not all the same)
         assert not all(embeddings[0] == emb for emb in embeddings[1:])
 
-    @patch('governmentreporter.processors.embeddings.logger')
-    @patch('governmentreporter.processors.embeddings.OpenAI')
+    @patch("governmentreporter.processors.embeddings.logger")
+    @patch("governmentreporter.processors.embeddings.OpenAI")
     def test_embedding_logging(self, mock_openai_class, mock_logger):
         """
         Test that appropriate logging occurs during embedding generation.
@@ -487,7 +475,7 @@ class TestEmbeddingIntegration:
         # Verify that debug/info logging occurred
         assert mock_logger.debug.called or mock_logger.info.called
 
-    @patch('governmentreporter.processors.embeddings.OpenAI')
+    @patch("governmentreporter.processors.embeddings.OpenAI")
     def test_embedding_dimension_validation(self, mock_openai_class):
         """
         Test validation of embedding dimensions.
@@ -517,7 +505,7 @@ class TestEmbeddingIntegration:
         # In this case, we're just returning what OpenAI gives us
         assert len(result) == 1000  # Returns what API provides
 
-    @patch('governmentreporter.processors.embeddings.OpenAI')
+    @patch("governmentreporter.processors.embeddings.OpenAI")
     def test_special_characters_in_text(self, mock_openai_class):
         """
         Test embedding generation with special characters.
@@ -601,7 +589,7 @@ def sample_texts():
         "Executive Order 12345 establishes new federal guidelines.",
         "Section 2(a) requires all agencies to comply within 90 days.",
         "The dissenting opinion argues for a different interpretation.",
-        "Implementation shall begin immediately upon publication."
+        "Implementation shall begin immediately upon publication.",
     ]
 
 
@@ -617,8 +605,10 @@ def embedding_generator():
         - Fixtures can use other fixtures via dependency injection
         - Complex setup logic is centralized in fixtures
     """
-    with patch('governmentreporter.processors.embeddings.OpenAI'):
-        with patch('governmentreporter.processors.embeddings.get_openai_api_key') as mock_get_key:
+    with patch("governmentreporter.processors.embeddings.OpenAI"):
+        with patch(
+            "governmentreporter.processors.embeddings.get_openai_api_key"
+        ) as mock_get_key:
             mock_get_key.return_value = "test-api-key"
             generator = EmbeddingGenerator()
 

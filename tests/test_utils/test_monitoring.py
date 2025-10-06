@@ -72,7 +72,7 @@ class TestPerformanceMonitorInitialization:
         monitor = PerformanceMonitor()
 
         # Act: Start monitoring
-        with patch('time.time', return_value=1234567890.0):
+        with patch("time.time", return_value=1234567890.0):
             monitor.start()
 
         # Assert: Start time is set
@@ -201,9 +201,9 @@ class TestDocumentRecording:
         # Act: Record various documents
         monitor.record_document(processing_time_ms=100.0)  # Success
         monitor.record_document(processing_time_ms=150.0)  # Success
-        monitor.record_document(failed=True)               # Failure
+        monitor.record_document(failed=True)  # Failure
         monitor.record_document(processing_time_ms=200.0)  # Success
-        monitor.record_document(failed=True)               # Failure
+        monitor.record_document(failed=True)  # Failure
 
         # Assert: All counted correctly
         assert monitor.documents_processed == 3
@@ -265,7 +265,7 @@ class TestStatisticsCalculation:
         # Arrange: Monitor with some data
         monitor = PerformanceMonitor()
 
-        with patch('time.time') as mock_time:
+        with patch("time.time") as mock_time:
             # Start at time 1000
             mock_time.return_value = 1000.0
             monitor.start()
@@ -308,6 +308,7 @@ class TestStatisticsCalculation:
 
         # Get statistics
         import time
+
         time.sleep(0.01)  # Ensure some elapsed time
         stats = monitor.get_statistics()
 
@@ -375,6 +376,7 @@ class TestStatisticsCalculation:
             monitor.record_document()
 
         import time
+
         time.sleep(0.01)  # Ensure some elapsed time
 
         # Act: Get statistics with total
@@ -441,13 +443,13 @@ class TestStatisticsCalculation:
         monitor = PerformanceMonitor()
 
         test_cases = [
-            (30.5, "30.5s"),      # Seconds only
-            (90, "1m 30s"),       # Minutes and seconds
-            (3665, "1h 1m"),      # Hours and minutes
+            (30.5, "30.5s"),  # Seconds only
+            (90, "1m 30s"),  # Minutes and seconds
+            (3665, "1h 1m"),  # Hours and minutes
         ]
 
         for elapsed, expected_format in test_cases:
-            with patch('time.time') as mock_time:
+            with patch("time.time") as mock_time:
                 mock_time.return_value = 1000.0
                 monitor.start()
                 mock_time.return_value = 1000.0 + elapsed
@@ -485,7 +487,7 @@ class TestProgressDisplay:
         captured_output = io.StringIO()
 
         # Act: Print progress at 50%
-        with patch('sys.stdout', captured_output):
+        with patch("sys.stdout", captured_output):
             monitor.print_progress(50, 100)
 
         # Assert: Output contains expected elements
@@ -512,7 +514,7 @@ class TestProgressDisplay:
         captured_output = io.StringIO()
 
         # Act: Print 100% progress
-        with patch('sys.stdout', captured_output):
+        with patch("sys.stdout", captured_output):
             monitor.print_progress(100, 100)
 
         # Assert: Newline added
@@ -533,7 +535,7 @@ class TestProgressDisplay:
         # Act: Print progress with zero total
         # Should return immediately without output
         captured_output = io.StringIO()
-        with patch('sys.stdout', captured_output):
+        with patch("sys.stdout", captured_output):
             monitor.print_progress(0, 0)
 
         # Assert: No output
@@ -552,7 +554,7 @@ class TestProgressDisplay:
         captured_output = io.StringIO()
 
         # Act: Print with custom prefix
-        with patch('sys.stdout', captured_output):
+        with patch("sys.stdout", captured_output):
             monitor.print_progress(25, 100, prefix="Indexing")
 
         # Assert: Custom prefix shown
@@ -577,13 +579,13 @@ class TestProgressDisplay:
         captured_output = io.StringIO()
 
         # Act: Print 60% progress (30 filled, 20 empty)
-        with patch('sys.stdout', captured_output):
+        with patch("sys.stdout", captured_output):
             monitor.print_progress(60, 100)
 
         # Assert: Bar composition
         output = captured_output.getvalue()
         # Extract bar portion between | characters
-        bar_match = output[output.find("|")+1:output.rfind("|")]
+        bar_match = output[output.find("|") + 1 : output.rfind("|")]
         assert len(bar_match) == 50
         assert bar_match.count("█") == 30  # 60% of 50
         assert bar_match.count("░") == 20  # 40% of 50
@@ -597,7 +599,7 @@ class TestProgressDisplay:
         # Arrange: Monitor with ETA calculation
         monitor = PerformanceMonitor()
 
-        with patch('time.time') as mock_time:
+        with patch("time.time") as mock_time:
             mock_time.return_value = 0.0
             monitor.start()
 
@@ -610,7 +612,7 @@ class TestProgressDisplay:
             captured_output = io.StringIO()
 
             # Act: Print progress with ETA
-            with patch('sys.stdout', captured_output):
+            with patch("sys.stdout", captured_output):
                 monitor.print_progress(30, 100)
 
         # Assert: ETA shown
@@ -635,7 +637,7 @@ class TestProgressDisplay:
         captured_output = io.StringIO()
 
         # Act: Print multiple progress updates
-        with patch('sys.stdout', captured_output):
+        with patch("sys.stdout", captured_output):
             monitor.print_progress(25, 100)
             monitor.print_progress(50, 100)
             monitor.print_progress(75, 100)
@@ -738,13 +740,13 @@ class TestSetupLogging:
         Should configure INFO level when verbose is False.
         """
         # Act: Setup with default
-        with patch('logging.basicConfig') as mock_config:
+        with patch("logging.basicConfig") as mock_config:
             setup_logging(verbose=False)
 
         # Assert: INFO level configured
         mock_config.assert_called_once()
         call_kwargs = mock_config.call_args[1]
-        assert call_kwargs['level'] == logging.INFO
+        assert call_kwargs["level"] == logging.INFO
 
     def test_setup_logging_verbose(self):
         """
@@ -753,13 +755,13 @@ class TestSetupLogging:
         Should configure DEBUG level when verbose is True.
         """
         # Act: Setup with verbose
-        with patch('logging.basicConfig') as mock_config:
+        with patch("logging.basicConfig") as mock_config:
             setup_logging(verbose=True)
 
         # Assert: DEBUG level configured
         mock_config.assert_called_once()
         call_kwargs = mock_config.call_args[1]
-        assert call_kwargs['level'] == logging.DEBUG
+        assert call_kwargs["level"] == logging.DEBUG
 
     def test_setup_logging_format(self):
         """
@@ -772,13 +774,13 @@ class TestSetupLogging:
             - %(name)s style is older but widely used
         """
         # Act: Setup logging
-        with patch('logging.basicConfig') as mock_config:
+        with patch("logging.basicConfig") as mock_config:
             setup_logging()
 
         # Assert: Format configured
         call_kwargs = mock_config.call_args[1]
-        assert 'format' in call_kwargs
-        format_str = call_kwargs['format']
+        assert "format" in call_kwargs
+        format_str = call_kwargs["format"]
         assert "%(asctime)s" in format_str
         assert "%(name)s" in format_str
         assert "%(levelname)s" in format_str
@@ -791,13 +793,13 @@ class TestSetupLogging:
         Should use readable date/time format.
         """
         # Act: Setup logging
-        with patch('logging.basicConfig') as mock_config:
+        with patch("logging.basicConfig") as mock_config:
             setup_logging()
 
         # Assert: Date format configured
         call_kwargs = mock_config.call_args[1]
-        assert 'datefmt' in call_kwargs
-        assert call_kwargs['datefmt'] == "%Y-%m-%d %H:%M:%S"
+        assert "datefmt" in call_kwargs
+        assert call_kwargs["datefmt"] == "%Y-%m-%d %H:%M:%S"
 
     def test_setup_logging_library_suppression(self):
         """
@@ -818,8 +820,8 @@ class TestSetupLogging:
             return mock_loggers[name]
 
         # Act: Setup logging
-        with patch('logging.getLogger', side_effect=mock_get_logger):
-            with patch('logging.basicConfig'):
+        with patch("logging.getLogger", side_effect=mock_get_logger):
+            with patch("logging.basicConfig"):
                 setup_logging()
 
         # Assert: Library loggers set to WARNING
@@ -854,7 +856,7 @@ class TestPerformanceMonitorIntegration:
         monitor = PerformanceMonitor()
 
         # Simulate processing with controlled time
-        with patch('time.time') as mock_time:
+        with patch("time.time") as mock_time:
             # Start processing
             mock_time.return_value = 1000.0
             monitor.start()
@@ -899,8 +901,8 @@ class TestPerformanceMonitorIntegration:
             outputs.append(args[0] if args else "")
 
         # Act: Simulate progress updates
-        with patch('builtins.print', side_effect=capture_print):
-            with patch('time.time') as mock_time:
+        with patch("builtins.print", side_effect=capture_print):
+            with patch("time.time") as mock_time:
                 mock_time.return_value = 0.0
                 monitor.start()
 
@@ -942,7 +944,7 @@ class TestPerformanceMonitorIntegration:
 
         # Assert: Accurate tracking despite errors
         assert stats["documents_processed"] == 33  # ~2/3 successful
-        assert stats["documents_failed"] == 17     # ~1/3 failed
+        assert stats["documents_failed"] == 17  # ~1/3 failed
         assert stats["success_rate"] < 70  # Lower success rate
 
     def test_concurrent_monitoring(self):

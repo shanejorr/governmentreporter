@@ -41,9 +41,11 @@ class TestGenerateSCOTUSLLMFields:
         - JSON parsing validation is critical
     """
 
-    @patch('governmentreporter.processors.llm_extraction.OpenAI')
-    @patch('governmentreporter.processors.llm_extraction.get_openai_api_key')
-    def test_generate_scotus_fields_with_syllabus(self, mock_get_key, mock_openai_class):
+    @patch("governmentreporter.processors.llm_extraction.OpenAI")
+    @patch("governmentreporter.processors.llm_extraction.get_openai_api_key")
+    def test_generate_scotus_fields_with_syllabus(
+        self, mock_get_key, mock_openai_class
+    ):
         """
         Test SCOTUS metadata extraction with Syllabus provided.
 
@@ -66,11 +68,15 @@ class TestGenerateSCOTUSLLMFields:
             "federal_statutes_cited": ["42 U.S.C. § 1983"],
             "federal_regulations_cited": [],
             "cases_cited": ["Brandenburg v. Ohio, 395 U.S. 444 (1969)"],
-            "topics_or_policy_areas": ["free speech", "constitutional law", "civil rights"],
+            "topics_or_policy_areas": [
+                "free speech",
+                "constitutional law",
+                "civil rights",
+            ],
             "holding_plain": "The First Amendment protects offensive speech.",
             "outcome_simple": "The lower court's decision was reversed.",
             "issue_plain": "Whether offensive speech is protected by the First Amendment?",
-            "reasoning": "The Court reasoned that the First Amendment protects even offensive speech..."
+            "reasoning": "The Court reasoned that the First Amendment protects even offensive speech...",
         }
 
         mock_response = MagicMock()
@@ -86,7 +92,9 @@ class TestGenerateSCOTUSLLMFields:
         result = generate_scotus_llm_fields(opinion_text, syllabus_text)
 
         # Assert
-        assert result["plain_language_summary"] == mock_metadata["plain_language_summary"]
+        assert (
+            result["plain_language_summary"] == mock_metadata["plain_language_summary"]
+        )
         assert result["holding_plain"] == mock_metadata["holding_plain"]
         assert result["constitution_cited"] == mock_metadata["constitution_cited"]
         assert len(result["topics_or_policy_areas"]) == 3
@@ -95,9 +103,11 @@ class TestGenerateSCOTUSLLMFields:
         call_args = mock_client.chat.completions.create.call_args
         assert "Syllabus" in str(call_args)
 
-    @patch('governmentreporter.processors.llm_extraction.OpenAI')
-    @patch('governmentreporter.processors.llm_extraction.get_openai_api_key')
-    def test_generate_scotus_fields_without_syllabus(self, mock_get_key, mock_openai_class):
+    @patch("governmentreporter.processors.llm_extraction.OpenAI")
+    @patch("governmentreporter.processors.llm_extraction.get_openai_api_key")
+    def test_generate_scotus_fields_without_syllabus(
+        self, mock_get_key, mock_openai_class
+    ):
         """
         Test SCOTUS metadata extraction without Syllabus.
 
@@ -123,7 +133,7 @@ class TestGenerateSCOTUSLLMFields:
             "holding_plain": "Warrantless searches require probable cause.",
             "outcome_simple": "The conviction was upheld.",
             "issue_plain": "Whether the search violated the Fourth Amendment?",
-            "reasoning": "The Court found that the search was reasonable..."
+            "reasoning": "The Court found that the search was reasonable...",
         }
 
         mock_response = MagicMock()
@@ -138,7 +148,9 @@ class TestGenerateSCOTUSLLMFields:
         result = generate_scotus_llm_fields(opinion_text, syllabus=None)
 
         # Assert
-        assert result["plain_language_summary"] == mock_metadata["plain_language_summary"]
+        assert (
+            result["plain_language_summary"] == mock_metadata["plain_language_summary"]
+        )
         assert result["constitution_cited"] == ["Fourth Amendment"]
         assert "search and seizure" in result["topics_or_policy_areas"]
 
@@ -147,10 +159,12 @@ class TestGenerateSCOTUSLLMFields:
         prompt = str(call_args)
         assert "without a Syllabus" in prompt or "Syllabus: None" not in prompt
 
-    @patch('governmentreporter.processors.llm_extraction.time.sleep')
-    @patch('governmentreporter.processors.llm_extraction.OpenAI')
-    @patch('governmentreporter.processors.llm_extraction.get_openai_api_key')
-    def test_generate_scotus_fields_with_retry(self, mock_get_key, mock_openai_class, mock_sleep):
+    @patch("governmentreporter.processors.llm_extraction.time.sleep")
+    @patch("governmentreporter.processors.llm_extraction.OpenAI")
+    @patch("governmentreporter.processors.llm_extraction.get_openai_api_key")
+    def test_generate_scotus_fields_with_retry(
+        self, mock_get_key, mock_openai_class, mock_sleep
+    ):
         """
         Test retry logic for rate limit errors.
 
@@ -177,7 +191,7 @@ class TestGenerateSCOTUSLLMFields:
             "holding_plain": "Test holding",
             "outcome_simple": "Test outcome",
             "issue_plain": "Test issue",
-            "reasoning": "Test reasoning"
+            "reasoning": "Test reasoning",
         }
 
         # First call fails with rate limit, second succeeds
@@ -188,7 +202,7 @@ class TestGenerateSCOTUSLLMFields:
 
         mock_client.chat.completions.create.side_effect = [
             RateLimitError("Rate limit exceeded", response=MagicMock(), body=None),
-            mock_response
+            mock_response,
         ]
 
         # Act
@@ -199,8 +213,8 @@ class TestGenerateSCOTUSLLMFields:
         assert mock_client.chat.completions.create.call_count == 2
         mock_sleep.assert_called_once()
 
-    @patch('governmentreporter.processors.llm_extraction.OpenAI')
-    @patch('governmentreporter.processors.llm_extraction.get_openai_api_key')
+    @patch("governmentreporter.processors.llm_extraction.OpenAI")
+    @patch("governmentreporter.processors.llm_extraction.get_openai_api_key")
     def test_generate_scotus_fields_empty_text(self, mock_get_key, mock_openai_class):
         """
         Test handling of empty opinion text.
@@ -228,7 +242,7 @@ class TestGenerateSCOTUSLLMFields:
             "holding_plain": "",
             "outcome_simple": "",
             "issue_plain": "",
-            "reasoning": ""
+            "reasoning": "",
         }
 
         mock_response = MagicMock()
@@ -245,9 +259,11 @@ class TestGenerateSCOTUSLLMFields:
         assert result["constitution_cited"] == []
         assert result["topics_or_policy_areas"] == []
 
-    @patch('governmentreporter.processors.llm_extraction.OpenAI')
-    @patch('governmentreporter.processors.llm_extraction.get_openai_api_key')
-    def test_generate_scotus_fields_malformed_json(self, mock_get_key, mock_openai_class):
+    @patch("governmentreporter.processors.llm_extraction.OpenAI")
+    @patch("governmentreporter.processors.llm_extraction.get_openai_api_key")
+    def test_generate_scotus_fields_malformed_json(
+        self, mock_get_key, mock_openai_class
+    ):
         """
         Test handling of malformed JSON responses.
 
@@ -291,8 +307,8 @@ class TestGenerateEOLLMFields:
         - Testing verifies correct field extraction for EO format
     """
 
-    @patch('governmentreporter.processors.llm_extraction.OpenAI')
-    @patch('governmentreporter.processors.llm_extraction.get_openai_api_key')
+    @patch("governmentreporter.processors.llm_extraction.OpenAI")
+    @patch("governmentreporter.processors.llm_extraction.get_openai_api_key")
     def test_generate_eo_fields_success(self, mock_get_key, mock_openai_class):
         """
         Test successful Executive Order metadata extraction.
@@ -314,10 +330,14 @@ class TestGenerateEOLLMFields:
             "federal_statutes_referenced": ["Clean Air Act, 42 U.S.C. § 7401"],
             "federal_regulations_referenced": ["40 C.F.R. Part 60"],
             "agencies_or_entities": ["EPA", "Department of Energy", "NOAA"],
-            "topics_or_policy_areas": ["climate change", "environmental protection", "energy"],
+            "topics_or_policy_areas": [
+                "climate change",
+                "environmental protection",
+                "energy",
+            ],
             "action_plain": "Requires agencies to reduce carbon emissions by 50%",
             "impact_simple": "Federal facilities must transition to renewable energy",
-            "implementation_requirements": "Agencies must submit implementation plans within 90 days"
+            "implementation_requirements": "Agencies must submit implementation plans within 90 days",
         }
 
         mock_response = MagicMock()
@@ -348,8 +368,8 @@ class TestGenerateEOLLMFields:
         assert result["action_plain"] == mock_metadata["action_plain"]
         assert len(result["federal_statutes_referenced"]) == 1
 
-    @patch('governmentreporter.processors.llm_extraction.OpenAI')
-    @patch('governmentreporter.processors.llm_extraction.get_openai_api_key')
+    @patch("governmentreporter.processors.llm_extraction.OpenAI")
+    @patch("governmentreporter.processors.llm_extraction.get_openai_api_key")
     def test_generate_eo_fields_empty_text(self, mock_get_key, mock_openai_class):
         """
         Test Executive Order extraction with empty text.
@@ -373,7 +393,7 @@ class TestGenerateEOLLMFields:
             "topics_or_policy_areas": [],
             "action_plain": "",
             "impact_simple": "",
-            "implementation_requirements": ""
+            "implementation_requirements": "",
         }
 
         mock_response = MagicMock()
@@ -392,10 +412,12 @@ class TestGenerateEOLLMFields:
         assert len(result["topics_or_policy_areas"]) >= 2
         assert "federal policy" in result["topics_or_policy_areas"]
 
-    @patch('governmentreporter.processors.llm_extraction.time.sleep')
-    @patch('governmentreporter.processors.llm_extraction.OpenAI')
-    @patch('governmentreporter.processors.llm_extraction.get_openai_api_key')
-    def test_generate_eo_fields_api_error_with_retry(self, mock_get_key, mock_openai_class, mock_sleep):
+    @patch("governmentreporter.processors.llm_extraction.time.sleep")
+    @patch("governmentreporter.processors.llm_extraction.OpenAI")
+    @patch("governmentreporter.processors.llm_extraction.get_openai_api_key")
+    def test_generate_eo_fields_api_error_with_retry(
+        self, mock_get_key, mock_openai_class, mock_sleep
+    ):
         """
         Test API error handling with retry for Executive Orders.
 
@@ -414,9 +436,7 @@ class TestGenerateEOLLMFields:
         # Simulate persistent API error
         mock_request = MagicMock()
         mock_client.chat.completions.create.side_effect = APIError(
-            "Internal server error",
-            request=mock_request,
-            body=None
+            "Internal server error", request=mock_request, body=None
         )
 
         # Act
@@ -449,9 +469,11 @@ class TestLLMExtractionIntegration:
         - Realistic test data helps catch edge cases
     """
 
-    @patch('governmentreporter.processors.llm_extraction.OpenAI')
-    @patch('governmentreporter.processors.llm_extraction.get_openai_api_key')
-    def test_scotus_extraction_with_complex_opinion(self, mock_get_key, mock_openai_class):
+    @patch("governmentreporter.processors.llm_extraction.OpenAI")
+    @patch("governmentreporter.processors.llm_extraction.get_openai_api_key")
+    def test_scotus_extraction_with_complex_opinion(
+        self, mock_get_key, mock_openai_class
+    ):
         """
         Test extraction from complex SCOTUS opinion with multiple parts.
 
@@ -470,21 +492,29 @@ class TestLLMExtractionIntegration:
         # Complex metadata response
         mock_metadata = {
             "plain_language_summary": "In a 5-4 decision, the Court held...",
-            "constitution_cited": ["First Amendment", "Fourteenth Amendment", "Commerce Clause"],
+            "constitution_cited": [
+                "First Amendment",
+                "Fourteenth Amendment",
+                "Commerce Clause",
+            ],
             "federal_statutes_cited": ["42 U.S.C. § 1983", "28 U.S.C. § 1331"],
             "federal_regulations_cited": ["40 C.F.R. Part 60"],
             "cases_cited": [
                 "Brandenburg v. Ohio, 395 U.S. 444 (1969)",
-                "New York Times v. Sullivan, 376 U.S. 254 (1964)"
+                "New York Times v. Sullivan, 376 U.S. 254 (1964)",
             ],
             "topics_or_policy_areas": [
-                "free speech", "defamation", "public figures",
-                "actual malice", "First Amendment", "press freedom"
+                "free speech",
+                "defamation",
+                "public figures",
+                "actual malice",
+                "First Amendment",
+                "press freedom",
             ],
             "holding_plain": "Public figures must prove actual malice for defamation claims.",
             "outcome_simple": "The judgment was reversed and remanded.",
             "issue_plain": "What standard applies to defamation claims by public figures?",
-            "reasoning": "The Court balanced free speech against reputation protection..."
+            "reasoning": "The Court balanced free speech against reputation protection...",
         }
 
         mock_response = MagicMock()
@@ -527,9 +557,11 @@ class TestLLMExtractionIntegration:
         assert len(result["cases_cited"]) >= 2
         assert len(result["topics_or_policy_areas"]) >= 4
 
-    @patch('governmentreporter.processors.llm_extraction.OpenAI')
-    @patch('governmentreporter.processors.llm_extraction.get_openai_api_key')
-    def test_eo_extraction_with_multiple_sections(self, mock_get_key, mock_openai_class):
+    @patch("governmentreporter.processors.llm_extraction.OpenAI")
+    @patch("governmentreporter.processors.llm_extraction.get_openai_api_key")
+    def test_eo_extraction_with_multiple_sections(
+        self, mock_get_key, mock_openai_class
+    ):
         """
         Test extraction from Executive Order with multiple sections.
 
@@ -549,23 +581,30 @@ class TestLLMExtractionIntegration:
             "plain_summary": "Comprehensive climate action order requiring federal agencies...",
             "federal_statutes_referenced": [
                 "Clean Air Act, 42 U.S.C. § 7401",
-                "National Environmental Policy Act, 42 U.S.C. § 4321"
+                "National Environmental Policy Act, 42 U.S.C. § 4321",
             ],
             "federal_regulations_referenced": [
                 "40 C.F.R. Part 60",
-                "40 C.F.R. Part 1500"
+                "40 C.F.R. Part 1500",
             ],
             "agencies_or_entities": [
-                "EPA", "Department of Energy", "Department of Defense",
-                "General Services Administration", "NOAA", "NASA"
+                "EPA",
+                "Department of Energy",
+                "Department of Defense",
+                "General Services Administration",
+                "NOAA",
+                "NASA",
             ],
             "topics_or_policy_areas": [
-                "climate change", "renewable energy", "carbon emissions",
-                "federal procurement", "environmental justice"
+                "climate change",
+                "renewable energy",
+                "carbon emissions",
+                "federal procurement",
+                "environmental justice",
             ],
             "action_plain": "Mandates carbon neutrality for federal operations by 2030",
             "impact_simple": "All federal agencies must transition to clean energy",
-            "implementation_requirements": "Quarterly progress reports and annual targets required"
+            "implementation_requirements": "Quarterly progress reports and annual targets required",
         }
 
         mock_response = MagicMock()
@@ -618,10 +657,12 @@ def mock_openai_response():
     response.choices = [
         MagicMock(
             message=MagicMock(
-                content=json.dumps({
-                    "plain_language_summary": "Test summary",
-                    "topics_or_policy_areas": ["test topic"],
-                })
+                content=json.dumps(
+                    {
+                        "plain_language_summary": "Test summary",
+                        "topics_or_policy_areas": ["test topic"],
+                    }
+                )
             )
         )
     ]

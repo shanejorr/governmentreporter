@@ -46,7 +46,7 @@ class TestMainCLI:
 
     def test_cli_shows_help_with_help_flag(self, cli_runner):
         """Test --help flag displays help text."""
-        result = cli_runner.invoke(main, ['--help'])
+        result = cli_runner.invoke(main, ["--help"])
 
         assert result.exit_code == 0
         assert "MCP server" in result.output or "government document" in result.output
@@ -55,14 +55,14 @@ class TestMainCLI:
 
     def test_cli_shows_version(self, cli_runner):
         """Test --version flag displays version."""
-        result = cli_runner.invoke(main, ['--version'])
+        result = cli_runner.invoke(main, ["--version"])
 
         assert result.exit_code == 0
         assert "0.1.0" in result.output or "version" in result.output.lower()
 
     def test_cli_lists_subcommands(self, cli_runner):
         """Test that all subcommands are listed in help."""
-        result = cli_runner.invoke(main, ['--help'])
+        result = cli_runner.invoke(main, ["--help"])
 
         assert result.exit_code == 0
         assert "server" in result.output
@@ -71,7 +71,7 @@ class TestMainCLI:
 
     def test_cli_invalid_command_shows_error(self, cli_runner):
         """Test that invalid command shows helpful error."""
-        result = cli_runner.invoke(main, ['invalid-command'])
+        result = cli_runner.invoke(main, ["invalid-command"])
 
         assert result.exit_code != 0
         assert "Error" in result.output or "invalid" in result.output.lower()
@@ -80,65 +80,67 @@ class TestMainCLI:
 class TestShellCompletion:
     """Test shell completion installation and display."""
 
-    @patch('governmentreporter.cli.main.os.environ.get')
+    @patch("governmentreporter.cli.main.os.environ.get")
     def test_install_completion_bash(self, mock_get_env, cli_runner):
         """Test shell completion installation for bash."""
         mock_get_env.return_value = "/bin/bash"
 
-        result = cli_runner.invoke(main, ['--install-completion'])
+        result = cli_runner.invoke(main, ["--install-completion"])
 
         assert result.exit_code == 0
         assert "bash" in result.output.lower()
-        assert "bashrc" in result.output.lower() or "bash_profile" in result.output.lower()
+        assert (
+            "bashrc" in result.output.lower() or "bash_profile" in result.output.lower()
+        )
 
-    @patch('governmentreporter.cli.main.os.environ.get')
+    @patch("governmentreporter.cli.main.os.environ.get")
     def test_install_completion_zsh(self, mock_get_env, cli_runner):
         """Test shell completion installation for zsh."""
         mock_get_env.return_value = "/bin/zsh"
 
-        result = cli_runner.invoke(main, ['--install-completion'])
+        result = cli_runner.invoke(main, ["--install-completion"])
 
         assert result.exit_code == 0
         assert "zsh" in result.output.lower()
         assert "zshrc" in result.output.lower()
 
-    @patch('governmentreporter.cli.main.os.environ.get')
+    @patch("governmentreporter.cli.main.os.environ.get")
     def test_install_completion_fish(self, mock_get_env, cli_runner):
         """Test shell completion installation for fish."""
         mock_get_env.return_value = "/usr/bin/fish"
 
-        result = cli_runner.invoke(main, ['--install-completion'])
+        result = cli_runner.invoke(main, ["--install-completion"])
 
         assert result.exit_code == 0
         assert "fish" in result.output.lower()
 
-    @patch('governmentreporter.cli.main.os.environ.get')
+    @patch("governmentreporter.cli.main.os.environ.get")
     def test_install_completion_unknown_shell(self, mock_get_env, cli_runner):
         """Test completion handles unknown shell gracefully."""
         mock_get_env.return_value = "/bin/unknown"
 
-        result = cli_runner.invoke(main, ['--install-completion'])
+        result = cli_runner.invoke(main, ["--install-completion"])
 
         assert result.exit_code != 0
         assert "unknown" in result.output.lower()
 
-    @patch('governmentreporter.cli.main.os.environ.get')
+    @patch("governmentreporter.cli.main.os.environ.get")
     def test_show_completion_bash(self, mock_get_env, cli_runner):
         """Test showing completion code for bash."""
         mock_get_env.return_value = "/bin/bash"
 
-        result = cli_runner.invoke(main, ['--show-completion'])
+        result = cli_runner.invoke(main, ["--show-completion"])
 
         assert result.exit_code == 0
         assert "GOVERNMENTREPORTER_COMPLETE" in result.output
         assert "bash" in result.output.lower()
 
-    @patch('governmentreporter.cli.main.os.environ.get')
+    @patch("governmentreporter.cli.main.os.environ.get")
     def test_show_completion_zsh(self, mock_get_env, cli_runner):
         """Test showing completion code for zsh."""
         mock_get_env.return_value = "/bin/zsh"
 
-        result = cli_runner.invoke(main, ['--show-completion'])
+        result = cli_runner.invoke(main, ["--show-completion"])
 
         assert result.exit_code == 0
         assert "GOVERNMENTREPORTER_COMPLETE" in result.output
@@ -150,21 +152,21 @@ class TestCLISubcommandAccess:
 
     def test_server_subcommand_exists(self, cli_runner):
         """Test server subcommand is accessible."""
-        result = cli_runner.invoke(main, ['server', '--help'])
+        result = cli_runner.invoke(main, ["server", "--help"])
 
         assert result.exit_code == 0
         assert "server" in result.output.lower() or "mcp" in result.output.lower()
 
     def test_ingest_subcommand_exists(self, cli_runner):
         """Test ingest subcommand is accessible."""
-        result = cli_runner.invoke(main, ['ingest', '--help'])
+        result = cli_runner.invoke(main, ["ingest", "--help"])
 
         assert result.exit_code == 0
         assert "ingest" in result.output.lower()
 
     def test_query_subcommand_exists(self, cli_runner):
         """Test query subcommand is accessible."""
-        result = cli_runner.invoke(main, ['query', '--help'])
+        result = cli_runner.invoke(main, ["query", "--help"])
 
         assert result.exit_code == 0
         assert "query" in result.output.lower() or "search" in result.output.lower()
@@ -177,14 +179,14 @@ class TestCLIErrorHandling:
         """Test CLI handles Ctrl+C gracefully."""
         # This is hard to test directly, but we can verify the CLI
         # doesn't crash with invalid input
-        result = cli_runner.invoke(main, ['--invalid-flag'])
+        result = cli_runner.invoke(main, ["--invalid-flag"])
 
         # Should show error, not crash
         assert "Error" in result.output or "invalid" in result.output.lower()
 
     def test_cli_provides_helpful_error_messages(self, cli_runner):
         """Test CLI provides helpful error messages."""
-        result = cli_runner.invoke(main, ['nonexistent'])
+        result = cli_runner.invoke(main, ["nonexistent"])
 
         assert result.exit_code != 0
         # Should guide user
@@ -197,14 +199,14 @@ class TestCLIIntegration:
     def test_help_for_nested_commands(self, cli_runner):
         """Test help works for nested command groups."""
         # ingest is a group with subcommands
-        result = cli_runner.invoke(main, ['ingest', '--help'])
+        result = cli_runner.invoke(main, ["ingest", "--help"])
 
         assert result.exit_code == 0
         assert "scotus" in result.output.lower() or "eo" in result.output.lower()
 
     def test_version_works_with_subcommands(self, cli_runner):
         """Test version flag works at any command level."""
-        result = cli_runner.invoke(main, ['--version'])
+        result = cli_runner.invoke(main, ["--version"])
 
         assert result.exit_code == 0
         assert "version" in result.output.lower() or "0.1" in result.output
@@ -212,9 +214,9 @@ class TestCLIIntegration:
     def test_cli_maintains_consistent_style(self, cli_runner):
         """Test CLI maintains consistent help text style."""
         # Get help from multiple commands
-        main_help = cli_runner.invoke(main, ['--help'])
-        server_help = cli_runner.invoke(main, ['server', '--help'])
-        query_help = cli_runner.invoke(main, ['query', '--help'])
+        main_help = cli_runner.invoke(main, ["--help"])
+        server_help = cli_runner.invoke(main, ["server", "--help"])
+        query_help = cli_runner.invoke(main, ["query", "--help"])
 
         # All should have consistent sections
         for result in [main_help, server_help, query_help]:

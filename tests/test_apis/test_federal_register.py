@@ -103,14 +103,14 @@ class TestFederalRegisterClient:
                     "id": 123,
                     "name": "Office of Management and Budget",
                     "slug": "office-of-management-and-budget",
-                    "url": "https://www.federalregister.gov/agencies/office-of-management-and-budget"
+                    "url": "https://www.federalregister.gov/agencies/office-of-management-and-budget",
                 },
                 {
                     "id": 456,
                     "name": "General Services Administration",
                     "slug": "general-services-administration",
-                    "url": "https://www.federalregister.gov/agencies/general-services-administration"
-                }
+                    "url": "https://www.federalregister.gov/agencies/general-services-administration",
+                },
             ],
             "topics": ["Technology", "Government Operations", "Software Development"],
             "significant": True,
@@ -118,10 +118,7 @@ class TestFederalRegisterClient:
             "citation": "89 FR 12345",
             "start_page": 12345,
             "end_page": 12350,
-            "page_views": {
-                "count": 5000,
-                "last_updated": "2024-01-25T10:00:00Z"
-            }
+            "page_views": {"count": 5000, "last_updated": "2024-01-25T10:00:00Z"},
         }
 
     @pytest.fixture
@@ -192,21 +189,16 @@ class TestFederalRegisterClient:
                 {
                     "id": 789,
                     "name": "Department of Technology Standards",
-                    "slug": "department-of-technology-standards"
+                    "slug": "department-of-technology-standards",
                 }
             ],
             "topics": ["Technology", "Regulations"],
             "cfr_references": [
-                {
-                    "title": 48,
-                    "part": 52,
-                    "chapter": "I",
-                    "subchapter": "H"
-                }
+                {"title": 48, "part": 52, "chapter": "I", "subchapter": "H"}
             ],
             "citation": "89 FR 789",
             "regulatory_plan": None,
-            "small_entities_affected": False
+            "small_entities_affected": False,
         }
 
     @pytest.fixture
@@ -229,7 +221,7 @@ class TestFederalRegisterClient:
                     "type": "Notice",
                     "publication_date": "2024-01-10",
                     "abstract": "First test abstract",
-                    "html_url": "https://www.federalregister.gov/d/2024-11111"
+                    "html_url": "https://www.federalregister.gov/d/2024-11111",
                 },
                 {
                     "document_number": "2024-22222",
@@ -237,7 +229,7 @@ class TestFederalRegisterClient:
                     "type": "Proposed Rule",
                     "publication_date": "2024-01-11",
                     "abstract": "Second test abstract",
-                    "html_url": "https://www.federalregister.gov/d/2024-22222"
+                    "html_url": "https://www.federalregister.gov/d/2024-22222",
                 },
                 {
                     "document_number": "2024-33333",
@@ -246,9 +238,9 @@ class TestFederalRegisterClient:
                     "subtype": "Proclamation",
                     "publication_date": "2024-01-12",
                     "abstract": "Third test abstract",
-                    "html_url": "https://www.federalregister.gov/d/2024-33333"
-                }
-            ]
+                    "html_url": "https://www.federalregister.gov/d/2024-33333",
+                },
+            ],
         }
 
     def test_client_initialization(self, client):
@@ -270,10 +262,14 @@ class TestFederalRegisterClient:
         """Test that the correct rate limit delay is returned."""
         assert client._get_rate_limit_delay() == 1.1
 
-    @patch('httpx.Client')
-    def test_get_document_success(self, mock_httpx_client, client,
-                                   mock_executive_order_data,
-                                   mock_executive_order_text):
+    @patch("httpx.Client")
+    def test_get_document_success(
+        self,
+        mock_httpx_client,
+        client,
+        mock_executive_order_data,
+        mock_executive_order_text,
+    ):
         """
         Test successful document retrieval by document number.
 
@@ -309,21 +305,28 @@ class TestFederalRegisterClient:
         # Verify the result
         assert isinstance(document, Document)
         assert document.id == "2024-12345"
-        assert document.title == "Executive Order on Advancing Software Testing Standards"
+        assert (
+            document.title == "Executive Order on Advancing Software Testing Standards"
+        )
         assert document.date == "2024-01-19"  # Uses signing_date not publication_date
         assert document.type == "Executive Order"
-        assert document.source == "Federal Register"  # Has space in actual implementation
+        assert (
+            document.source == "Federal Register"
+        )  # Has space in actual implementation
         assert "By the authority vested in me" in document.content
         assert document.metadata["executive_order_number"] == "14123"
         assert document.metadata["president"] == "Joseph R. Biden Jr."
         assert document.metadata["signing_date"] == "2024-01-19"
         assert len(document.metadata["agencies"]) == 2
-        assert document.url == "https://www.federalregister.gov/documents/2024/01/20/2024-12345/executive-order"
+        assert (
+            document.url
+            == "https://www.federalregister.gov/documents/2024/01/20/2024-12345/executive-order"
+        )
 
         # Verify API calls
         assert mock_client_instance.get.call_count == 2
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_get_document_not_found(self, mock_httpx_client, client):
         """
         Test document retrieval with non-existent document number.
@@ -334,9 +337,7 @@ class TestFederalRegisterClient:
         mock_httpx_client.return_value.__enter__.return_value = mock_client_instance
 
         mock_client_instance.get.side_effect = httpx.HTTPStatusError(
-            "Not Found",
-            request=MagicMock(),
-            response=MagicMock(status_code=404)
+            "Not Found", request=MagicMock(), response=MagicMock(status_code=404)
         )
 
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
@@ -344,10 +345,14 @@ class TestFederalRegisterClient:
 
         assert exc_info.value.response.status_code == 404
 
-    @patch('httpx.Client')
-    def test_get_document_text_success(self, mock_httpx_client, client,
-                                        mock_executive_order_data,
-                                        mock_executive_order_text):
+    @patch("httpx.Client")
+    def test_get_document_text_success(
+        self,
+        mock_httpx_client,
+        client,
+        mock_executive_order_data,
+        mock_executive_order_text,
+    ):
         """
         Test successful text-only retrieval.
 
@@ -381,8 +386,10 @@ class TestFederalRegisterClient:
         assert "EXECUTIVE ORDER 14123" in text
         assert "JOSEPH R. BIDEN JR." in text
 
-    @patch('httpx.Client')
-    def test_search_documents_basic(self, mock_httpx_client, client, mock_search_results):
+    @patch("httpx.Client")
+    def test_search_documents_basic(
+        self, mock_httpx_client, client, mock_search_results
+    ):
         """
         Test basic document search functionality.
 
@@ -415,11 +422,11 @@ class TestFederalRegisterClient:
         mock_client_instance.get.assert_called_once()
         call_args = mock_client_instance.get.call_args
         # Check if params were passed
-        if call_args and len(call_args) > 1 and 'params' in call_args[1]:
+        if call_args and len(call_args) > 1 and "params" in call_args[1]:
             params = call_args[1]["params"]
             # These assertions depend on actual implementation
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_search_documents_with_filters(self, mock_httpx_client, client):
         """
         Test document search with date filters and type constraints.
@@ -430,10 +437,7 @@ class TestFederalRegisterClient:
         mock_client_instance = MagicMock()
         mock_httpx_client.return_value.__enter__.return_value = mock_client_instance
 
-        empty_results = {
-            "count": 0,
-            "results": []
-        }
+        empty_results = {"count": 0, "results": []}
         search_response = MagicMock()
         search_response.json.return_value = empty_results
         search_response.raise_for_status = MagicMock()
@@ -441,10 +445,7 @@ class TestFederalRegisterClient:
         mock_client_instance.get.return_value = search_response
 
         documents = client.search_documents(
-            "test query",
-            start_date="2024-01-01",
-            end_date="2024-12-31",
-            limit=20
+            "test query", start_date="2024-01-01", end_date="2024-12-31", limit=20
         )
 
         # Verify parameters in API call
@@ -456,7 +457,7 @@ class TestFederalRegisterClient:
     # Note: get_executive_orders, get_agency_documents, and get_documents_by_topic
     # don't exist in the actual implementation - removed these tests
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_get_significant_documents(self, mock_httpx_client, client):
         """
         Test retrieval of significant regulatory documents.
@@ -476,9 +477,9 @@ class TestFederalRegisterClient:
                     "type": "Rule",
                     "significant": True,
                     "publication_date": "2024-04-01",
-                    "html_url": "https://www.federalregister.gov/d/2024-SIG-001"
+                    "html_url": "https://www.federalregister.gov/d/2024-SIG-001",
                 }
-            ]
+            ],
         }
 
         search_response = MagicMock()
@@ -494,7 +495,7 @@ class TestFederalRegisterClient:
         # Verify significant documents are properly marked
         mock_client_instance.get.assert_called_once()
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_pagination_handling(self, mock_httpx_client, client):
         """
         Test handling of paginated search results.
@@ -506,10 +507,16 @@ class TestFederalRegisterClient:
             "count": 25,
             "total_pages": 2,
             "next_page_url": "https://www.federalregister.gov/api/v1/documents?page=2",
-            "results": [{"document_number": f"2024-{i:05d}", "title": f"Doc {i}",
-                        "type": "Notice", "publication_date": "2024-01-01",
-                        "html_url": f"https://www.federalregister.gov/d/2024-{i:05d}"}
-                       for i in range(20)]
+            "results": [
+                {
+                    "document_number": f"2024-{i:05d}",
+                    "title": f"Doc {i}",
+                    "type": "Notice",
+                    "publication_date": "2024-01-01",
+                    "html_url": f"https://www.federalregister.gov/d/2024-{i:05d}",
+                }
+                for i in range(20)
+            ],
         }
 
         # Second page
@@ -518,10 +525,16 @@ class TestFederalRegisterClient:
             "total_pages": 2,
             "previous_page_url": "https://www.federalregister.gov/api/v1/documents?page=1",
             "next_page_url": None,
-            "results": [{"document_number": f"2024-{i:05d}", "title": f"Doc {i}",
-                        "type": "Notice", "publication_date": "2024-01-01",
-                        "html_url": f"https://www.federalregister.gov/d/2024-{i:05d}"}
-                       for i in range(20, 25)]
+            "results": [
+                {
+                    "document_number": f"2024-{i:05d}",
+                    "title": f"Doc {i}",
+                    "type": "Notice",
+                    "publication_date": "2024-01-01",
+                    "html_url": f"https://www.federalregister.gov/d/2024-{i:05d}",
+                }
+                for i in range(20, 25)
+            ],
         }
 
         # Setup mock HTTP client
@@ -546,7 +559,7 @@ class TestFederalRegisterClient:
         assert documents[0].id == "2024-00000"
         assert documents[19].id == "2024-00019"
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_error_handling_network(self, mock_httpx_client, client):
         """
         Test handling of network connectivity errors.
@@ -561,7 +574,7 @@ class TestFederalRegisterClient:
         with pytest.raises(httpx.ConnectError):
             client.get_document("2024-12345")
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_error_handling_timeout(self, mock_httpx_client, client):
         """
         Test handling of request timeouts.
@@ -571,12 +584,14 @@ class TestFederalRegisterClient:
         mock_client_instance = MagicMock()
         mock_httpx_client.return_value.__enter__.return_value = mock_client_instance
 
-        mock_client_instance.get.side_effect = httpx.TimeoutException("Request timed out")
+        mock_client_instance.get.side_effect = httpx.TimeoutException(
+            "Request timed out"
+        )
 
         with pytest.raises(httpx.TimeoutException):
             client.get_document("2024-12345")
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_error_handling_server_error(self, mock_httpx_client, client):
         """
         Test handling of server errors.
@@ -589,7 +604,7 @@ class TestFederalRegisterClient:
         mock_client_instance.get.side_effect = httpx.HTTPStatusError(
             "Internal Server Error",
             request=MagicMock(),
-            response=MagicMock(status_code=500)
+            response=MagicMock(status_code=500),
         )
 
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
@@ -612,8 +627,10 @@ class TestFederalRegisterClient:
         assert client.validate_date_format("2024-1-15") is False
         assert client.validate_date_format("") is False
 
-    @patch('httpx.Client')
-    def test_document_type_normalization(self, mock_httpx_client, client, mock_federal_rule_data):
+    @patch("httpx.Client")
+    def test_document_type_normalization(
+        self, mock_httpx_client, client, mock_federal_rule_data
+    ):
         """
         Test that document types are properly normalized.
 
@@ -642,11 +659,13 @@ class TestFederalRegisterClient:
         document = client.get_document("2024-00789")
 
         # The get_document method always returns "Executive Order" type
-        assert document.type == "Executive Order"  # Always returns this for get_document
+        assert (
+            document.type == "Executive Order"
+        )  # Always returns this for get_document
         # The metadata would contain the actual subtype
         # assert document.metadata["subtype"] == "Final Rule"
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_empty_search_results(self, mock_httpx_client, client):
         """
         Test handling of empty search results.
@@ -657,10 +676,7 @@ class TestFederalRegisterClient:
         mock_client_instance = MagicMock()
         mock_httpx_client.return_value.__enter__.return_value = mock_client_instance
 
-        empty_results = {
-            "count": 0,
-            "results": []
-        }
+        empty_results = {"count": 0, "results": []}
 
         search_response = MagicMock()
         search_response.json.return_value = empty_results
@@ -673,7 +689,7 @@ class TestFederalRegisterClient:
         assert documents == []
         assert len(documents) == 0
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_malformed_response_handling(self, mock_httpx_client, client):
         """
         Test handling of malformed API responses.
@@ -685,7 +701,9 @@ class TestFederalRegisterClient:
         mock_httpx_client.return_value.__enter__.return_value = mock_client_instance
 
         malformed_response = MagicMock()
-        malformed_response.json.side_effect = json.JSONDecodeError("Invalid JSON", "", 0)
+        malformed_response.json.side_effect = json.JSONDecodeError(
+            "Invalid JSON", "", 0
+        )
         malformed_response.raise_for_status = MagicMock()
 
         mock_client_instance.get.return_value = malformed_response
@@ -693,7 +711,7 @@ class TestFederalRegisterClient:
         with pytest.raises(json.JSONDecodeError):
             client.search_documents("test")
 
-    @patch('httpx.Client')
+    @patch("httpx.Client")
     def test_partial_metadata_handling(self, mock_httpx_client, client):
         """
         Test handling of documents with partial metadata.
@@ -705,7 +723,7 @@ class TestFederalRegisterClient:
             "title": "Document with Limited Metadata",
             "type": "Notice",
             "publication_date": "2024-05-01",
-            "html_url": "https://www.federalregister.gov/d/2024-PARTIAL"
+            "html_url": "https://www.federalregister.gov/d/2024-PARTIAL",
             # Missing many optional fields
         }
 
@@ -713,10 +731,7 @@ class TestFederalRegisterClient:
         mock_client_instance = MagicMock()
         mock_httpx_client.return_value.__enter__.return_value = mock_client_instance
 
-        search_results = {
-            "count": 1,
-            "results": [partial_data]
-        }
+        search_results = {"count": 1, "results": [partial_data]}
 
         search_response = MagicMock()
         search_response.json.return_value = search_results
@@ -731,8 +746,8 @@ class TestFederalRegisterClient:
         assert documents[0].title == "Document with Limited Metadata"
         # Verify no errors with missing optional fields
 
-    @patch('httpx.Client')
-    @patch('time.sleep')
+    @patch("httpx.Client")
+    @patch("time.sleep")
     def test_rate_limiting(self, mock_sleep, mock_httpx_client, client):
         """
         Test that rate limiting is properly applied.

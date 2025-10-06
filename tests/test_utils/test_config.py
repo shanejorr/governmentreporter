@@ -218,7 +218,7 @@ class TestGetCourtListenerToken:
             - None is falsy in boolean context
         """
         # Arrange: Mock os.getenv to return None
-        with patch('os.getenv', return_value=None):
+        with patch("os.getenv", return_value=None):
             # Act & Assert: Verify ValueError is raised
             with pytest.raises(ValueError, match="COURT_LISTENER_API_TOKEN not found"):
                 get_court_listener_token()
@@ -389,7 +389,7 @@ class TestGetOpenAIApiKey:
         assert result == test_key
         assert result.count("=") == 4
 
-    @patch('os.getenv')
+    @patch("os.getenv")
     def test_get_key_with_mocked_getenv(self, mock_getenv):
         """
         Test using mocked os.getenv for isolation.
@@ -502,10 +502,10 @@ class TestConfigurationIntegration:
         with pytest.raises(ValueError, match="OPENAI_API_KEY"):
             get_openai_api_key()
 
-    @patch.dict(os.environ, {
-        "COURT_LISTENER_API_TOKEN": "test-court",
-        "OPENAI_API_KEY": "test-openai"
-    })
+    @patch.dict(
+        os.environ,
+        {"COURT_LISTENER_API_TOKEN": "test-court", "OPENAI_API_KEY": "test-openai"},
+    )
     def test_using_patch_dict(self):
         """
         Test configuration using patch.dict for environment setup.
@@ -592,12 +592,13 @@ class TestConfigurationEdgeCases:
         import importlib
 
         # Remove the module from sys.modules to force reimport
-        if 'governmentreporter.utils.config' in sys.modules:
-            del sys.modules['governmentreporter.utils.config']
+        if "governmentreporter.utils.config" in sys.modules:
+            del sys.modules["governmentreporter.utils.config"]
 
         # Now patch and import
-        with patch('dotenv.load_dotenv') as mock_load:
+        with patch("dotenv.load_dotenv") as mock_load:
             import governmentreporter.utils.config
+
             # Verify load_dotenv was called
             mock_load.assert_called_once()
 

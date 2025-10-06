@@ -42,7 +42,7 @@ class TestIngestionClientInitialization:
         - Error cases test validation logic
     """
 
-    @patch('governmentreporter.database.ingestion.QdrantDBClient')
+    @patch("governmentreporter.database.ingestion.QdrantDBClient")
     def test_initialization_success(self, mock_qdrant_client_class):
         """
         Test successful initialization of ingestion client.
@@ -58,8 +58,7 @@ class TestIngestionClientInitialization:
 
         # Initialize ingestion client
         client = QdrantIngestionClient(
-            collection_name="test_collection",
-            db_path="./test_db"
+            collection_name="test_collection", db_path="./test_db"
         )
 
         # Verify initialization
@@ -70,9 +69,11 @@ class TestIngestionClientInitialization:
         mock_qdrant_client_class.assert_called_once_with("./test_db")
 
         # Verify collection creation
-        mock_client_instance.create_collection.assert_called_once_with("test_collection")
+        mock_client_instance.create_collection.assert_called_once_with(
+            "test_collection"
+        )
 
-    @patch('governmentreporter.database.ingestion.QdrantDBClient')
+    @patch("governmentreporter.database.ingestion.QdrantDBClient")
     def test_initialization_with_default_path(self, mock_qdrant_client_class):
         """
         Test initialization with default database path.
@@ -101,7 +102,7 @@ class TestIngestionClientInitialization:
 
         assert "collection_name is required" in str(exc_info.value)
 
-    @patch('governmentreporter.database.ingestion.QdrantDBClient')
+    @patch("governmentreporter.database.ingestion.QdrantDBClient")
     def test_initialization_collection_creation_failure(self, mock_qdrant_client_class):
         """
         Test handling of collection creation failure during initialization.
@@ -113,7 +114,9 @@ class TestIngestionClientInitialization:
         mock_qdrant_client_class.return_value = mock_client_instance
 
         # Mock collection creation failure
-        mock_client_instance.create_collection.side_effect = Exception("Connection failed")
+        mock_client_instance.create_collection.side_effect = Exception(
+            "Connection failed"
+        )
 
         # Initialization should raise the exception
         with pytest.raises(Exception) as exc_info:
@@ -142,12 +145,17 @@ class TestBatchDocumentUpsert:
 
         Returns a tuple of (ingestion_client, mock_qdrant_client).
         """
-        with patch('governmentreporter.database.ingestion.QdrantDBClient') as mock_class:
+        with patch(
+            "governmentreporter.database.ingestion.QdrantDBClient"
+        ) as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
 
             # Mock successful batch storage
-            mock_instance.store_documents_batch.return_value = (0, [])  # Default: all succeed
+            mock_instance.store_documents_batch.return_value = (
+                0,
+                [],
+            )  # Default: all succeed
 
             client = QdrantIngestionClient("test_collection")
             return client, mock_instance
@@ -167,20 +175,20 @@ class TestBatchDocumentUpsert:
                     "chunk_index": i,
                     "total_chunks": 3,
                     "start_char": i * 100,
-                    "end_char": (i + 1) * 100
+                    "end_char": (i + 1) * 100,
                 },
                 "document_metadata": {
                     "title": "Test Document",
                     "date": "2024-01-15",
                     "type": "opinion",
-                    "source": "courtlistener"
+                    "source": "courtlistener",
                 },
                 "llm_extracted_metadata": {
                     "summary": "Test summary",
                     "topics": ["law", "testing"],
-                    "entities": ["Supreme Court", "United States"]
+                    "entities": ["Supreme Court", "United States"],
                 },
-                "document_id": "doc-123"
+                "document_id": "doc-123",
             }
             payloads.append(payload)
         return payloads
@@ -194,7 +202,9 @@ class TestBatchDocumentUpsert:
         """
         return [[0.1 + (i * 0.01)] * 1536 for i in range(3)]
 
-    def test_batch_upsert_success(self, client_with_mock, sample_payloads, sample_embeddings):
+    def test_batch_upsert_success(
+        self, client_with_mock, sample_payloads, sample_embeddings
+    ):
         """
         Test successful batch upsert of documents.
 
@@ -210,9 +220,7 @@ class TestBatchDocumentUpsert:
 
         # Perform batch upsert
         success, failed = client.batch_upsert_documents(
-            sample_payloads,
-            sample_embeddings,
-            batch_size=100
+            sample_payloads, sample_embeddings, batch_size=100
         )
 
         # Verify results
@@ -233,7 +241,9 @@ class TestBatchDocumentUpsert:
         assert doc.metadata["document_id"] == "doc-123"
         assert doc.metadata["chunk_metadata"]["chunk_index"] == 0
 
-    def test_batch_upsert_with_missing_chunk_text(self, client_with_mock, sample_embeddings):
+    def test_batch_upsert_with_missing_chunk_text(
+        self, client_with_mock, sample_embeddings
+    ):
         """
         Test handling of payloads without chunk text.
 
@@ -248,7 +258,7 @@ class TestBatchDocumentUpsert:
                     "chunk_index": 0
                     # No "text" field
                 },
-                "document_id": "doc-123"
+                "document_id": "doc-123",
             }
         ]
 
@@ -256,9 +266,7 @@ class TestBatchDocumentUpsert:
 
         # Should handle missing text gracefully
         success, failed = client.batch_upsert_documents(
-            payloads,
-            [sample_embeddings[0]],
-            batch_size=100
+            payloads, [sample_embeddings[0]], batch_size=100
         )
 
         assert success == 1
@@ -282,9 +290,7 @@ class TestBatchDocumentUpsert:
 
         with pytest.raises(ValueError) as exc_info:
             client.batch_upsert_documents(
-                sample_payloads,
-                mismatched_embeddings,
-                batch_size=100
+                sample_payloads, mismatched_embeddings, batch_size=100
             )
 
         assert "must have the same length" in str(exc_info.value)
@@ -305,7 +311,9 @@ class TestBatchDocumentUpsert:
         assert failed == 0
         mock_qdrant.store_documents_batch.assert_not_called()
 
-    def test_batch_upsert_with_failures(self, client_with_mock, sample_payloads, sample_embeddings):
+    def test_batch_upsert_with_failures(
+        self, client_with_mock, sample_payloads, sample_embeddings
+    ):
         """
         Test handling of partial storage failures.
 
@@ -318,9 +326,7 @@ class TestBatchDocumentUpsert:
 
         # Perform batch upsert
         success, failed = client.batch_upsert_documents(
-            sample_payloads,
-            sample_embeddings,
-            batch_size=100
+            sample_payloads, sample_embeddings, batch_size=100
         )
 
         # Verify partial success
@@ -342,13 +348,13 @@ class TestBatchDocumentUpsert:
         payloads = [
             {
                 "chunk_metadata": {"text": "Valid text", "chunk_index": 0},
-                "document_id": "doc-1"
+                "document_id": "doc-1",
             },
             None,  # Invalid payload
             {
                 "chunk_metadata": {"text": "Another valid", "chunk_index": 2},
-                "document_id": "doc-3"
-            }
+                "document_id": "doc-3",
+            },
         ]
 
         # Mock storage of successfully converted documents
@@ -356,9 +362,7 @@ class TestBatchDocumentUpsert:
 
         # Perform batch upsert
         success, failed = client.batch_upsert_documents(
-            payloads,
-            sample_embeddings,
-            batch_size=100
+            payloads, sample_embeddings, batch_size=100
         )
 
         # One should fail during conversion
@@ -382,17 +386,15 @@ class TestBatchDocumentUpsert:
         mock_qdrant.store_documents_batch.return_value = (3, [])
 
         # Use custom batch size
-        client.batch_upsert_documents(
-            sample_payloads,
-            sample_embeddings,
-            batch_size=50
-        )
+        client.batch_upsert_documents(sample_payloads, sample_embeddings, batch_size=50)
 
         # Verify batch size was passed
         call_args = mock_qdrant.store_documents_batch.call_args
         assert call_args.kwargs["batch_size"] == 50
 
-    def test_batch_upsert_without_document_id(self, client_with_mock, sample_embeddings):
+    def test_batch_upsert_without_document_id(
+        self, client_with_mock, sample_embeddings
+    ):
         """
         Test handling of payloads without document_id.
 
@@ -403,10 +405,7 @@ class TestBatchDocumentUpsert:
         # Payload without document_id
         payloads = [
             {
-                "chunk_metadata": {
-                    "text": "Text without doc ID",
-                    "chunk_index": 0
-                }
+                "chunk_metadata": {"text": "Text without doc ID", "chunk_index": 0}
                 # No document_id
             }
         ]
@@ -415,9 +414,7 @@ class TestBatchDocumentUpsert:
 
         # Should generate unique ID
         success, failed = client.batch_upsert_documents(
-            payloads,
-            [sample_embeddings[0]],
-            batch_size=100
+            payloads, [sample_embeddings[0]], batch_size=100
         )
 
         assert success == 1
@@ -428,7 +425,9 @@ class TestBatchDocumentUpsert:
         assert documents[0].id is not None
         assert "_chunk_0" in documents[0].id
 
-    def test_batch_upsert_complete_failure(self, client_with_mock, sample_payloads, sample_embeddings):
+    def test_batch_upsert_complete_failure(
+        self, client_with_mock, sample_payloads, sample_embeddings
+    ):
         """
         Test handling of complete storage failure.
 
@@ -437,13 +436,13 @@ class TestBatchDocumentUpsert:
         client, mock_qdrant = client_with_mock
 
         # Mock complete storage failure
-        mock_qdrant.store_documents_batch.side_effect = Exception("Database unavailable")
+        mock_qdrant.store_documents_batch.side_effect = Exception(
+            "Database unavailable"
+        )
 
         # Perform batch upsert
         success, failed = client.batch_upsert_documents(
-            sample_payloads,
-            sample_embeddings,
-            batch_size=100
+            sample_payloads, sample_embeddings, batch_size=100
         )
 
         # All should fail
@@ -469,7 +468,9 @@ class TestCollectionStatistics:
         """
         Create an ingestion client with mocked collection info.
         """
-        with patch('governmentreporter.database.ingestion.QdrantDBClient') as mock_class:
+        with patch(
+            "governmentreporter.database.ingestion.QdrantDBClient"
+        ) as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
 
@@ -574,7 +575,9 @@ class TestIngestionWorkflows:
 
         Provides ingestion client with fully mocked dependencies.
         """
-        with patch('governmentreporter.database.ingestion.QdrantDBClient') as mock_class:
+        with patch(
+            "governmentreporter.database.ingestion.QdrantDBClient"
+        ) as mock_class:
             mock_qdrant = MagicMock()
             mock_class.return_value = mock_qdrant
 
@@ -622,18 +625,18 @@ class TestIngestionWorkflows:
                 "chunk_metadata": {
                     "text": f"Chunk {i} of Supreme Court opinion",
                     "chunk_index": i,
-                    "total_chunks": 10
+                    "total_chunks": 10,
                 },
                 "document_metadata": {
                     "title": "Test v. United States",
                     "date": "2024-01-15",
-                    "court": "SCOTUS"
+                    "court": "SCOTUS",
                 },
                 "llm_extracted_metadata": {
                     "summary": "Important legal ruling",
-                    "topics": ["constitutional law", "civil rights"]
+                    "topics": ["constitutional law", "civil rights"],
                 },
-                "document_id": "scotus-2024-001"
+                "document_id": "scotus-2024-001",
             }
             payloads.append(payload)
             embeddings.append([0.1 + (i * 0.01)] * 1536)
@@ -685,21 +688,19 @@ class TestIngestionWorkflows:
                     "chunk_metadata": {
                         "text": f"Document {doc_idx}, Chunk {chunk_idx}",
                         "chunk_index": chunk_idx,
-                        "total_chunks": 5
+                        "total_chunks": 5,
                     },
-                    "document_metadata": {
-                        "title": f"Document {doc_idx}"
-                    },
-                    "document_id": f"doc-{doc_idx}"
+                    "document_metadata": {"title": f"Document {doc_idx}"},
+                    "document_id": f"doc-{doc_idx}",
                 }
                 all_payloads.append(payload)
-                all_embeddings.append([0.1 + (doc_idx * 0.1) + (chunk_idx * 0.01)] * 1536)
+                all_embeddings.append(
+                    [0.1 + (doc_idx * 0.1) + (chunk_idx * 0.01)] * 1536
+                )
 
         # Ingest all chunks
         mock_qdrant.store_documents_batch.return_value = (15, [])
-        success, failed = client.batch_upsert_documents(
-            all_payloads, all_embeddings
-        )
+        success, failed = client.batch_upsert_documents(all_payloads, all_embeddings)
 
         assert success == 15
         assert failed == 0
@@ -730,14 +731,17 @@ class TestIngestionWorkflows:
         payloads = [
             {
                 "chunk_metadata": {"text": f"Chunk {i}", "chunk_index": i},
-                "document_id": "doc-1"
+                "document_id": "doc-1",
             }
             for i in range(5)
         ]
         embeddings = [[0.1] * 1536 for _ in range(5)]
 
         # First attempt: partial failure
-        mock_qdrant.store_documents_batch.return_value = (3, ["doc-1_chunk_3", "doc-1_chunk_4"])
+        mock_qdrant.store_documents_batch.return_value = (
+            3,
+            ["doc-1_chunk_3", "doc-1_chunk_4"],
+        )
         success1, failed1 = client.batch_upsert_documents(payloads, embeddings)
 
         assert success1 == 3
@@ -776,7 +780,9 @@ class TestEdgeCasesAndValidation:
     @pytest.fixture
     def client_with_mock(self):
         """Create ingestion client with mocked dependencies."""
-        with patch('governmentreporter.database.ingestion.QdrantDBClient') as mock_class:
+        with patch(
+            "governmentreporter.database.ingestion.QdrantDBClient"
+        ) as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
             client = QdrantIngestionClient("test_collection")
@@ -820,10 +826,7 @@ class TestEdgeCasesAndValidation:
         client, mock_qdrant = client_with_mock
 
         payloads = [
-            {
-                "chunk_metadata": "not a dict",  # Wrong type
-                "document_id": "doc-1"
-            }
+            {"chunk_metadata": "not a dict", "document_id": "doc-1"}  # Wrong type
         ]
         embeddings = [[0.1] * 1536]
 
@@ -853,10 +856,12 @@ class TestEdgeCasesAndValidation:
         payloads = []
         embeddings = []
         for i in range(large_size):
-            payloads.append({
-                "chunk_metadata": {"text": f"Chunk {i}", "chunk_index": i},
-                "document_id": f"doc-{i // 100}"  # 10 docs, 100 chunks each
-            })
+            payloads.append(
+                {
+                    "chunk_metadata": {"text": f"Chunk {i}", "chunk_index": i},
+                    "document_id": f"doc-{i // 100}",  # 10 docs, 100 chunks each
+                }
+            )
             embeddings.append([0.1] * 1536)
 
         mock_qdrant.store_documents_batch.return_value = (large_size, [])
@@ -884,7 +889,7 @@ class TestEdgeCasesAndValidation:
         payloads = [
             {
                 "chunk_metadata": {"text": f"Chunk {i}", "chunk_index": i},
-                "document_id": "same-doc"
+                "document_id": "same-doc",
             }
             for i in range(5)
         ]
@@ -922,7 +927,9 @@ class TestIngestionClientAdvancedScenarios:
     @pytest.fixture
     def client_with_mock(self):
         """Create ingestion client with advanced mocking."""
-        with patch('governmentreporter.database.ingestion.QdrantDBClient') as mock_class:
+        with patch(
+            "governmentreporter.database.ingestion.QdrantDBClient"
+        ) as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
             client = QdrantIngestionClient("test_collection")
@@ -937,15 +944,18 @@ class TestIngestionClientAdvancedScenarios:
         client, mock_qdrant = client_with_mock
 
         payloads = [
-            {"chunk_metadata": {"text": "Text 1", "chunk_index": 0}, "document_id": "doc-1"},
-            {"chunk_metadata": {"text": "Text 2", "chunk_index": 1}, "document_id": "doc-1"}
+            {
+                "chunk_metadata": {"text": "Text 1", "chunk_index": 0},
+                "document_id": "doc-1",
+            },
+            {
+                "chunk_metadata": {"text": "Text 2", "chunk_index": 1},
+                "document_id": "doc-1",
+            },
         ]
 
         # Embeddings with different dimensions (should be caught by QdrantDBClient)
-        embeddings = [
-            [0.1] * 1536,
-            [0.2] * 768  # Wrong dimension
-        ]
+        embeddings = [[0.1] * 1536, [0.2] * 768]  # Wrong dimension
 
         # Mock that storage will reject the second document
         mock_qdrant.store_documents_batch.return_value = (1, ["doc-1_chunk_1"])
@@ -966,8 +976,14 @@ class TestIngestionClientAdvancedScenarios:
 
         # Same document_id and chunk_index creates duplicate IDs
         payloads = [
-            {"chunk_metadata": {"text": "Version 1", "chunk_index": 0}, "document_id": "doc-1"},
-            {"chunk_metadata": {"text": "Version 2", "chunk_index": 0}, "document_id": "doc-1"},
+            {
+                "chunk_metadata": {"text": "Version 1", "chunk_index": 0},
+                "document_id": "doc-1",
+            },
+            {
+                "chunk_metadata": {"text": "Version 2", "chunk_index": 0},
+                "document_id": "doc-1",
+            },
         ]
         embeddings = [[0.1] * 1536, [0.2] * 1536]
 
@@ -998,7 +1014,7 @@ class TestIngestionClientAdvancedScenarios:
         payloads = [
             {
                 "chunk_metadata": {"text": large_text, "chunk_index": 0},
-                "document_id": "large-doc"
+                "document_id": "large-doc",
             }
         ]
         embeddings = [[0.1] * 1536]
@@ -1033,25 +1049,19 @@ class TestIngestionClientAdvancedScenarios:
                             "people": ["John Doe", "Jane Smith"],
                             "organizations": {
                                 "government": ["Supreme Court", "Congress"],
-                                "private": ["ACLU", "EFF"]
-                            }
+                                "private": ["ACLU", "EFF"],
+                            },
                         },
                         "citations": [
                             {"case": "Roe v Wade", "year": 1973, "relevance": 0.9},
-                            {"case": "Brown v Board", "year": 1954, "relevance": 0.8}
-                        ]
-                    }
+                            {"case": "Brown v Board", "year": 1954, "relevance": 0.8},
+                        ],
+                    },
                 },
                 "document_metadata": {
-                    "hierarchy": {
-                        "level1": {
-                            "level2": {
-                                "level3": "deep value"
-                            }
-                        }
-                    }
+                    "hierarchy": {"level1": {"level2": {"level3": "deep value"}}}
                 },
-                "document_id": "nested-doc"
+                "document_id": "nested-doc",
             }
         ]
         embeddings = [[0.1] * 1536]
@@ -1068,9 +1078,18 @@ class TestIngestionClientAdvancedScenarios:
         metadata = documents[0].metadata
 
         # Check nested structures
-        assert metadata["chunk_metadata"]["annotations"]["entities"]["people"][0] == "John Doe"
-        assert metadata["chunk_metadata"]["annotations"]["citations"][0]["case"] == "Roe v Wade"
-        assert metadata["document_metadata"]["hierarchy"]["level1"]["level2"]["level3"] == "deep value"
+        assert (
+            metadata["chunk_metadata"]["annotations"]["entities"]["people"][0]
+            == "John Doe"
+        )
+        assert (
+            metadata["chunk_metadata"]["annotations"]["citations"][0]["case"]
+            == "Roe v Wade"
+        )
+        assert (
+            metadata["document_metadata"]["hierarchy"]["level1"]["level2"]["level3"]
+            == "deep value"
+        )
 
     def test_unicode_and_special_characters(self, client_with_mock):
         """
@@ -1085,15 +1104,15 @@ class TestIngestionClientAdvancedScenarios:
                 "chunk_metadata": {
                     "text": "Legal text with émojis 🎯⚖️ and symbols €£¥",
                     "chunk_index": 0,
-                    "languages": ["English", "Español", "中文", "العربية"]
+                    "languages": ["English", "Español", "中文", "العربية"],
                 },
                 "document_metadata": {
                     "title": "Case № 2024-001: Müller vs. O'Connor",
                     "special_chars": "∀x∈ℝ: x²≥0",
                     "rtl_text": "مرحبا بك",
-                    "emoji_tags": ["📚", "🔍", "⚖️"]
+                    "emoji_tags": ["📚", "🔍", "⚖️"],
                 },
-                "document_id": "unicode-doc-2024"
+                "document_id": "unicode-doc-2024",
             }
         ]
         embeddings = [[0.1] * 1536]
@@ -1111,7 +1130,10 @@ class TestIngestionClientAdvancedScenarios:
         assert "émojis 🎯⚖️" in documents[0].text
         metadata = documents[0].metadata
         assert "中文" in metadata["chunk_metadata"]["languages"]
-        assert metadata["document_metadata"]["title"] == "Case № 2024-001: Müller vs. O'Connor"
+        assert (
+            metadata["document_metadata"]["title"]
+            == "Case № 2024-001: Müller vs. O'Connor"
+        )
         assert metadata["document_metadata"]["emoji_tags"][0] == "📚"
 
     def test_concurrent_batch_processing(self, client_with_mock):
@@ -1124,13 +1146,19 @@ class TestIngestionClientAdvancedScenarios:
 
         # Create multiple batches
         batch1_payloads = [
-            {"chunk_metadata": {"text": f"Batch 1, Chunk {i}", "chunk_index": i}, "document_id": "doc-batch1"}
+            {
+                "chunk_metadata": {"text": f"Batch 1, Chunk {i}", "chunk_index": i},
+                "document_id": "doc-batch1",
+            }
             for i in range(50)
         ]
         batch1_embeddings = [[0.1] * 1536 for _ in range(50)]
 
         batch2_payloads = [
-            {"chunk_metadata": {"text": f"Batch 2, Chunk {i}", "chunk_index": i}, "document_id": "doc-batch2"}
+            {
+                "chunk_metadata": {"text": f"Batch 2, Chunk {i}", "chunk_index": i},
+                "document_id": "doc-batch2",
+            }
             for i in range(50)
         ]
         batch2_embeddings = [[0.2] * 1536 for _ in range(50)]
@@ -1139,8 +1167,12 @@ class TestIngestionClientAdvancedScenarios:
         mock_qdrant.store_documents_batch.return_value = (50, [])
 
         # Process both batches
-        success1, failed1 = client.batch_upsert_documents(batch1_payloads, batch1_embeddings, batch_size=25)
-        success2, failed2 = client.batch_upsert_documents(batch2_payloads, batch2_embeddings, batch_size=25)
+        success1, failed1 = client.batch_upsert_documents(
+            batch1_payloads, batch1_embeddings, batch_size=25
+        )
+        success2, failed2 = client.batch_upsert_documents(
+            batch2_payloads, batch2_embeddings, batch_size=25
+        )
 
         assert success1 == 50
         assert failed1 == 0
@@ -1167,7 +1199,9 @@ class TestIngestionClientRecoveryAndResilience:
     @pytest.fixture
     def client_with_mock(self):
         """Create client with failure simulation capabilities."""
-        with patch('governmentreporter.database.ingestion.QdrantDBClient') as mock_class:
+        with patch(
+            "governmentreporter.database.ingestion.QdrantDBClient"
+        ) as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
             client = QdrantIngestionClient("test_collection")
@@ -1182,7 +1216,10 @@ class TestIngestionClientRecoveryAndResilience:
         client, mock_qdrant = client_with_mock
 
         payloads = [
-            {"chunk_metadata": {"text": f"Chunk {i}", "chunk_index": i}, "document_id": f"doc-{i}"}
+            {
+                "chunk_metadata": {"text": f"Chunk {i}", "chunk_index": i},
+                "document_id": f"doc-{i}",
+            }
             for i in range(10)
         ]
         embeddings = [[0.1] * 1536 for _ in range(10)]
@@ -1190,7 +1227,7 @@ class TestIngestionClientRecoveryAndResilience:
         # Simulate partial failure (7 succeed, 3 fail)
         mock_qdrant.store_documents_batch.return_value = (
             7,
-            ["doc-7_chunk_7", "doc-8_chunk_8", "doc-9_chunk_9"]
+            ["doc-7_chunk_7", "doc-8_chunk_8", "doc-9_chunk_9"],
         )
 
         success, failed = client.batch_upsert_documents(payloads, embeddings)
@@ -1209,7 +1246,12 @@ class TestIngestionClientRecoveryAndResilience:
         # First operation succeeds
         mock_qdrant.store_documents_batch.return_value = (1, [])
 
-        payloads = [{"chunk_metadata": {"text": "Test", "chunk_index": 0}, "document_id": "doc-1"}]
+        payloads = [
+            {
+                "chunk_metadata": {"text": "Test", "chunk_index": 0},
+                "document_id": "doc-1",
+            }
+        ]
         embeddings = [[0.1] * 1536]
 
         # Initial storage should work
@@ -1217,7 +1259,9 @@ class TestIngestionClientRecoveryAndResilience:
         assert success == 1
 
         # Simulate collection was deleted
-        mock_qdrant.store_documents_batch.side_effect = Exception("Collection not found")
+        mock_qdrant.store_documents_batch.side_effect = Exception(
+            "Collection not found"
+        )
 
         # Next operation should fail but gracefully
         success, failed = client.batch_upsert_documents(payloads, embeddings)
@@ -1240,7 +1284,7 @@ class TestIngestionClientRecoveryAndResilience:
             for i in range(large_batch_size):
                 yield {
                     "chunk_metadata": {"text": f"Chunk {i}", "chunk_index": i % 100},
-                    "document_id": f"doc-{i // 100}"
+                    "document_id": f"doc-{i // 100}",
                 }
 
         def generate_embeddings():
@@ -1254,7 +1298,9 @@ class TestIngestionClientRecoveryAndResilience:
         mock_qdrant.store_documents_batch.return_value = (large_batch_size, [])
 
         # Process large batch
-        success, failed = client.batch_upsert_documents(payloads, embeddings, batch_size=500)
+        success, failed = client.batch_upsert_documents(
+            payloads, embeddings, batch_size=500
+        )
 
         assert success == large_batch_size
         assert failed == 0
@@ -1276,9 +1322,9 @@ class TestIngestionClientRecoveryAndResilience:
                     "text": "Test text",
                     "chunk_index": 0,
                     "date": datetime.datetime.now(),  # Not directly JSON serializable
-                    "set_data": {1, 2, 3}  # Sets aren't JSON serializable
+                    "set_data": {1, 2, 3},  # Sets aren't JSON serializable
                 },
-                "document_id": "doc-1"
+                "document_id": "doc-1",
             }
         ]
         embeddings = [[0.1] * 1536]
@@ -1309,7 +1355,9 @@ class TestCollectionStatisticsAdvanced:
     @pytest.fixture
     def client_with_advanced_mock(self):
         """Create client with advanced statistics mocking."""
-        with patch('governmentreporter.database.ingestion.QdrantDBClient') as mock_class:
+        with patch(
+            "governmentreporter.database.ingestion.QdrantDBClient"
+        ) as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
 
@@ -1373,10 +1421,7 @@ class TestCollectionStatisticsAdvanced:
         test_collection.name = "test_collection"
 
         mock_collections_response = MagicMock()
-        mock_collections_response.collections = [
-            other_collection,
-            test_collection
-        ]
+        mock_collections_response.collections = [other_collection, test_collection]
         mock_base.get_collections.return_value = mock_collections_response
 
         stats = client.get_collection_stats()

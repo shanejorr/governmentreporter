@@ -35,8 +35,12 @@ from ..apis.base import Document
 from ..utils import get_logger
 from .chunking import chunk_executive_order, chunk_supreme_court_opinion
 from .llm_extraction import generate_eo_llm_fields, generate_scotus_llm_fields
-from .schema import (ChunkMetadata, ExecutiveOrderMetadata, QdrantPayload,
-                     SupremeCourtMetadata)
+from .schema import (
+    ChunkMetadata,
+    ExecutiveOrderMetadata,
+    QdrantPayload,
+    SupremeCourtMetadata,
+)
 
 logger = get_logger(__name__)
 
@@ -321,7 +325,9 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
     )
 
     if not (is_scotus or is_eo):
-        logger.warning("Unknown document type: %s from %s - skipping", doc.type, doc.source)
+        logger.warning(
+            "Unknown document type: %s from %s - skipping", doc.type, doc.source
+        )
         return []
 
     logger.info("Processing document %s (%s)", doc.id, doc.type)
@@ -345,7 +351,9 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
             try:
                 llm_fields = generate_scotus_llm_fields(doc.content, syllabus)
             except Exception as e:
-                logger.warning("Failed to generate LLM fields for %s: %s", doc.id, str(e))
+                logger.warning(
+                    "Failed to generate LLM fields for %s: %s", doc.id, str(e)
+                )
                 llm_extraction_successful = False
 
                 # Use standardized fallback messages
@@ -355,7 +363,11 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
                     "federal_statutes_cited": [],
                     "federal_regulations_cited": [],
                     "cases_cited": [],
-                    "topics_or_policy_areas": ["supreme court", "legal opinion", "court decision"],
+                    "topics_or_policy_areas": [
+                        "supreme court",
+                        "legal opinion",
+                        "court decision",
+                    ],
                     "holding_plain": "Unable to extract holding.",
                     "outcome_simple": "Unable to extract outcome.",
                     "issue_plain": "Unable to extract issue.",
@@ -418,7 +430,9 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
             try:
                 llm_fields = generate_eo_llm_fields(doc.content)
             except Exception as e:
-                logger.warning("Failed to generate LLM fields for %s: %s", doc.id, str(e))
+                logger.warning(
+                    "Failed to generate LLM fields for %s: %s", doc.id, str(e)
+                )
                 llm_extraction_successful = False
 
                 # Use standardized fallback messages
@@ -429,7 +443,11 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
                     "federal_statutes_cited": [],
                     "federal_regulations_cited": [],
                     "cases_cited": [],
-                    "topics_or_policy_areas": ["executive order", "federal policy", "presidential action"],
+                    "topics_or_policy_areas": [
+                        "executive order",
+                        "federal policy",
+                        "presidential action",
+                    ],
                 }
 
             # 4. Merge document and LLM metadata

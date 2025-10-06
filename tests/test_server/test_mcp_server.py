@@ -103,7 +103,7 @@ class TestMCPServerInitialization:
         # Access the server name from the mcp Server object
         assert server.server.name == "Test MCP Server"
 
-    @patch('governmentreporter.server.mcp_server.QdrantDBClient')
+    @patch("governmentreporter.server.mcp_server.QdrantDBClient")
     def test_server_creates_qdrant_client_on_init(self, mock_qdrant_class, mock_config):
         """Test that Qdrant client is prepared during initialization."""
         server = GovernmentReporterMCP(config=mock_config)
@@ -162,7 +162,10 @@ class TestMCPToolRegistration:
         assert "search_scotus_opinions" in tool_names
 
         scotus_tool = next(t for t in tools if t.name == "search_scotus_opinions")
-        assert "supreme court" in scotus_tool.description.lower() or "scotus" in scotus_tool.description.lower()
+        assert (
+            "supreme court" in scotus_tool.description.lower()
+            or "scotus" in scotus_tool.description.lower()
+        )
 
     @pytest.mark.asyncio
     async def test_search_executive_orders_tool_registered(self, mock_config):
@@ -223,7 +226,7 @@ class TestMCPToolInputSchemas:
         search_tools = [
             "search_government_documents",
             "search_scotus_opinions",
-            "search_executive_orders"
+            "search_executive_orders",
         ]
 
         for tool_name in search_tools:
@@ -252,11 +255,11 @@ class TestMCPServerConfiguration:
 
     def test_config_has_required_fields(self, mock_config):
         """Test configuration has all required fields."""
-        assert hasattr(mock_config, 'server_name')
-        assert hasattr(mock_config, 'server_version')
-        assert hasattr(mock_config, 'qdrant_host')
-        assert hasattr(mock_config, 'qdrant_port')
-        assert hasattr(mock_config, 'collection_map')
+        assert hasattr(mock_config, "server_name")
+        assert hasattr(mock_config, "server_version")
+        assert hasattr(mock_config, "qdrant_host")
+        assert hasattr(mock_config, "qdrant_port")
+        assert hasattr(mock_config, "collection_map")
 
     def test_config_default_collections(self):
         """Test default configuration includes expected collections."""
@@ -281,8 +284,10 @@ class TestMCPServerErrorHandling:
     without crashing the server.
     """
 
-    @patch('governmentreporter.server.mcp_server.QdrantDBClient')
-    def test_server_handles_qdrant_connection_error(self, mock_qdrant_class, mock_config):
+    @patch("governmentreporter.server.mcp_server.QdrantDBClient")
+    def test_server_handles_qdrant_connection_error(
+        self, mock_qdrant_class, mock_config
+    ):
         """Test server handles Qdrant connection failures gracefully."""
         # Configure mock to raise connection error
         mock_qdrant_class.side_effect = ConnectionError("Cannot connect to Qdrant")
@@ -312,7 +317,7 @@ class TestMCPServerLifecycle:
         server = GovernmentReporterMCP(config=mock_config)
         assert server is not None
 
-    @patch('governmentreporter.server.mcp_server.QdrantDBClient')
+    @patch("governmentreporter.server.mcp_server.QdrantDBClient")
     def test_server_cleanup_closes_connections(self, mock_qdrant_class, mock_config):
         """Test that cleanup properly closes all connections."""
         mock_client = MagicMock()

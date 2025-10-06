@@ -168,9 +168,7 @@ class QdrantDBClient:
             logger.info(f"Initialized Qdrant client with cloud URL: {url}")
         elif host:
             self.client = QdrantBaseClient(
-                host=host,
-                port=port or 6333,
-                api_key=api_key
+                host=host, port=port or 6333, api_key=api_key
             )
             self.connection_mode = "remote"
             logger.info(f"Initialized Qdrant client at {host}:{port or 6333}")
@@ -641,7 +639,7 @@ class QdrantDBClient:
             query_embedding=query_vector,
             collection_name=collection_name,
             limit=limit,
-            query_filter=query_filter  # Pass directly as query_filter for complex filters
+            query_filter=query_filter,  # Pass directly as query_filter for complex filters
         )
 
     def delete_document(self, document_id: str, collection_name: str) -> bool:

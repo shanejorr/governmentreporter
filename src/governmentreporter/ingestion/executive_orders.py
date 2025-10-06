@@ -135,14 +135,20 @@ class ExecutiveOrderIngester(DocumentIngester):
                         doc_id,
                         metadata={
                             "title": order.get("title", ""),
-                            "executive_order_number": order.get("executive_order_number", ""),
+                            "executive_order_number": order.get(
+                                "executive_order_number", ""
+                            ),
                             "signing_date": order.get("signing_date", ""),
                             "publication_date": order.get("publication_date", ""),
                         },
                     )
 
             # Return list of document IDs
-            return [order.get("document_number") for order in all_orders if order.get("document_number")]
+            return [
+                order.get("document_number")
+                for order in all_orders
+                if order.get("document_number")
+            ]
 
         except Exception as e:
             logger.error(f"Error fetching Executive Orders: {e}")
@@ -212,7 +218,9 @@ class ExecutiveOrderIngester(DocumentIngester):
                 source="Federal Register",
                 content=raw_text,
                 metadata={
-                    "executive_order_number": order_metadata.get("executive_order_number"),
+                    "executive_order_number": order_metadata.get(
+                        "executive_order_number"
+                    ),
                     "president": (
                         order_metadata.get("president", {}).get("name")
                         if "president" in order_metadata

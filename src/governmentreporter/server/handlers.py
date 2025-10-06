@@ -33,8 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 async def handle_search_government_documents(
-    qdrant_client: QdrantDBClient,
-    arguments: Dict[str, Any]
+    qdrant_client: QdrantDBClient, arguments: Dict[str, Any]
 ) -> str:
     """
     Handle the search_government_documents tool call.
@@ -95,42 +94,38 @@ async def handle_search_government_documents(
         if "scotus" in document_types:
             collection = "supreme_court_opinions"
             scotus_results = qdrant_client.semantic_search(
-                collection_name=collection,
-                query_vector=query_embedding,
-                limit=limit
+                collection_name=collection, query_vector=query_embedding, limit=limit
             )
             for result in scotus_results:
                 # SearchResult has document attribute, not payload
                 # Flatten document text and metadata into single payload dict
                 payload = {
                     "text": result.document.text,
-                    **result.document.metadata  # Flatten metadata into payload
+                    **result.document.metadata,  # Flatten metadata into payload
                 }
-                results.append({
-                    "type": "scotus",
-                    "score": result.score,
-                    "payload": payload
-                })
+                results.append(
+                    {"type": "scotus", "score": result.score, "payload": payload}
+                )
 
         if "executive_orders" in document_types:
             collection = "executive_orders"
             eo_results = qdrant_client.semantic_search(
-                collection_name=collection,
-                query_vector=query_embedding,
-                limit=limit
+                collection_name=collection, query_vector=query_embedding, limit=limit
             )
             for result in eo_results:
                 # SearchResult has document attribute, not payload
                 # Flatten document text and metadata into single payload dict
                 payload = {
                     "text": result.document.text,
-                    **result.document.metadata  # Flatten metadata into payload
+                    **result.document.metadata,  # Flatten metadata into payload
                 }
-                results.append({
-                    "type": "executive_order",
-                    "score": result.score,
-                    "payload": payload
-                })
+                results.append(
+                    {
+                        "type": "executive_order",
+                        "score": result.score,
+                        "payload": payload,
+                    }
+                )
 
         # Sort all results by relevance score
         results.sort(key=lambda x: x["score"], reverse=True)
@@ -146,8 +141,7 @@ async def handle_search_government_documents(
 
 
 async def handle_search_scotus_opinions(
-    qdrant_client: QdrantDBClient,
-    arguments: Dict[str, Any]
+    qdrant_client: QdrantDBClient, arguments: Dict[str, Any]
 ) -> str:
     """
     Handle the search_scotus_opinions tool call with specialized filters.
@@ -204,18 +198,12 @@ async def handle_search_scotus_opinions(
 
         if opinion_type:
             filter_conditions.append(
-                FieldCondition(
-                    key="opinion_type",
-                    match=MatchValue(value=opinion_type)
-                )
+                FieldCondition(key="opinion_type", match=MatchValue(value=opinion_type))
             )
 
         if justice:
             filter_conditions.append(
-                FieldCondition(
-                    key="justice",
-                    match=MatchValue(value=justice)
-                )
+                FieldCondition(key="justice", match=MatchValue(value=justice))
             )
 
         if start_date or end_date:
@@ -227,10 +215,7 @@ async def handle_search_scotus_opinions(
                 range_params["lte"] = end_date
 
             filter_conditions.append(
-                FieldCondition(
-                    key="date",
-                    range=Range(**range_params)
-                )
+                FieldCondition(key="date", range=Range(**range_params))
             )
 
         # Create proper Qdrant Filter object
@@ -240,22 +225,17 @@ async def handle_search_scotus_opinions(
             collection_name="supreme_court_opinions",
             query_vector=query_embedding,
             limit=limit,
-            query_filter=search_filter
+            query_filter=search_filter,
         )
 
         # Format results with SCOTUS-specific formatting
         formatted_results = []
         for result in results:
             # SearchResult has document attribute, not payload
-            payload = {
-                "text": result.document.text,
-                **result.document.metadata
-            }
-            formatted_results.append({
-                "type": "scotus",
-                "score": result.score,
-                "payload": payload
-            })
+            payload = {"text": result.document.text, **result.document.metadata}
+            formatted_results.append(
+                {"type": "scotus", "score": result.score, "payload": payload}
+            )
 
         formatted_response = processor.format_scotus_results(query, formatted_results)
         return formatted_response
@@ -266,8 +246,7 @@ async def handle_search_scotus_opinions(
 
 
 async def handle_search_executive_orders(
-    qdrant_client: QdrantDBClient,
-    arguments: Dict[str, Any]
+    qdrant_client: QdrantDBClient, arguments: Dict[str, Any]
 ) -> str:
     """
     Handle the search_executive_orders tool call with specialized filters.
@@ -328,28 +307,19 @@ async def handle_search_executive_orders(
 
         if president:
             filter_conditions.append(
-                FieldCondition(
-                    key="president",
-                    match=MatchValue(value=president)
-                )
+                FieldCondition(key="president", match=MatchValue(value=president))
             )
 
         if agencies:
             # Agencies are stored as an array, match any of them
             filter_conditions.append(
-                FieldCondition(
-                    key="impacted_agencies",
-                    match=MatchAny(any=agencies)
-                )
+                FieldCondition(key="impacted_agencies", match=MatchAny(any=agencies))
             )
 
         if policy_topics:
             # Policy topics are stored as an array, match any of them
             filter_conditions.append(
-                FieldCondition(
-                    key="policy_topics",
-                    match=MatchAny(any=policy_topics)
-                )
+                FieldCondition(key="policy_topics", match=MatchAny(any=policy_topics))
             )
 
         if start_date or end_date:
@@ -361,10 +331,7 @@ async def handle_search_executive_orders(
                 range_params["lte"] = end_date
 
             filter_conditions.append(
-                FieldCondition(
-                    key="signing_date",
-                    range=Range(**range_params)
-                )
+                FieldCondition(key="signing_date", range=Range(**range_params))
             )
 
         # Create proper Qdrant Filter object
@@ -374,22 +341,17 @@ async def handle_search_executive_orders(
             collection_name="executive_orders",
             query_vector=query_embedding,
             limit=limit,
-            query_filter=search_filter
+            query_filter=search_filter,
         )
 
         # Format results with EO-specific formatting
         formatted_results = []
         for result in results:
             # SearchResult has document attribute, not payload
-            payload = {
-                "text": result.document.text,
-                **result.document.metadata
-            }
-            formatted_results.append({
-                "type": "executive_order",
-                "score": result.score,
-                "payload": payload
-            })
+            payload = {"text": result.document.text, **result.document.metadata}
+            formatted_results.append(
+                {"type": "executive_order", "score": result.score, "payload": payload}
+            )
 
         formatted_response = processor.format_eo_results(query, formatted_results)
         return formatted_response
@@ -400,8 +362,7 @@ async def handle_search_executive_orders(
 
 
 async def handle_get_document_by_id(
-    qdrant_client: QdrantDBClient,
-    arguments: Dict[str, Any]
+    qdrant_client: QdrantDBClient, arguments: Dict[str, Any]
 ) -> str:
     """
     Handle the get_document_by_id tool call.
@@ -446,8 +407,7 @@ async def handle_get_document_by_id(
     try:
         # First, get the chunk from Qdrant
         document = qdrant_client.get_document(
-            document_id=document_id,
-            collection_name=collection
+            document_id=document_id, collection_name=collection
         )
 
         if not document:
@@ -456,7 +416,7 @@ async def handle_get_document_by_id(
         # Prepare payload from Document object
         payload = {
             "text": document.text,
-            **document.metadata  # Flatten metadata into payload
+            **document.metadata,  # Flatten metadata into payload
         }
 
         # If full_document is requested, fetch from API
@@ -478,7 +438,9 @@ async def handle_get_document_by_id(
                     client = FederalRegisterClient()
                     # Note: FederalRegisterClient would need a get_document method
                     # For now, we'll just return the chunk
-                    logger.debug(f"Full document retrieval not implemented for EO {doc_number}")
+                    logger.debug(
+                        f"Full document retrieval not implemented for EO {doc_number}"
+                    )
 
         # Return the chunk with metadata
         formatted_response = processor.format_document_chunk(
@@ -492,8 +454,7 @@ async def handle_get_document_by_id(
 
 
 async def handle_list_collections(
-    qdrant_client: QdrantDBClient,
-    arguments: Dict[str, Any]
+    qdrant_client: QdrantDBClient, arguments: Dict[str, Any]
 ) -> str:
     """
     Handle the list_collections tool call.
@@ -545,8 +506,7 @@ async def handle_list_collections(
 
                 # Get sample point to understand metadata structure
                 sample = qdrant_client.client.scroll(
-                    collection_name=collection_name,
-                    limit=1
+                    collection_name=collection_name, limit=1
                 )[0]
 
                 details = {
@@ -554,15 +514,12 @@ async def handle_list_collections(
                     "vectors_count": info.vectors_count,
                     "points_count": info.points_count,
                     "config": info.config,
-                    "sample_metadata": sample[0].payload if sample else {}
+                    "sample_metadata": sample[0].payload if sample else {},
                 }
                 collection_details.append(details)
             except Exception as e:
                 logger.warning(f"Could not get details for {collection_name}: {e}")
-                collection_details.append({
-                    "name": collection_name,
-                    "error": str(e)
-                })
+                collection_details.append({"name": collection_name, "error": str(e)})
 
         # Format the response
         formatted_response = processor.format_collections_list(collection_details)

@@ -43,19 +43,16 @@ __all__ = [
     # Main server class
     "GovernmentReporterMCP",
     "create_and_run_server",
-
     # Configuration
     "ServerConfig",
     "get_config",
     "set_config",
-
     # Handlers
     "handle_search_government_documents",
     "handle_search_scotus_opinions",
     "handle_search_executive_orders",
     "handle_get_document_by_id",
     "handle_list_collections",
-
     # Query processing
     "QueryProcessor",
 ]

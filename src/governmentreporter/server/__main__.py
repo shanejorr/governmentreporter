@@ -13,9 +13,8 @@ import os
 
 # Execute the server.py file directly
 server_py_path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "server.py"
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "server.py"
 )
 
 # Execute the server.py script
-exec(compile(open(server_py_path).read(), server_py_path, 'exec'))
+exec(compile(open(server_py_path).read(), server_py_path, "exec"))
