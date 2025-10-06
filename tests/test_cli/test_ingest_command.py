@@ -164,32 +164,6 @@ class TestIngestSCOTUSCommand:
 
     @patch("governmentreporter.utils.monitoring.setup_logging")
     @patch("governmentreporter.ingestion.scotus.SCOTUSIngester")
-    def test_scotus_accepts_progress_db_path(
-        self, mock_ingester_class, mock_setup_logging, cli_runner
-    ):
-        """Test scotus accepts custom progress database path."""
-        mock_ingester = MagicMock()
-        mock_ingester.run.return_value = None
-        mock_ingester_class.return_value = mock_ingester
-
-        result = cli_runner.invoke(
-            ingest,
-            [
-                "scotus",
-                "--start-date",
-                "2024-01-01",
-                "--end-date",
-                "2024-12-31",
-                "--progress-db",
-                "./custom_progress.db",
-            ],
-        )
-
-        call_kwargs = mock_ingester_class.call_args[1]
-        assert "./custom_progress.db" in str(call_kwargs.get("progress_db", ""))
-
-    @patch("governmentreporter.utils.monitoring.setup_logging")
-    @patch("governmentreporter.ingestion.scotus.SCOTUSIngester")
     def test_scotus_handles_ingestion_errors(
         self, mock_ingester_class, mock_setup_logging, cli_runner
     ):

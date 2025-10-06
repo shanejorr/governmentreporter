@@ -620,14 +620,17 @@ class TestFederalRegisterClient:
 
         Verifies that date validation works correctly.
         """
-        # Valid formats
-        assert client.validate_date_format("2024-01-15") is True
-        assert client.validate_date_format("2024-12-31") is True
+        # Valid formats should not raise
+        client.validate_date_format("2024-01-15")
+        client.validate_date_format("2024-12-31")
 
-        # Invalid formats
-        assert client.validate_date_format("01/15/2024") is False
-        assert client.validate_date_format("2024-1-15") is False
-        assert client.validate_date_format("") is False
+        # Invalid formats should raise ValueError
+        with pytest.raises(ValueError):
+            client.validate_date_format("01/15/2024")
+        with pytest.raises(ValueError):
+            client.validate_date_format("2024-1-15")
+        with pytest.raises(ValueError):
+            client.validate_date_format("")
 
     @patch("httpx.Client")
     def test_document_type_normalization(

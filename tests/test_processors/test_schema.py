@@ -291,6 +291,7 @@ class TestSupremeCourtMetadata:
                 "Fifth Amendment",
             ],
             # SCOTUS-specific fields
+            "case_name": "Miranda v. Arizona",
             "docket_number": "759",
             "case_name_short": "Miranda",
             "holding_plain": "Police must give Miranda warnings before interrogation.",
@@ -336,6 +337,7 @@ class TestSupremeCourtMetadata:
             "plain_language_summary": "Summary",
             "topics_or_policy_areas": ["t1", "t2", "t3", "t4", "t5"],
             # Required SCOTUS fields
+            "case_name": "Test Case",
             "holding_plain": "The Court held...",
             "outcome_simple": "Affirmed",
             "issue_plain": "Whether...",
@@ -370,6 +372,7 @@ class TestSupremeCourtMetadata:
             "plain_language_summary": "Summary",
             "constitution_cited": ["First Amendment"],  # Inherited field
             "topics_or_policy_areas": ["t1", "t2", "t3", "t4", "t5"],
+            "case_name": "Test v. Case",
             "holding_plain": "Held...",
             "outcome_simple": "Reversed",
             "issue_plain": "Issue...",
@@ -673,6 +676,7 @@ class TestSchemaSerializationDeserialization:
             url="https://example.com",
             plain_language_summary="Summary",
             topics_or_policy_areas=["t1", "t2", "t3", "t4", "t5"],
+            case_name="Test v. Case",
             holding_plain="Held...",
             outcome_simple="Reversed",
             issue_plain="Issue...",

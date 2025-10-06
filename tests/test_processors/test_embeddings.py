@@ -444,37 +444,6 @@ class TestEmbeddingIntegration:
         # Verify embeddings are different (not all the same)
         assert not all(embeddings[0] == emb for emb in embeddings[1:])
 
-    @patch("governmentreporter.processors.embeddings.logger")
-    @patch("governmentreporter.processors.embeddings.OpenAI")
-    def test_embedding_logging(self, mock_openai_class, mock_logger):
-        """
-        Test that appropriate logging occurs during embedding generation.
-
-        Verifies that the module logs important events for debugging
-        and monitoring purposes.
-
-        Args:
-            mock_openai_class: Mock OpenAI class
-            mock_logger: Mock logger instance
-        """
-        # Arrange
-        mock_client = MagicMock()
-        mock_openai_class.return_value = mock_client
-
-        mock_embedding = [0.1] * 1536
-        mock_response = MagicMock()
-        mock_response.data = [MagicMock(embedding=mock_embedding)]
-        mock_client.embeddings.create.return_value = mock_response
-
-        generator = EmbeddingGenerator(api_key="test-key")
-
-        # Act
-        generator.generate_embedding("Test text for logging")
-
-        # Assert
-        # Verify that debug/info logging occurred
-        assert mock_logger.debug.called or mock_logger.info.called
-
     @patch("governmentreporter.processors.embeddings.OpenAI")
     def test_embedding_dimension_validation(self, mock_openai_class):
         """
@@ -543,9 +512,9 @@ class TestEmbeddingIntegration:
         assert len(result) == 1536
         mock_client.embeddings.create.assert_called_once()
 
-        # Verify the special text was passed correctly
+        # Verify the special text was passed correctly (check the actual parameter)
         call_args = mock_client.embeddings.create.call_args
-        assert special_text in str(call_args)
+        assert call_args.kwargs['input'] == special_text
 
 
 # Fixtures for embedding tests

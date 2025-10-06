@@ -606,10 +606,8 @@ class FederalRegisterClient(GovernmentAPIClient):
             - Progress logging: Operational visibility during long operations
         """
         # Validate date formats
-        if not self.validate_date_format(start_date):
-            raise ValueError(f"Invalid start_date format: {start_date}. Use YYYY-MM-DD")
-        if not self.validate_date_format(end_date):
-            raise ValueError(f"Invalid end_date format: {end_date}. Use YYYY-MM-DD")
+        self.validate_date_format(start_date)
+        self.validate_date_format(end_date)
 
         url = f"{self.base_url}/documents"
         params = {
@@ -936,10 +934,10 @@ class FederalRegisterClient(GovernmentAPIClient):
             - Documentation: Comprehensive docstring for complex method
         """
         # Validate date formats if provided
-        if start_date and not self.validate_date_format(start_date):
-            raise ValueError(f"Invalid start_date format: {start_date}. Use YYYY-MM-DD")
-        if end_date and not self.validate_date_format(end_date):
-            raise ValueError(f"Invalid end_date format: {end_date}. Use YYYY-MM-DD")
+        if start_date:
+            self.validate_date_format(start_date)
+        if end_date:
+            self.validate_date_format(end_date)
 
         # Build search parameters
         url = f"{self.base_url}/documents"

@@ -78,7 +78,7 @@ class TestIngestionClientInitialization:
         """
         Test initialization with default database path.
 
-        Verifies that the default path "./qdrant_db" is used
+        Verifies that the default path "./data/qdrant/qdrant_db" is used
         when no path is specified.
         """
         mock_client_instance = MagicMock()
@@ -88,7 +88,7 @@ class TestIngestionClientInitialization:
         client = QdrantIngestionClient("test_collection")
 
         # Verify default path used
-        mock_qdrant_client_class.assert_called_once_with("./qdrant_db")
+        mock_qdrant_client_class.assert_called_once_with("./data/qdrant/qdrant_db")
 
     def test_initialization_without_collection_name(self):
         """

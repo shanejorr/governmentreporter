@@ -528,18 +528,24 @@ class TestCourtListenerClient:
 
         Verifies that the inherited validate_date_format method works correctly.
         """
-        # Valid formats
-        assert client.validate_date_format("2024-01-15") is True
-        assert client.validate_date_format("2024-12-31") is True
-        assert client.validate_date_format("2000-01-01") is True
+        # Valid formats should not raise
+        client.validate_date_format("2024-01-15")
+        client.validate_date_format("2024-12-31")
+        client.validate_date_format("2000-01-01")
 
-        # Invalid formats
-        assert client.validate_date_format("01/15/2024") is False
-        assert client.validate_date_format("2024-1-15") is False
-        assert client.validate_date_format("2024/01/15") is False
-        assert client.validate_date_format("15-01-2024") is False
-        assert client.validate_date_format("2024") is False
-        assert client.validate_date_format("") is False
+        # Invalid formats should raise ValueError
+        with pytest.raises(ValueError):
+            client.validate_date_format("01/15/2024")
+        with pytest.raises(ValueError):
+            client.validate_date_format("2024-1-15")
+        with pytest.raises(ValueError):
+            client.validate_date_format("2024/01/15")
+        with pytest.raises(ValueError):
+            client.validate_date_format("15-01-2024")
+        with pytest.raises(ValueError):
+            client.validate_date_format("2024")
+        with pytest.raises(ValueError):
+            client.validate_date_format("")
 
     @patch("time.sleep")  # Mock sleep to avoid 15s delay in retries
     @patch("httpx.Client")

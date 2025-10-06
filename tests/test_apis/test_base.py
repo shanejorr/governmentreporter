@@ -91,6 +91,14 @@ class TestDocumentDataclass:
 class MockGovernmentAPIClient(GovernmentAPIClient):
     """Mock implementation for testing."""
 
+    def _get_base_url(self) -> str:
+        """Return mock base URL."""
+        return "https://mock-api.example.com/v1"
+
+    def _get_rate_limit_delay(self) -> float:
+        """Return mock rate limit delay."""
+        return 0.1
+
     def search_documents(
         self, query: str, start_date: Optional[str] = None, end_date: Optional[str] = None
     ) -> list:

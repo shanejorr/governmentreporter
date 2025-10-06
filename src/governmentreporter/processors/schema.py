@@ -88,8 +88,8 @@ class SharedMetadata(BaseModel):
     )
     topics_or_policy_areas: List[str] = Field(
         default_factory=list,
-        min_items=5,
-        max_items=8,
+        min_length=5,
+        max_length=8,
         description="Plain-language tags for policy domains and legal areas (5-8 tags)",
     )
 
@@ -143,9 +143,37 @@ class SupremeCourtMetadata(SharedMetadata):
     case_name: str = Field(
         description="Full case name from CourtListener (e.g., 'Brown v. Board of Education')"
     )
+    case_name_short: Optional[str] = Field(
+        default=None,
+        description="Shortened case name (e.g., 'Miranda')",
+    )
+    docket_number: Optional[str] = Field(
+        default=None,
+        description="Docket number for the case",
+    )
     opinion_type: Optional[str] = Field(
         default=None,
         description="Type of opinion: 'majority', 'concurrence', or 'dissent'",
+    )
+    majority_author: Optional[str] = Field(
+        default=None,
+        description="Justice who authored the majority opinion",
+    )
+    vote_majority: Optional[int] = Field(
+        default=None,
+        description="Number of justices in the majority",
+    )
+    vote_minority: Optional[int] = Field(
+        default=None,
+        description="Number of justices in the minority",
+    )
+    argued_date: Optional[str] = Field(
+        default=None,
+        description="Date the case was argued (YYYY-MM-DD format)",
+    )
+    decided_date: Optional[str] = Field(
+        default=None,
+        description="Date the case was decided (YYYY-MM-DD format)",
     )
 
     # LLM-generated fields specific to SCOTUS
@@ -179,19 +207,52 @@ class ExecutiveOrderMetadata(SharedMetadata):
 
     Python Learning Notes:
         - Inherits all fields from SharedMetadata
-        - eo_number is the primary identifier used in citations
-        - agencies_impacted helps with regulatory research
+        - executive_order_number is the primary identifier used in citations
+        - agencies_or_entities helps with regulatory research
     """
 
     # Document/API-extracted fields specific to Executive Orders
-    eo_number: str = Field(
-        description="Presidential Executive Order number (e.g., '14304')"
+    executive_order_number: Optional[str] = Field(
+        default=None,
+        description="Presidential Executive Order number (e.g., '14304')",
+    )
+    president: Optional[str] = Field(
+        default=None,
+        description="Name of the president who signed the order",
+    )
+    signing_date: Optional[str] = Field(
+        default=None,
+        description="Date the order was signed (YYYY-MM-DD format)",
+    )
+    effective_date: Optional[str] = Field(
+        default=None,
+        description="Date the order becomes effective (YYYY-MM-DD format)",
+    )
+    federal_register_number: Optional[str] = Field(
+        default=None,
+        description="Federal Register document number",
     )
 
     # LLM-generated fields specific to Executive Orders
-    agencies_impacted: List[str] = Field(
+    plain_summary: str = Field(
+        description="Brief plain-language summary of the order"
+    )
+    action_plain: str = Field(
+        description="Plain-language description of the primary action or directive"
+    )
+    impact_simple: str = Field(
+        description="Simple description of the order's impact"
+    )
+    implementation_requirements: str = Field(
+        description="Key implementation requirements in plain language"
+    )
+    agencies_or_entities: List[str] = Field(
         default_factory=list,
-        description="Federal agencies materially affected by the order",
+        description="Federal agencies or entities materially affected by the order",
+    )
+    revokes: List[str] = Field(
+        default_factory=list,
+        description="List of prior executive orders revoked by this order",
     )
 
 

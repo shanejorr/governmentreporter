@@ -406,41 +406,36 @@ class GovernmentAPIClient(ABC):
         """
         pass
 
-    def validate_date_format(self, date_str: str) -> bool:
+    def validate_date_format(self, date_str: str) -> None:
         """
-        Validate that a date string follows the YYYY-MM-DD format.
+        Validate that a date string follows the YYYY-MM-DD format and is a valid date.
 
         This concrete method provides date validation functionality to all API clients.
         It ensures consistent date formatting across different government APIs, which
         may have varying native date formats. The YYYY-MM-DD format (ISO 8601) is
         used as the standard throughout the application.
 
-        This method validates format only, not date validity. For example, it would
-        accept "2024-13-45" as valid format even though it's not a real date.
-        Date validity should be checked separately if needed.
+        This method validates both format and date validity. It raises ValueError
+        for invalid formats or impossible dates (e.g., 2024-13-01, 2024-02-30).
 
         Args:
             date_str (str): Date string to validate.
                           Should be in YYYY-MM-DD format.
                           Examples: "2024-01-01", "2024-12-31"
 
-        Returns:
-            bool: True if string matches YYYY-MM-DD format exactly.
-                 False for any other format or invalid input.
-                 Returns False for None or empty strings.
+        Raises:
+            ValueError: If the date string doesn't match YYYY-MM-DD format or
+                       represents an invalid date.
 
         Examples:
-            >>> client.validate_date_format("2024-01-15")
-            True
-            >>> client.validate_date_format("01/15/2024")
-            False
-            >>> client.validate_date_format("2024-1-15")  # Missing zeros
-            False
-            >>> client.validate_date_format("2024-13-45")  # Invalid but correct format
-            True
+            >>> client.validate_date_format("2024-01-15")  # Valid, no exception
+            >>> client.validate_date_format("01/15/2024")  # Raises ValueError
+            >>> client.validate_date_format("2024-1-15")  # Raises ValueError
+            >>> client.validate_date_format("2024-13-45")  # Raises ValueError
 
         Implementation Details:
-            - Uses regular expression for pattern matching
+            - First uses regular expression for pattern matching
+            - Then uses datetime.strptime to validate the date is real
             - Pattern breakdown:
                 ^ : Start of string
                 \\d{4} : Exactly 4 digits (year)
@@ -454,11 +449,22 @@ class GovernmentAPIClient(ABC):
             - import inside method: Lazy import, only when needed
             - re.match(): Checks if pattern matches from start of string
             - r"" prefix: Raw string, treats backslashes literally
-            - bool(): Converts match object to True/False
+            - datetime.strptime(): Parses string to datetime, validates date
+            - Raises ValueError: Indicates validation failure
             - Regular expressions: Powerful pattern matching tool
             - Concrete method: Has implementation (not abstract)
         """
         import re
+        from datetime import datetime
 
         pattern = r"^\d{4}-\d{2}-\d{2}$"
-        return bool(re.match(pattern, date_str))
+        if not re.match(pattern, date_str):
+            raise ValueError(
+                f"Date '{date_str}' does not match required format YYYY-MM-DD"
+            )
+
+        # Validate the date is actually valid (not 2024-13-45, etc.)
+        try:
+            datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError as e:
+            raise ValueError(f"Invalid date '{date_str}': {str(e)}") from e

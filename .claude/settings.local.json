@@ -33,7 +33,12 @@
       "Bash(uv pip:*)",
       "Bash(timeout 5 uv run:*)",
       "Bash(timeout 30 uv run:*)",
-      "Bash(timeout 120 uv run pytest tests/ -v --tb=short)"
+      "Bash(timeout 120 uv run pytest tests/ -v --tb=short)",
+      "Bash(for file in tests/test_*/*.py)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(done)",
+      "Bash(pytest:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "additionalDirectories": [
