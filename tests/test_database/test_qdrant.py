@@ -27,13 +27,20 @@ from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
 from qdrant_client import QdrantClient as QdrantBaseClient
-from qdrant_client.models import (CollectionInfo, CollectionStatus, Distance,
-                                  FieldCondition, Filter, MatchValue,
-                                  PayloadSchemaType, PointStruct, ScoredPoint,
-                                  VectorParams)
+from qdrant_client.models import (
+    CollectionInfo,
+    CollectionStatus,
+    Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
+    PayloadSchemaType,
+    PointStruct,
+    ScoredPoint,
+    VectorParams,
+)
 
-from governmentreporter.database.qdrant import (Document, QdrantDBClient,
-                                                SearchResult)
+from governmentreporter.database.qdrant import Document, QdrantDBClient, SearchResult
 
 
 class TestQdrantDBClientInitialization:

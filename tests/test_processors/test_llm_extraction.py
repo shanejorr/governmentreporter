@@ -24,7 +24,9 @@ import pytest
 from openai import APIError, OpenAI, RateLimitError
 
 from governmentreporter.processors.llm_extraction import (
-    generate_eo_llm_fields, generate_scotus_llm_fields)
+    generate_eo_llm_fields,
+    generate_scotus_llm_fields,
+)
 
 
 class TestGenerateSCOTUSLLMFields:

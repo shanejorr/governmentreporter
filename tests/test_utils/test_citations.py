@@ -6,12 +6,14 @@ Streamlined test suite covering core functionality and edge cases.
 
 import pytest
 
-from governmentreporter.utils.citations import (format_cfr_citation,
-                                                format_constitution_citation,
-                                                format_usc_citation,
-                                                parse_cfr_citations,
-                                                parse_constitution_citations,
-                                                parse_usc_citations)
+from governmentreporter.utils.citations import (
+    format_cfr_citation,
+    format_constitution_citation,
+    format_usc_citation,
+    parse_cfr_citations,
+    parse_constitution_citations,
+    parse_usc_citations,
+)
 
 
 class TestFormatCFRCitation:

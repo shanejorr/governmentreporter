@@ -23,8 +23,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from governmentreporter.utils.config import (get_court_listener_token,
-                                             get_openai_api_key)
+from governmentreporter.utils.config import get_court_listener_token, get_openai_api_key
 
 
 class TestGetCourtListenerToken:

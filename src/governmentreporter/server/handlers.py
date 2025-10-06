@@ -22,8 +22,7 @@ Each handler follows the pattern:
 import logging
 from typing import Any, Dict
 
-from qdrant_client.models import (FieldCondition, Filter, MatchAny, MatchValue,
-                                  Range)
+from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue, Range
 
 from ..apis.court_listener import CourtListenerClient
 from ..apis.federal_register import FederalRegisterClient

@@ -45,8 +45,7 @@ from typing import Optional
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from governmentreporter.server.config import (ServerConfig, get_config,
-                                              set_config)
+from governmentreporter.server.config import ServerConfig, get_config, set_config
 from governmentreporter.server.mcp_server import GovernmentReporterMCP
 from governmentreporter.utils.config import get_openai_api_key
 

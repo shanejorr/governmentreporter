@@ -29,10 +29,13 @@ For command-line usage:
 """
 
 from .config import ServerConfig, get_config, set_config
-from .handlers import (handle_get_document_by_id, handle_list_collections,
-                       handle_search_executive_orders,
-                       handle_search_government_documents,
-                       handle_search_scotus_opinions)
+from .handlers import (
+    handle_get_document_by_id,
+    handle_list_collections,
+    handle_search_executive_orders,
+    handle_search_government_documents,
+    handle_search_scotus_opinions,
+)
 from .mcp_server import GovernmentReporterMCP, create_and_run_server
 from .query_processor import QueryProcessor
 

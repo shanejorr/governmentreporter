@@ -25,8 +25,12 @@ import pytest
 
 from governmentreporter.apis.base import Document
 from governmentreporter.processors.build_payloads import (
-    build_payloads_from_document, extract_year_from_date,
-    normalize_eo_metadata, normalize_scotus_metadata, validate_payload)
+    build_payloads_from_document,
+    extract_year_from_date,
+    normalize_eo_metadata,
+    normalize_scotus_metadata,
+    validate_payload,
+)
 
 
 class TestExtractYearFromDate:

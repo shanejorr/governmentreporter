@@ -35,8 +35,12 @@ from ..apis.base import Document
 from ..utils import get_logger
 from .chunking import chunk_executive_order, chunk_supreme_court_opinion
 from .llm_extraction import generate_eo_llm_fields, generate_scotus_llm_fields
-from .schema import (ChunkMetadata, ExecutiveOrderMetadata, QdrantPayload,
-                     SupremeCourtMetadata)
+from .schema import (
+    ChunkMetadata,
+    ExecutiveOrderMetadata,
+    QdrantPayload,
+    SupremeCourtMetadata,
+)
 
 logger = get_logger(__name__)
 

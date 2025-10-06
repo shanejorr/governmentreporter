@@ -25,11 +25,13 @@ from typing import List
 import pytest
 from pydantic import ValidationError
 
-from governmentreporter.processors.schema import (ChunkMetadata,
-                                                  ExecutiveOrderMetadata,
-                                                  QdrantPayload,
-                                                  SharedMetadata,
-                                                  SupremeCourtMetadata)
+from governmentreporter.processors.schema import (
+    ChunkMetadata,
+    ExecutiveOrderMetadata,
+    QdrantPayload,
+    SharedMetadata,
+    SupremeCourtMetadata,
+)
 
 
 class TestSharedMetadata:

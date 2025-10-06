@@ -23,8 +23,10 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from openai import APIError, OpenAI, RateLimitError
 
-from governmentreporter.processors.embeddings import (EmbeddingGenerator,
-                                                      generate_embedding)
+from governmentreporter.processors.embeddings import (
+    EmbeddingGenerator,
+    generate_embedding,
+)
 
 
 class TestEmbeddingGenerator:
