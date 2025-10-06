@@ -36,7 +36,7 @@ Example Usage:
     from governmentreporter.database import QdrantClient, Document
 
     # Initialize client
-    client = QdrantClient(db_path="./qdrant_db")
+    client = QdrantClient(db_path="./data/qdrant/qdrant_db")
 
     # Store a document
     doc = Document(

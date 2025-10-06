@@ -56,7 +56,7 @@ class ExecutiveOrderIngester(DocumentIngester):
         batch_size: int = 25,
         dry_run: bool = False,
         progress_db: str = "executive_orders_ingestion.db",
-        qdrant_db_path: str = "./qdrant_db",
+        qdrant_db_path: str = "./data/qdrant/qdrant_db",
     ):
         """
         Initialize the Executive Order ingester.

@@ -54,7 +54,7 @@ class SCOTUSIngester(DocumentIngester):
         batch_size: int = 50,
         dry_run: bool = False,
         progress_db: str = "scotus_ingestion.db",
-        qdrant_db_path: str = "./qdrant_db",
+        qdrant_db_path: str = "./data/qdrant/qdrant_db",
     ):
         """
         Initialize the SCOTUS ingester.

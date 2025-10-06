@@ -48,7 +48,7 @@ class QdrantIngestionClient:
     
     Example:
         # Initialize for Supreme Court opinions
-        client = QdrantIngestionClient("supreme_court_opinions", "./qdrant_db")
+        client = QdrantIngestionClient("supreme_court_opinions", "./data/qdrant/qdrant_db")
         
         # Process documents and generate payloads
         payloads = build_payloads_from_document(document)
@@ -64,15 +64,15 @@ class QdrantIngestionClient:
         - Logging provides visibility into operations
     """
     
-    def __init__(self, collection_name: str, db_path: str = "./qdrant_db"):
+    def __init__(self, collection_name: str, db_path: str = "./data/qdrant/qdrant_db"):
         """
         Initialize the ingestion client for a specific collection.
-        
+
         Args:
             collection_name (str): Name of the collection to store documents in.
                                   Common values: "supreme_court_opinions", "executive_orders"
             db_path (str): Path to the Qdrant database directory.
-                          Defaults to "./qdrant_db" in the current directory.
+                          Defaults to "./data/qdrant/qdrant_db" in the current directory.
         
         Raises:
             ValueError: If collection_name is empty

@@ -87,7 +87,7 @@ class DocumentIngester(ABC):
         batch_size: int = 50,
         dry_run: bool = False,
         progress_db: str = "ingestion.db",
-        qdrant_db_path: str = "./qdrant_db",
+        qdrant_db_path: str = "./data/qdrant/qdrant_db",
         document_type: str = "generic",
     ):
         """

@@ -103,7 +103,7 @@ class ServerConfig:
         default_factory=lambda: os.getenv("QDRANT_API_KEY")
     )
     qdrant_db_path: str = field(
-        default_factory=lambda: os.getenv("QDRANT_DB_PATH", "./qdrant_db")
+        default_factory=lambda: os.getenv("QDRANT_DB_PATH", "./data/qdrant/qdrant_db")
     )
 
     # Embedding configuration
