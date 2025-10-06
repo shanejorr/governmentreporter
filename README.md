@@ -362,12 +362,41 @@ QDRANT_API_KEY=your-key-here
 MCP_ENABLE_CACHE=true
 ```
 
+### MCP Server Status: ✅ Fully Functional
+
+The GovernmentReporter MCP server is **production-ready** and fully compliant with the MCP specification. All required components are implemented and tested:
+
+- ✅ stdio transport (JSON-RPC 2.0)
+- ✅ Server lifecycle management (initialize, start, shutdown)
+- ✅ 5 semantic search tools for government documents
+- ✅ Qdrant vector database integration
+- ✅ Query result formatting optimized for LLM consumption
+- ✅ Environment variable configuration
+- ✅ Error handling and logging
+
 ### MCP Tools Available to LLMs
+
 1. **`search_government_documents`** - Cross-collection semantic search
-2. **`search_scotus_opinions`** - SCOTUS-specific with legal filters
+   - Search across SCOTUS opinions and Executive Orders
+   - Configurable limits and document type filtering
+
+2. **`search_scotus_opinions`** - SCOTUS-specific search with advanced filters
+   - Filter by opinion type (majority, concurring, dissenting, syllabus)
+   - Filter by authoring justice and date range
+   - Rich legal metadata in results
+
 3. **`search_executive_orders`** - Executive Order search with policy filters
-4. **`get_document_by_id`** - Retrieve specific document/chunk by ID
-5. **`list_collections`** - Show available collections and statistics
+   - Filter by president, agencies, and policy topics
+   - Date range filtering
+   - Policy context and agency impacts in results
+
+4. **`get_document_by_id`** - Document retrieval by ID
+   - Retrieve specific chunks by ID
+   - Optional full document retrieval from government APIs
+
+5. **`list_collections`** - Collection information
+   - List all available collections with statistics
+   - Metadata field descriptions
 
 ## Claude Desktop Integration Tutorial
 
@@ -376,10 +405,11 @@ This tutorial walks you through connecting the GovernmentReporter MCP server to 
 ### Prerequisites
 
 Before starting, ensure you have:
-- ✅ Qdrant running locally (default: `localhost:6333`)
-- ✅ Government documents indexed in Qdrant collections
+- ✅ Python 3.11+ and `uv` package manager installed
+- ✅ Qdrant running locally (default: `localhost:6333`) or configured for remote/cloud
+- ✅ Government documents indexed in Qdrant collections (see "Ingest Documents" section)
 - ✅ Claude Desktop app installed
-- ✅ Required API keys in `.env` file
+- ✅ Required API keys in `.env` file (OpenAI API key required)
 
 ### Step 1: Configure Claude Desktop for MCP
 
@@ -500,7 +530,29 @@ After saving the configuration file:
 2. **Restart** Claude Desktop
 3. Wait for the app to fully load
 
-### Step 6: Verify MCP Connection
+### Step 6: Test Server Locally (Optional)
+
+Before testing with Claude Desktop, you can verify the server works:
+
+```bash
+# Test server startup (will run until interrupted with Ctrl+C)
+uv run governmentreporter server
+
+# Or with debug logging
+uv run governmentreporter server --log-level DEBUG
+```
+
+You should see:
+```
+INFO - Initializing GovernmentReporter MCP Server...
+INFO - Connected to Qdrant. Available collections: [...]
+INFO - MCP server initialized successfully
+INFO - Starting GovernmentReporter MCP Server...
+```
+
+Press Ctrl+C to stop the test. Claude Desktop will start/stop the server automatically.
+
+### Step 7: Verify Claude Desktop Connection
 
 In a new Claude conversation, you should see:
 - 🔧 A tools indicator in the interface
@@ -509,9 +561,9 @@ In a new Claude conversation, you should see:
 To test the connection, ask Claude:
 > "What tools do you have access to?"
 
-Claude should mention the government document search capabilities.
+Claude should mention the 5 government document search tools.
 
-### Step 7: Using the MCP Server
+### Step 8: Using the MCP Server
 
 Now you can ask Claude legal research questions that will trigger the MCP tools:
 
@@ -537,7 +589,7 @@ Now you can ask Claude legal research questions that will trigger the MCP tools:
 "Find cases and executive orders related to cryptocurrency regulation"
 ```
 
-### Step 8: Understanding Claude's Responses
+### Step 9: Understanding Claude's Responses
 
 When Claude uses the MCP server, you'll see:
 
@@ -548,8 +600,11 @@ When Claude uses the MCP server, you'll see:
    - Executive Order numbers and dates
    - Relevant legal metadata
    - Direct quotes from documents
+   - Relevance scores
 
 3. **Source Attribution** - Claude will reference specific documents and provide context
+
+The MCP server returns results formatted specifically for LLM consumption, with hierarchical document structure (sections, opinion types) and rich legal/policy metadata.
 
 ### Advanced Configuration
 

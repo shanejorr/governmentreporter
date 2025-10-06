@@ -109,10 +109,28 @@ uv run governmentreporter ingest eo \
 
 ## Testing the Search
 
+### MCP Server Status
+
+✅ **The MCP server is fully functional and production-ready!**
+
+The server includes:
+- 5 semantic search tools for government documents
+- stdio transport (JSON-RPC 2.0)
+- Qdrant vector database integration
+- Optimized result formatting for LLM consumption
+
 ### Command Line Testing
 
 ```bash
-# Search across all documents
+# Test the MCP server locally (Ctrl+C to stop)
+uv run governmentreporter server
+
+# You should see:
+# INFO - Initializing GovernmentReporter MCP Server...
+# INFO - Connected to Qdrant. Available collections: [...]
+# INFO - MCP server initialized successfully
+
+# Search across all documents (alternative command-line tool)
 uv run governmentreporter query "constitutional law"
 
 # The query command will show search results from Qdrant
@@ -134,6 +152,21 @@ uv run governmentreporter query "constitutional law"
     "governmentreporter": {
       "command": "uv",
       "args": ["run", "governmentreporter", "server"],
+      "cwd": "/path/to/your/governmentreporter"
+    }
+  }
+}
+```
+
+**Important**: Replace `/path/to/your/governmentreporter` with your actual project path.
+
+**Optional**: If you don't have a `.env` file in your project, add API keys directly:
+```json
+{
+  "mcpServers": {
+    "governmentreporter": {
+      "command": "uv",
+      "args": ["run", "governmentreporter", "server"],
       "cwd": "/path/to/your/governmentreporter",
       "env": {
         "OPENAI_API_KEY": "your-openai-key-here",
@@ -148,10 +181,19 @@ uv run governmentreporter query "constitutional law"
 
 Completely quit (Cmd+Q on macOS) and restart Claude Desktop.
 
-**Step 4: Test it!**
+**Step 4: Verify Connection**
 
 Ask Claude:
-> "Search for recent Supreme Court cases about environmental regulation"
+> "What tools do you have access to?"
+
+You should see the 5 GovernmentReporter tools listed.
+
+**Step 5: Test it!**
+
+Ask Claude questions like:
+- "Search for recent Supreme Court cases about environmental regulation"
+- "Find Executive Orders about climate policy"
+- "What collections are available?"
 
 Claude will use the MCP tools to search your indexed documents!
 
@@ -251,10 +293,13 @@ uv run governmentreporter ingest scotus --start-date 2024-01-01 --end-date 2024-
 
 ### Claude Desktop can't see tools
 
-1. Verify config file syntax (use JSON validator)
-2. Check that `cwd` path is correct
-3. Completely restart Claude Desktop (Cmd+Q)
-4. Check Console.app (macOS) for errors
+1. **Test server locally first**: Run `uv run governmentreporter server` to verify it starts without errors
+2. **Verify config file syntax**: Use a JSON validator to check `claude_desktop_config.json`
+3. **Check `cwd` path**: Ensure the path to your project is absolute and correct
+4. **Verify dependencies**: Run `uv sync` to ensure all packages are installed
+5. **Completely restart Claude Desktop**: Use Cmd+Q on macOS, not just closing the window
+6. **Check logs**: Console.app (macOS) or Event Viewer (Windows) for error messages
+7. **Test with debug logging**: Add `"MCP_LOG_LEVEL": "DEBUG"` to the `env` section in config
 
 ---
 
@@ -301,12 +346,27 @@ docker stats
 
 ---
 
+## MCP Tools Available
+
+Once connected to Claude Desktop, you have access to 5 powerful tools:
+
+1. **`search_government_documents`** - Search across all collections (SCOTUS + Executive Orders)
+2. **`search_scotus_opinions`** - SCOTUS-specific search with filters (opinion type, justice, dates)
+3. **`search_executive_orders`** - Executive Order search with filters (president, agencies, topics)
+4. **`get_document_by_id`** - Retrieve specific document chunks by ID
+5. **`list_collections`** - View available collections and statistics
+
+All tools return results with rich metadata, relevance scores, and properly formatted citations.
+
+---
+
 ## Next Steps
 
-1. **Ingest more data** - Expand your date ranges
-2. **Explore MCP tools** - Try different search filters
-3. **Read the docs** - Check out [DEPLOYMENT.md](DEPLOYMENT.md) for advanced configuration
-4. **Join the community** - Ask questions, report issues
+1. **Ingest more data** - Expand your date ranges to build a comprehensive database
+2. **Explore MCP tools** - Try different search filters and combinations
+3. **Read the docs** - Check out [README.md](README.md) for full Claude Desktop integration tutorial
+4. **Advanced configuration** - Customize server settings via environment variables
+5. **Join the community** - Ask questions, report issues
 
 ---
 
@@ -333,13 +393,16 @@ docker stats
 
 | Task | Command |
 |------|---------|
+| **Start MCP server** | `uv run governmentreporter server` |
+| **Start MCP server (debug)** | `uv run governmentreporter server --log-level DEBUG` |
 | Start all services | `docker-compose up -d` |
 | Stop all services | `docker-compose down` |
 | View logs | `docker-compose logs -f` |
 | Ingest SCOTUS | `uv run governmentreporter ingest scotus --start-date YYYY-MM-DD --end-date YYYY-MM-DD` |
 | Ingest EOs | `uv run governmentreporter ingest eo --start-date YYYY-MM-DD --end-date YYYY-MM-DD` |
 | Test search | `uv run governmentreporter query "test"` |
-| Check health | `curl http://localhost:6333/health` |
+| Check Qdrant health | `curl http://localhost:6333/health` |
+| List collections | `uv run governmentreporter info collections` |
 
 ---
 
