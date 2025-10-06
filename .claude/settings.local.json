@@ -32,7 +32,8 @@
       "Bash(uv show:*)",
       "Bash(uv pip:*)",
       "Bash(timeout 5 uv run:*)",
-      "Bash(timeout 30 uv run:*)"
+      "Bash(timeout 30 uv run:*)",
+      "Bash(timeout 120 uv run pytest tests/ -v --tb=short)"
     ],
     "deny": [],
     "additionalDirectories": [
