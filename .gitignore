@@ -97,3 +97,4 @@ scratch/check_quadrant.txt
 
 # Test databases
 test_qdrant_db/
+.env.example
