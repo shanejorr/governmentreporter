@@ -62,63 +62,6 @@ services:
     # ports:
     #   - "8080:8080"
 
-  # Optional: Ingestion service for SCOTUS opinions
-  scotus-ingester:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: governmentreporter-scotus-ingester
-    depends_on:
-      qdrant:
-        condition: service_healthy
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - COURT_LISTENER_API_TOKEN=${COURT_LISTENER_API_TOKEN}
-      - QDRANT_HOST=qdrant
-      - QDRANT_PORT=6333
-      - QDRANT_DB_PATH=/app/data/qdrant/qdrant_db
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-    networks:
-      - governmentreporter-network
-    command: >
-      python -m governmentreporter.cli.main ingest scotus
-      --start-date 2024-01-01
-      --end-date 2024-12-31
-      --batch-size 50
-    profiles:
-      - ingestion
-    restart: "no"
-
-  # Optional: Ingestion service for Executive Orders
-  eo-ingester:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: governmentreporter-eo-ingester
-    depends_on:
-      qdrant:
-        condition: service_healthy
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - QDRANT_HOST=qdrant
-      - QDRANT_PORT=6333
-      - QDRANT_DB_PATH=/app/data/qdrant/qdrant_db
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
-    networks:
-      - governmentreporter-network
-    command: >
-      python -m governmentreporter.cli.main ingest eo
-      --start-date 2024-01-01
-      --end-date 2024-12-31
-      --batch-size 50
-    profiles:
-      - ingestion
-    restart: "no"
-
 networks:
   governmentreporter-network:
     driver: bridge

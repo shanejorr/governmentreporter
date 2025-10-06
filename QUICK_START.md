@@ -78,25 +78,29 @@ Before you can search, you need to ingest some documents.
 ### Ingest Supreme Court Opinions
 
 ```bash
-# Using Docker Compose
-docker-compose --profile ingestion up scotus-ingester
-
-# Or locally
 uv run governmentreporter ingest scotus \
   --start-date 2024-01-01 \
   --end-date 2024-12-31
+
+# With custom batch size for faster ingestion
+uv run governmentreporter ingest scotus \
+  --start-date 2024-01-01 \
+  --end-date 2024-12-31 \
+  --batch-size 100
 ```
 
 ### Ingest Executive Orders
 
 ```bash
-# Using Docker Compose
-docker-compose --profile ingestion up eo-ingester
-
-# Or locally
 uv run governmentreporter ingest eo \
   --start-date 2024-01-01 \
   --end-date 2024-12-31
+
+# With custom batch size for faster ingestion
+uv run governmentreporter ingest eo \
+  --start-date 2024-01-01 \
+  --end-date 2024-12-31 \
+  --batch-size 100
 ```
 
 **Note**: Ingestion can take a while depending on the date range. The system will track progress and resume if interrupted.
@@ -228,7 +232,7 @@ curl http://localhost:6333/collections
 curl http://localhost:6333/collections/supreme_court_opinions
 
 # Re-run ingestion if needed
-docker-compose --profile ingestion up scotus-ingester
+uv run governmentreporter ingest scotus --start-date 2024-01-01 --end-date 2024-12-31
 ```
 
 ### Ingestion fails
@@ -237,12 +241,12 @@ docker-compose --profile ingestion up scotus-ingester
 # Check API keys
 echo $OPENAI_API_KEY
 
-# View ingestion logs
-docker-compose logs scotus-ingester
-
 # Check progress database
 sqlite3 data/progress/scotus_ingestion.db \
   "SELECT status, COUNT(*) FROM documents GROUP BY status;"
+
+# Re-run ingestion (it will resume from where it left off)
+uv run governmentreporter ingest scotus --start-date 2024-01-01 --end-date 2024-12-31
 ```
 
 ### Claude Desktop can't see tools
@@ -259,13 +263,15 @@ sqlite3 data/progress/scotus_ingestion.db \
 ### Faster Ingestion
 
 ```bash
-# Increase batch size
-docker-compose --profile ingestion up scotus-ingester \
-  --env SCOTUS_BATCH_SIZE=100
-
-# Or in command
+# Increase batch size for faster processing
 uv run governmentreporter ingest scotus \
   --start-date 2024-01-01 \
+  --end-date 2024-12-31 \
+  --batch-size 100
+
+# Process multiple years
+uv run governmentreporter ingest scotus \
+  --start-date 2020-01-01 \
   --end-date 2024-12-31 \
   --batch-size 100
 ```
@@ -330,8 +336,8 @@ docker stats
 | Start all services | `docker-compose up -d` |
 | Stop all services | `docker-compose down` |
 | View logs | `docker-compose logs -f` |
-| Ingest SCOTUS | `docker-compose --profile ingestion up scotus-ingester` |
-| Ingest EOs | `docker-compose --profile ingestion up eo-ingester` |
+| Ingest SCOTUS | `uv run governmentreporter ingest scotus --start-date YYYY-MM-DD --end-date YYYY-MM-DD` |
+| Ingest EOs | `uv run governmentreporter ingest eo --start-date YYYY-MM-DD --end-date YYYY-MM-DD` |
 | Test search | `uv run governmentreporter query "test"` |
 | Check health | `curl http://localhost:6333/health` |
 

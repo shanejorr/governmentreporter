@@ -132,17 +132,15 @@ cp logging.yaml logging.prod.yaml
 # 4. Build and start services
 docker-compose up -d
 
-# 5. Run ingestion (one-time or scheduled)
-docker-compose --profile ingestion up scotus-ingester
-docker-compose --profile ingestion up eo-ingester
-
-# 6. Monitor logs
+# 5. Monitor logs
 docker-compose logs -f mcp-server
 
-# 7. Health check
+# 6. Health check
 docker-compose ps
 curl http://localhost:6333/health  # Qdrant health
 ```
+
+**Note**: For document ingestion, use the CLI with `uv` locally or set up GitHub Actions for scheduled ingestion. See the main README for ingestion instructions.
 
 ### Systemd Service (Linux)
 
@@ -421,8 +419,8 @@ curl -H "Authorization: Bearer $OPENAI_API_KEY" https://api.openai.com/v1/models
 # Check progress database
 sqlite3 data/progress/scotus_ingestion.db "SELECT COUNT(*) FROM documents;"
 
-# Resume failed ingestion
-docker-compose --profile ingestion up scotus-ingester
+# Resume failed ingestion using uv
+uv run governmentreporter ingest scotus --start-date 2024-01-01 --end-date 2024-12-31
 ```
 
 #### 3. Qdrant Connection Issues
@@ -450,14 +448,11 @@ docker-compose exec mcp-server curl http://qdrant:6333/health
 
 **Solutions**:
 ```bash
-# Increase Docker memory limit
+# Increase Docker memory limit for MCP server
 # Edit docker-compose.yml and add:
 services:
   mcp-server:
     mem_limit: 4g
-
-# Reduce batch size
-SCOTUS_BATCH_SIZE=25
 
 # Monitor memory usage
 docker stats
@@ -473,10 +468,11 @@ docker stats
 docker-compose exec qdrant curl http://localhost:6333/collections
 
 # Check collection statistics
-uv run governmentreporter query "test" --collection supreme_court_opinions
+uv run governmentreporter query "test"
 
 # Re-index if needed
-docker-compose --profile ingestion up scotus-ingester
+uv run governmentreporter ingest scotus --start-date 2024-01-01 --end-date 2024-12-31
+uv run governmentreporter ingest eo --start-date 2024-01-01 --end-date 2024-12-31
 ```
 
 ### Debug Mode
