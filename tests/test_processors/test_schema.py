@@ -63,7 +63,7 @@ class TestSharedMetadata:
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
             "url": "https://example.com/doc-12345",
-            "plain_language_summary": "The Court held that testing is important.",
+            "document_summary": "The Court held that testing is important.",
             "constitution_cited": ["First Amendment", "Fourth Amendment"],
             "federal_statutes_cited": ["42 U.S.C. § 1983"],
             "federal_regulations_cited": ["40 C.F.R. Part 60"],
@@ -105,7 +105,7 @@ class TestSharedMetadata:
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
             "url": "https://example.com/doc-12345",
-            "plain_language_summary": "Test summary",
+            "document_summary": "Test summary",
         }
 
         # Act & Assert
@@ -131,7 +131,7 @@ class TestSharedMetadata:
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
             "url": "https://example.com",
-            "plain_language_summary": "Summary",
+            "document_summary": "Summary",
             "topics_or_policy_areas": ["topic1", "topic2"],  # Only 2, need 5-8
         }
 
@@ -171,7 +171,7 @@ class TestSharedMetadata:
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
             "url": "https://example.com",
-            "plain_language_summary": "Summary",
+            "document_summary": "Summary",
             "topics_or_policy_areas": ["t1", "t2", "t3", "t4", "t5"],
         }
 
@@ -283,7 +283,7 @@ class TestSupremeCourtMetadata:
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
             "url": "https://example.com/miranda",
-            "plain_language_summary": "Police must inform suspects of their rights.",
+            "document_summary": "Police must inform suspects of their rights.",
             "topics_or_policy_areas": [
                 "criminal law",
                 "civil rights",
@@ -335,7 +335,7 @@ class TestSupremeCourtMetadata:
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
             "url": "https://example.com",
-            "plain_language_summary": "Summary",
+            "document_summary": "Summary",
             "topics_or_policy_areas": ["t1", "t2", "t3", "t4", "t5"],
             # Required SCOTUS fields
             "case_name": "Test Case",
@@ -370,7 +370,7 @@ class TestSupremeCourtMetadata:
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
             "url": "https://example.com",
-            "plain_language_summary": "Summary",
+            "document_summary": "Summary",
             "constitution_cited": ["First Amendment"],  # Inherited field
             "topics_or_policy_areas": ["t1", "t2", "t3", "t4", "t5"],
             "case_name": "Test v. Case",
@@ -417,7 +417,7 @@ class TestExecutiveOrderMetadata:
             "source": "Federal Register",
             "type": "Executive Order",
             "url": "https://federalregister.gov/eo-14123",
-            "plain_language_summary": "Requires federal agencies to reduce emissions.",
+            "document_summary": "Requires federal agencies to reduce emissions.",
             "topics_or_policy_areas": [
                 "climate",
                 "environment",
@@ -465,7 +465,7 @@ class TestExecutiveOrderMetadata:
             "source": "Federal Register",
             "type": "Executive Order",
             "url": "https://example.com",
-            "plain_language_summary": "Summary",
+            "document_summary": "Summary",
             "topics_or_policy_areas": ["t1", "t2", "t3", "t4", "t5"],
             # Required EO fields
             "plain_summary": "Summary",
@@ -499,7 +499,7 @@ class TestExecutiveOrderMetadata:
             "source": "Federal Register",
             "type": "Executive Order",
             "url": "https://example.com",
-            "plain_language_summary": "Summary",
+            "document_summary": "Summary",
             "topics_or_policy_areas": ["t1", "t2", "t3", "t4", "t5"],
             "plain_summary": "Summary",
             "action_plain": "Action",
@@ -544,7 +544,7 @@ class TestQdrantPayload:
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
             "url": "https://example.com",
-            "plain_language_summary": "Summary",
+            "document_summary": "Summary",
             "topics_or_policy_areas": ["t1", "t2", "t3", "t4", "t5"],
             "holding_plain": "Held...",
             "outcome_simple": "Reversed",
@@ -584,7 +584,7 @@ class TestQdrantPayload:
             "source": "Federal Register",
             "type": "Executive Order",
             "url": "https://federalregister.gov",
-            "plain_language_summary": "Climate order",
+            "document_summary": "Climate order",
             "topics_or_policy_areas": [
                 "climate",
                 "energy",
@@ -645,7 +645,7 @@ class TestSchemaSerializationDeserialization:
             source="TestSource",
             type="TestType",
             url="https://example.com",
-            plain_language_summary="Summary",
+            document_summary="Summary",
             constitution_cited=["First Amendment"],
             topics_or_policy_areas=["t1", "t2", "t3", "t4", "t5"],
         )
@@ -675,7 +675,7 @@ class TestSchemaSerializationDeserialization:
             source="CourtListener",
             type="Supreme Court Opinion",
             url="https://example.com",
-            plain_language_summary="Summary",
+            document_summary="Summary",
             topics_or_policy_areas=["t1", "t2", "t3", "t4", "t5"],
             case_name="Test v. Case",
             holding_plain="Held...",
@@ -717,7 +717,7 @@ class TestSchemaSerializationDeserialization:
                 "source": "Test",
                 "type": "Test",
                 "url": "https://example.com",
-                "plain_language_summary": "Summary",
+                "document_summary": "Summary",
                 "topics_or_policy_areas": ["t1", "t2", "t3", "t4", "t5"],
                 "chunk_index": 0,
                 "chunk_total": 1,
@@ -755,7 +755,7 @@ def valid_shared_metadata_dict():
         "source": "TestSource",
         "type": "TestType",
         "url": "https://example.com/test",
-        "plain_language_summary": "This is a test summary.",
+        "document_summary": "This is a test summary.",
         "constitution_cited": ["First Amendment", "Fourth Amendment"],
         "federal_statutes_cited": ["42 U.S.C. § 1983"],
         "federal_regulations_cited": ["40 C.F.R. Part 60"],

@@ -1,16 +1,17 @@
 """
 LLM-based metadata extraction using GPT-5-nano.
 
-This module provides functions to extract structured metadata from legal documents
-using OpenAI's GPT-5-nano model. It generates plain-language summaries, extracts
-citations, and identifies key legal concepts to enhance retrieval capabilities.
+This module provides functions to extract structured document-level metadata from legal documents
+using OpenAI's GPT-5-nano model. It generates technical summaries optimized for RAG retrieval,
+extracts citations, and identifies key legal concepts to enhance semantic search and provide
+context for understanding document chunks.
 
 The module focuses on:
-    - Plain-language explanations for lay users
-    - Structured citation extraction in Bluebook format
-    - Topic and policy area identification
-    - Supreme Court opinion analysis (holdings, outcomes, issues)
-    - Executive Order impact assessment
+    - Document-level summaries optimized for LLM clients and semantic search
+    - Structured citation extraction in Bluebook format with validation
+    - Topic and policy area identification balancing technical precision and searchability
+    - Supreme Court opinion analysis (holdings, outcomes, issues, reasoning)
+    - Executive Order impact assessment (actions, agencies, deadlines)
 
 Python Learning Notes:
     - OpenAI client requires API key from environment variables
@@ -37,26 +38,30 @@ def generate_scotus_llm_fields(
     text: str, syllabus: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Generate LLM-extracted metadata fields for Supreme Court opinions.
+    Generate LLM-extracted document-level metadata for Supreme Court opinions.
 
-    This function uses GPT-5-nano to extract structured metadata from Supreme Court
-    opinion text. It prioritizes the Syllabus (when available) for extracting
-    holdings, outcomes, and issues, as the Syllabus provides official summaries
-    prepared by the Court Reporter's office.
+    This function uses GPT-5-nano to extract structured metadata that provides context for
+    understanding individual chunks (500-800 token fragments) from much larger opinions (15,000+ words).
+    The metadata is optimized for RAG retrieval and LLM comprehension, using precise legal terminology
+    rather than simplified language.
+
+    It prioritizes the Syllabus (when available) for extracting holdings, outcomes, and issues,
+    as the Syllabus provides official summaries prepared by the Court Reporter's office.
 
     The function extracts:
-        - Plain-language legal summaries and explanations
-        - Citations to Constitution, statutes, regulations, and cases
-        - Topics and policy areas for improved retrieval
-        - Court holdings, outcomes, issues, and reasoning
+        - Document-level technical summary (1-2 dense sentences)
+        - Citations to Constitution, statutes, regulations, and cases (validated, text-backed)
+        - Topics and policy areas balancing technical precision with searchability
+        - Court holdings, outcomes, issues, and reasoning using legal terminology
 
     Syllabus Priority:
         When a Syllabus is provided, it takes precedence for extracting:
-        - holding_plain: The Court's holding in one sentence
-        - outcome_simple: The case outcome in simple terms
+        - holding_plain: The Court's holding using precise legal terminology
+        - outcome_simple: The case disposition
         - issue_plain: The central legal question
-        The Syllabus is the Court's official summary and provides the most
-        authoritative source for these key elements.
+
+        When NO Syllabus is provided, these fields are extracted ONLY from the majority opinion
+        (never from dissents or concurrences).
 
     Args:
         text (str): Full text of the Supreme Court opinion, including all
@@ -67,17 +72,16 @@ def generate_scotus_llm_fields(
 
     Returns:
         Dict[str, Any]: Dictionary containing extracted metadata fields:
-            - plain_language_summary: One-paragraph summary using the template
-              "The Court held [holding]... It stated... [reasoning]."
-            - constitution_cited: List of constitutional citations
-            - federal_statutes_cited: List of U.S.C. citations
-            - federal_regulations_cited: List of C.F.R. citations
-            - cases_cited: List of case citations with names and reporters
-            - topics_or_policy_areas: 5-8 topic tags
-            - holding_plain: One-sentence holding statement
-            - outcome_simple: Simple outcome description
-            - issue_plain: Central question in plain English
-            - reasoning: Court's reasoning in one paragraph
+            - document_summary: 1-2 dense, technical sentences providing document-level context
+            - constitution_cited: List of constitutional citations (text-backed, validated)
+            - federal_statutes_cited: List of U.S.C. citations (text-backed, validated)
+            - federal_regulations_cited: List of C.F.R. citations (text-backed, validated)
+            - cases_cited: List of case citations (text-backed, validated)
+            - topics_or_policy_areas: 5-8 topic tags (technical + searchable)
+            - holding_plain: One-sentence holding using legal terminology
+            - outcome_simple: Case disposition and consequence
+            - issue_plain: Central legal question
+            - reasoning: Court's key reasoning (3-4 sentences)
 
     Example:
         # With Syllabus (preferred approach)
@@ -85,12 +89,12 @@ def generate_scotus_llm_fields(
         syllabus_text = "SYLLABUS\\n\\nHeld: The Court held that..."
 
         metadata = generate_scotus_llm_fields(opinion_text, syllabus_text)
-        print(metadata["holding_plain"])  # Extracted from Syllabus
-        print(metadata["constitution_cited"])  # From full opinion
+        print(metadata["document_summary"])  # Technical summary of entire case
+        print(metadata["constitution_cited"])  # Validated citations from full opinion
 
-        # Without Syllabus (fallback)
+        # Without Syllabus (fallback - extracts from majority only)
         metadata = generate_scotus_llm_fields(opinion_text)
-        print(metadata["issue_plain"])  # Extracted from opinion text
+        print(metadata["holding_plain"])  # From majority opinion, not dissents
 
     Python Learning Notes:
         - Optional parameters allow flexible function usage
@@ -110,79 +114,151 @@ def generate_scotus_llm_fields(
             # If Syllabus is available, prepend it for priority extraction
             analysis_content = f"SYLLABUS (USE THIS FOR HOLDING, OUTCOME, AND ISSUE):\n{syllabus}\n\nFULL OPINION:\n{text}"
             syllabus_instruction = """
-            IMPORTANT: Extract holding_plain, outcome_simple, and issue_plain ONLY from the SYLLABUS section.
-            The Syllabus is the authoritative summary. Use the full opinion for all other fields.
+            CRITICAL: Extract holding_plain, outcome_simple, and issue_plain ONLY from the SYLLABUS section.
+            The Syllabus is the Court's official summary and provides the authoritative source for these fields.
+            Use the full opinion for all other fields (citations, topics, reasoning).
+            """
+        else:
+            syllabus_instruction = """
+            CRITICAL: When NO Syllabus is provided, extract holding_plain, outcome_simple, and issue_plain
+            ONLY from the majority opinion. NEVER use dissenting or concurring opinions for these fields.
+            Dissents and concurrences represent alternative views, not the Court's actual holding.
             """
 
         # System prompt defining the extraction task
-        system_prompt = f"""You are a legal analyst extracting metadata from Supreme Court opinions for a RAG system.
-Your task is to extract structured metadata that helps lay users (non-lawyers) understand complex legal documents.
+        system_prompt = f"""You are a legal analyst extracting document-level metadata from Supreme Court opinions for a RAG system.
 
-CRITICAL: Use simple, everyday language. Avoid legal jargon at all costs.
+Your task is to create metadata that provides context for understanding individual chunks (500-800 token fragments)
+from much larger opinions (15,000+ words). This metadata helps LLM clients assess chunk relevance and synthesize
+answers to user queries.
+
+CRITICAL: Use precise legal terminology. Dense, technical summaries improve semantic search and provide
+better context than simplified language. The LLM clients consuming this metadata will translate to plain
+language for end users as needed.
 
 {syllabus_instruction}
 
+REASONING PROCESS - Before extracting, think through:
+1. Document structure: Identify the Syllabus (if present), majority opinion, concurrences, and dissents
+2. Controlling holdings: Determine what the Court actually held (majority view only)
+3. Citations: Identify constitutional provisions, statutes, regulations, and cases that are actually cited verbatim
+4. Key reasoning: Trace the Court's logical progression from issue to holding
+
+OUTPUT FORMAT:
+- Return ONLY a single JSON object
+- NO markdown code fences (no ```json)
+- NO explanatory text before or after the JSON
+- NO additional commentary
+- Just the raw JSON object
+
+Expected JSON schema:
+{{
+  "document_summary": "string (1-2 dense sentences)",
+  "constitution_cited": ["array of strings"],
+  "federal_statutes_cited": ["array of strings"],
+  "federal_regulations_cited": ["array of strings"],
+  "cases_cited": ["array of strings"],
+  "topics_or_policy_areas": ["array of 5-8 strings"],
+  "holding_plain": "string",
+  "outcome_simple": "string",
+  "issue_plain": "string",
+  "reasoning": "string"
+}}
+
 Extract the following fields in JSON format:
 
-1. plain_language_summary: One paragraph following this structure:
-   - Start with: "In a case about [what the case is about in everyday terms]..."
-   - Then: "the Court decided that [holding in plain English]."
-   - Finally: "The Court reasoned that [why they decided this way - the key reason]."
+1. document_summary: One to two dense, technical sentences providing document-level context.
+   - State the legal question, holding, and key reasoning
+   - Use precise legal terminology (constitutional provisions, statutes, legal doctrines)
+   - Include vote breakdown and note dissents if applicable
+   - Focus on information density, not narrative flow
+   - This appears with every chunk, so keep it concise (~40 words)
 
-   Example: "In a case about whether police can search someone's phone without a warrant, the Court decided that police must get a warrant before searching digital devices. The Court reasoned that cell phones contain massive amounts of private information that deserves strong privacy protection."
+   Example: "Court held CFPB funding via Federal Reserve earnings satisfies Art. I, § 9, cl. 7 Appropriations Clause. Statutory authorization in 12 U.S.C. § 5497(a)(1) constitutes valid appropriation; applied rational basis review. 7-2 decision; Alito dissenting on historical practice grounds."
 
-2. constitution_cited: Array of U.S. Constitution citations in Bluebook format (e.g., "U.S. Const. amend. XIV, § 1", "U.S. Const. art. I, § 8, cl. 3")
+   NOT: "In a case about government agency funding, the Court decided that the Consumer Financial Protection Bureau can get its money from the Federal Reserve. The Court reasoned that Congress gave permission for this arrangement, which is enough under the Constitution's rules about government spending."
 
-3. federal_statutes_cited: Array of U.S.C. citations in Bluebook format (e.g., "42 U.S.C. § 1983", "8 U.S.C. § 1182(f)")
+2. constitution_cited: Array of U.S. Constitution citations in Bluebook format.
+   - ONLY include citations that appear verbatim in the provided text
+   - Use proper Bluebook format with correct spacing and punctuation
+   - Remove duplicates; preserve order of first appearance
+   - If no constitutional citations appear, return an empty array []
 
-4. federal_regulations_cited: Array of C.F.R. citations in Bluebook format (e.g., "14 C.F.R. § 91.817")
+   Examples:
+   ✅ CORRECT: "U.S. Const. amend. XIV, § 1"
+   ✅ CORRECT: "U.S. Const. art. I, § 8, cl. 3"
+   ❌ INCORRECT: "14th Amendment Section 1"
+   ❌ INCORRECT: "Article I Section 8"
 
-5. cases_cited: Array of case citations in Bluebook format (e.g., "Brown v. Bd. of Educ., 347 U.S. 483 (1954)")
+3. federal_statutes_cited: Array of U.S.C. citations in Bluebook format.
+   - ONLY include citations that appear verbatim in the provided text
+   - Use proper spacing: "42 U.S.C. § 1983" (note space before §)
+   - Remove duplicates; preserve order of first appearance
+   - If no statute citations appear, return an empty array []
 
-6. topics_or_policy_areas: Array of 5-8 tags that mix legal concepts AND everyday search terms people might use.
-   - Include both: technical legal terms (e.g., "due process", "commerce clause")
-   - AND everyday topics (e.g., "healthcare", "voting rights", "police searches", "religious freedom")
-   - Think: "What would a regular person search for to find this case?"
-   - Good examples: ["abortion rights", "religious freedom", "healthcare law", "federal power"]
-   - Bad examples: ["constitutional law", "statutory interpretation", "judicial review"]
+   Examples:
+   ✅ CORRECT: "42 U.S.C. § 1983"
+   ✅ CORRECT: "8 U.S.C. § 1182(f)"
+   ❌ INCORRECT: "Section 1983"
+   ❌ INCORRECT: "42 USC 1983"
 
-7. holding_plain: The Court's decision in ONE sentence using simple language.
-   - Avoid legal jargon. Instead of "petitioner prevailed" say "the person who sued won"
-   - Instead of "reversed and remanded" say "overturned the lower court's decision and sent it back"
-   - Focus on WHAT the Court decided, not the technical legal outcome
+4. federal_regulations_cited: Array of C.F.R. citations in Bluebook format.
+   - ONLY include citations that appear verbatim in the provided text
+   - Remove duplicates; preserve order of first appearance
+   - If no regulation citations appear, return an empty array []
 
-8. outcome_simple: Who won and what happens next, in simple terms.
-   - Instead of: "Reversed and remanded"
-   - Say: "The person who sued won. The case goes back to the lower court for a new decision."
-   - Instead of: "Affirmed"
-   - Say: "The lower court's decision stands. The person who appealed lost."
+   Examples:
+   ✅ CORRECT: "14 C.F.R. § 91.817"
+   ❌ INCORRECT: "14 CFR 91.817"
 
-9. issue_plain: The central question the Court answered, phrased as a simple question anyone could understand.
-   - Start with: "Can...", "Does...", "Must...", "Is it constitutional to..."
-   - Example: "Can Congress pass a law requiring people to buy health insurance?"
-   - NOT: "Whether the Affordable Care Act's individual mandate exceeds Congress's enumerated powers"
+5. cases_cited: Array of case citations in Bluebook format.
+   - ONLY include citations that appear verbatim in the provided text
+   - Include case name, reporter, and year
+   - Remove duplicates; preserve order of first appearance
+   - If no case citations appear, return an empty array []
 
-10. reasoning: Why did the Court decide this way? Explain in ONE paragraph using everyday language.
-    - Focus on the Court's main reason, not all arguments
-    - Explain it like you're telling a friend who knows nothing about law
-    - Connect the reasoning to common sense or familiar principles when possible
-    - Avoid terms like: "petitioner", "respondent", "appellant", "appellee", "certiorari", "standing", "justiciability"
+   Examples:
+   ✅ CORRECT: "Brown v. Bd. of Educ., 347 U.S. 483 (1954)"
+   ✅ CORRECT: "Chevron U.S.A. Inc. v. NRDC, 467 U.S. 837 (1984)"
+   ❌ INCORRECT: "Brown v. Board of Education"
+   ❌ INCORRECT: "the Chevron case"
 
-FORBIDDEN LEGAL JARGON - Use these plain alternatives:
-- "Petitioner" → "the person/party who sued" or "the person who appealed"
-- "Respondent" → "the other party" or "the government" or "[specific party name]"
-- "Affirmed" → "upheld the lower court's decision" or "kept the decision in place"
-- "Reversed" → "overturned the lower court's decision"
-- "Remanded" → "sent back to the lower court"
-- "Reversed and remanded" → "overturned the decision and sent it back for reconsideration"
-- "Vacated" → "threw out the lower court's decision"
-- "Standing" → "the right to sue" or "legal permission to bring the case"
-- "Certiorari" → "agreed to hear the case" or "took the case"
-- "En banc" → "full court" or "all the judges"
-- "Per curiam" → "unsigned opinion" or "opinion by the whole court"
-- "Dicta" → "additional comments" or "side remarks"
+6. topics_or_policy_areas: Array of 5-8 tags balancing technical precision with searchability.
+   - Include THREE types of tags:
+     * Broad policy areas: "environmental law", "healthcare", "criminal procedure"
+     * Specific legal doctrines: "Chevron deference", "qualified immunity", "Commerce Clause", "Appropriations Clause"
+     * Affected entities/areas: "federal agencies", "state governments", "individual rights", "regulatory authority"
+   - Remove duplicates; preserve order of appearance
+   - Return exactly 5-8 tags (no more, no fewer)
 
-Remember: Write for someone with NO legal training. Use concrete examples and simple explanations."""
+   Good examples: ["administrative law", "Chevron deference", "EPA rulemaking", "Clean Air Act", "statutory interpretation", "federal agencies"]
+   Bad examples: ["constitutional law", "legal case", "court decision"] (too generic)
+
+7. holding_plain: The Court's holding in ONE clear, declarative sentence.
+   - State what the Court held using precise legal terminology
+   - Focus on the substantive legal determination
+   - Example: "Statutory authorization of CFPB funding satisfies the Appropriations Clause"
+   - Example: "Fourth Amendment requires warrant for cell phone searches incident to arrest"
+
+8. outcome_simple: The case disposition and its immediate consequence.
+   - State the procedural outcome (affirmed, reversed, vacated, remanded)
+   - Note what happens next if applicable
+   - Example: "Affirmed lower court judgment upholding CFPB funding mechanism"
+   - Example: "Reversed Ninth Circuit and remanded for reconsideration under strict scrutiny"
+
+9. issue_plain: The central legal question before the Court.
+   - Frame as a question using legal terminology
+   - Be specific about the constitutional/statutory provision at issue
+   - Example: "Whether CFPB funding via Federal Reserve earnings violates Art. I, § 9, cl. 7 Appropriations Clause"
+   - Example: "Whether search-incident-to-arrest exception applies to digital devices under Fourth Amendment"
+
+10. reasoning: The Court's key reasoning in one concise paragraph (3-4 sentences).
+    - State the legal standard or test applied
+    - Explain the Court's analytical framework
+    - Note key precedents relied upon or distinguished
+    - Use precise legal terminology
+
+    Example: "Applied rational basis review to appropriations challenges. Statutory authorization constitutes valid appropriation under historical practice dating to founding era. Distinguished from nondelegation doctrine cases where Congress delegates legislative power rather than authorizing expenditures. Relied on precedent upholding standing appropriations for judicial salaries and mint operations."
 
         # User prompt with the opinion text
         user_prompt = (
@@ -256,7 +332,7 @@ Remember: Write for someone with NO legal training. Use concrete examples and si
 
         # Ensure all required fields are present with defaults
         required_fields = {
-            "plain_language_summary": "",
+            "document_summary": "",
             "constitution_cited": [],
             "federal_statutes_cited": [],
             "federal_regulations_cited": [],
@@ -298,7 +374,7 @@ Remember: Write for someone with NO legal training. Use concrete examples and si
         logger.error("Failed to extract SCOTUS metadata: %s", str(e), exc_info=True)
         # Return minimal valid metadata on error
         return {
-            "plain_language_summary": "Unable to generate summary.",
+            "document_summary": "Unable to generate summary.",
             "constitution_cited": [],
             "federal_statutes_cited": [],
             "federal_regulations_cited": [],
@@ -313,22 +389,23 @@ Remember: Write for someone with NO legal training. Use concrete examples and si
 
 def generate_eo_llm_fields(text: str) -> Dict[str, Any]:
     """
-    Generate LLM-extracted metadata fields for Executive Orders.
+    Generate LLM-extracted document-level metadata for Executive Orders.
 
-    This function uses GPT-5-nano to extract structured metadata from Executive
-    Order text. It focuses on action-oriented summaries and regulatory impacts
-    to help users understand what the order does and who it affects.
+    This function uses GPT-5-nano to extract structured metadata that provides context for
+    understanding individual chunks (300-400 token fragments) from Executive Orders. The metadata
+    is optimized for RAG retrieval and LLM comprehension, using precise policy and legal terminology.
 
     The function extracts:
-        - Action-oriented plain language summary
-        - Impacted federal agencies
-        - Citations to Constitution, statutes, regulations, and cases
-        - Policy areas and topics for improved retrieval
+        - Document-level technical summary (1-2 dense sentences)
+        - Impacted federal agencies with canonical names
+        - Citations to Constitution, statutes, regulations (validated, text-backed)
+        - Policy areas and topics balancing technical precision with searchability
 
     Executive Order Specifics:
-        - Summaries emphasize concrete actions (prohibits, requires, establishes)
-        - Agency identification focuses on operational impacts
-        - Topics include both policy areas and regulatory domains
+        - Summaries include specific agency names, CFR/USC citations, and deadlines
+        - Agency identification uses full canonical names
+        - Topics cover policy areas, mechanisms, and affected sectors
+        - All citations must appear verbatim in the order text
 
     Args:
         text (str): Full text of the Executive Order, including all sections
@@ -337,28 +414,27 @@ def generate_eo_llm_fields(text: str) -> Dict[str, Any]:
 
     Returns:
         Dict[str, Any]: Dictionary containing extracted metadata fields:
-            - plain_language_summary: Action-oriented paragraph starting with
-              strong verbs (establishes, prohibits, requires, revokes)
-            - agencies_impacted: List of federal agencies affected by the order
-            - constitution_cited: List of constitutional citations
-            - federal_statutes_cited: List of U.S.C. citations
-            - federal_regulations_cited: List of C.F.R. citations
-            - cases_cited: List of case citations
-            - topics_or_policy_areas: 5-8 topic tags
+            - document_summary: 1-2 dense, technical sentences providing document-level context
+            - agencies_impacted: List of federal agencies (canonical names, deduplicated)
+            - constitution_cited: List of constitutional citations (text-backed, validated)
+            - federal_statutes_cited: List of U.S.C. citations (text-backed, validated)
+            - federal_regulations_cited: List of C.F.R. citations (text-backed, validated)
+            - cases_cited: List of case citations (text-backed, validated)
+            - topics_or_policy_areas: 5-8 topic tags (technical + searchable)
 
     Example:
         eo_text = "Executive Order 14304\\n\\nSec. 1. Purpose..."
 
         metadata = generate_eo_llm_fields(eo_text)
-        print(metadata["plain_language_summary"])
-        # "Establishes new requirements for federal agencies to..."
+        print(metadata["document_summary"])
+        # "Directs FAA to repeal 14 C.F.R. § 91.817 supersonic flight ban within 180 days..."
 
         print(metadata["agencies_impacted"])
-        # ["Department of Transportation", "Federal Aviation Administration"]
+        # ["Federal Aviation Administration", "Department of Transportation", "Office of Science and Technology Policy"]
 
     Python Learning Notes:
         - JSON response format ensures structured output
-        - Low temperature (0.2) improves consistency
+        - Reasoning instructions improve extraction accuracy
         - Default values prevent missing field errors
         - Logging helps with debugging and monitoring
     """
@@ -367,67 +443,98 @@ def generate_eo_llm_fields(text: str) -> Dict[str, Any]:
         client = OpenAI(api_key=get_openai_api_key())
 
         # System prompt defining the extraction task for Executive Orders
-        system_prompt = """You are a policy analyst extracting metadata from Presidential Executive Orders for a RAG system.
-Your task is to extract structured metadata that helps lay users (non-lawyers, everyday Americans) understand government actions and policies.
+        system_prompt = """You are a policy analyst extracting document-level metadata from Presidential Executive Orders for a RAG system.
 
-CRITICAL: Write for regular people, not policy experts. Focus on real-world impacts.
+Your task is to create metadata that provides context for understanding individual chunks (300-400 token fragments)
+from much larger executive orders. This metadata helps LLM clients assess chunk relevance and synthesize answers
+to user queries.
+
+CRITICAL: Use precise policy and legal terminology. Include specific agency names, statutory citations, and
+regulatory mechanisms. The LLM clients consuming this metadata will translate to accessible language for end
+users as needed.
+
+REASONING PROCESS - Before extracting, think through:
+1. Document structure: Identify header, sections, subsections, and signature block
+2. Key actions: What does this order mandate, prohibit, establish, or revoke?
+3. Affected entities: Which agencies must take action? Which are affected?
+4. Legal authorities: Identify constitutional provisions, statutes, and regulations that are actually cited verbatim
+5. Deadlines: Note any explicit timelines or effective dates mentioned in the text
+
+OUTPUT FORMAT:
+- Return ONLY a single JSON object
+- NO markdown code fences (no ```json)
+- NO explanatory text before or after the JSON
+- NO additional commentary
+- Just the raw JSON object
+
+Expected JSON schema:
+{{
+  "document_summary": "string (1-2 dense sentences)",
+  "agencies_impacted": ["array of strings"],
+  "constitution_cited": ["array of strings"],
+  "federal_statutes_cited": ["array of strings"],
+  "federal_regulations_cited": ["array of strings"],
+  "cases_cited": ["array of strings"],
+  "topics_or_policy_areas": ["array of 5-8 strings"]
+}}
 
 Extract the following fields in JSON format:
 
-1. plain_language_summary: One paragraph (3-4 sentences) explaining what this order does and who it affects.
+1. document_summary: One to two dense, technical sentences providing document-level context.
+   - State the order's key mandates, prohibitions, or establishments
+   - Include specific agency names, CFR/USC citations, and deadlines
+   - Use precise policy terminology and regulatory mechanisms
+   - Focus on information density, not accessibility
+   - This appears with every chunk, so keep it concise (~40 words)
 
-   Structure:
-   - First sentence: Start with an action verb describing what the order does
-   - Second sentence: Explain the practical impact or real-world change
-   - Third sentence: Note who is affected (businesses, individuals, agencies, etc.)
-   - Optional fourth sentence: Mention any deadlines or implementation timeline
+   Example: "Directs FAA to repeal 14 C.F.R. § 91.817 supersonic flight ban within 180 days and establish noise-based certification under 14 C.F.R. Part 36. Coordinates supersonic R&D through OSTP with DOD, DOC, DOT, and NASA participation; mandates NPRM within 18 months."
 
-   Strong action verbs to use:
-   - "Creates..." - for new programs, agencies, or initiatives
-   - "Bans..." or "Prohibits..." - for restrictions (be specific about what's banned)
-   - "Requires..." or "Mandates..." - for new obligations (explain who must do what)
-   - "Cancels..." or "Eliminates..." - for ending existing programs/policies
-   - "Orders [agency] to..." - when directing specific agency actions
-   - "Speeds up..." - for acceleration of existing processes
-   - "Protects..." - for safeguarding people or resources
-   - "Expands..." - for growing existing programs
-
-   Example: "Creates a new task force within the Department of Transportation to speed up approval of supersonic aircraft for commercial flights. This aims to make supersonic passenger travel available in the United States by reducing regulatory delays. The order affects aircraft manufacturers, airlines planning supersonic routes, and the Federal Aviation Administration, which must update its rules within 180 days."
-
-   NOT: "Establishes interagency coordination mechanisms to facilitate regulatory harmonization for next-generation aviation technologies."
+   NOT: "Creates a new task force within the Department of Transportation to speed up approval of supersonic aircraft for commercial flights. This aims to make supersonic passenger travel available in the United States by reducing regulatory delays. The order affects aircraft manufacturers, airlines planning supersonic routes, and the Federal Aviation Administration, which must update its rules within 180 days."
 
 2. agencies_impacted: Array of federal agencies that must take action or are affected by this order.
-   - Use full, recognizable names: "Department of Transportation", "Environmental Protection Agency"
+   - Use full, canonical department names: "Department of Transportation", "Environmental Protection Agency"
+   - Expand acronyms on first mention when helpful: "Federal Aviation Administration (FAA)"
    - Include both primary agencies (who must act) and secondary agencies (who are affected)
-   - When helpful for understanding, you may note their role: "Department of Energy (renewable energy programs)"
+   - Remove duplicates; preserve order of first appearance
+   - Avoid listing the same agency multiple times with different names
 
-3. constitution_cited: Array of U.S. Constitution citations in Bluebook format
+3. constitution_cited: Array of U.S. Constitution citations in Bluebook format.
+   - ONLY include citations that appear verbatim in the provided text
+   - Remove duplicates; preserve order of first appearance
+   - If no constitutional citations appear, return an empty array []
 
-4. federal_statutes_cited: Array of U.S.C. citations in Bluebook format
+4. federal_statutes_cited: Array of U.S.C. citations in Bluebook format.
+   - ONLY include citations that appear verbatim in the provided text
+   - Use proper spacing: "42 U.S.C. § 4332" (note space before §)
+   - Remove duplicates; preserve order of first appearance
+   - If no statute citations appear, return an empty array []
 
-5. federal_regulations_cited: Array of C.F.R. citations in Bluebook format
+5. federal_regulations_cited: Array of C.F.R. citations in Bluebook format.
+   - ONLY include citations that appear verbatim in the provided text
+   - Remove duplicates; preserve order of first appearance
+   - If no regulation citations appear, return an empty array []
 
-6. cases_cited: Array of case citations in Bluebook format (rare in EOs but possible)
+6. cases_cited: Array of case citations in Bluebook format (rare in EOs but possible).
+   - ONLY include citations that appear verbatim in the provided text
+   - Remove duplicates; preserve order of first appearance
+   - If no case citations appear, return an empty array []
 
 7. topics_or_policy_areas: Array of 5-8 tags using terms regular people would search for.
 
-   Include a mix of:
+   Include a mix across three categories:
    - Broad policy areas: "climate change", "national security", "healthcare", "immigration"
-   - Specific topics: "electric vehicles", "border security", "prescription drugs", "voting access"
+   - Specific topics/mechanisms: "electric vehicles", "border security", "prescription drugs", "regulatory reform"
    - Affected sectors: "small business", "farming", "technology", "manufacturing"
-   - Geographic relevance when applicable: "federal lands", "coastal areas", "tribal lands"
+
+   Remove duplicates; preserve order of appearance
+   Return exactly 5-8 tags (no more, no fewer)
+   ONLY include topics based on what is actually in the order text (do not speculate about community impacts)
 
    Good examples: ["clean energy", "electric vehicles", "auto industry", "climate change", "manufacturing jobs"]
-   Bad examples: ["regulatory reform", "administrative procedure", "executive authority", "federal policy"]
+   Bad examples: ["regulatory reform", "administrative procedure", "executive authority", "federal policy"] (too generic)
 
    Think: "What would someone type into a search engine to find this order?"
-
-REMEMBER:
-- Avoid bureaucratic language and acronyms without explanation
-- Focus on "who does what" and "who is affected"
-- Explain the practical, real-world impact
-- Use concrete, specific terms over abstract policy language
-- Write like you're explaining this to a friend or family member who doesn't work in government"""
+"""
 
         # User prompt with the Executive Order text
         user_prompt = f"Extract metadata from this Executive Order:\n\n{text}"
@@ -499,7 +606,7 @@ REMEMBER:
 
         # Ensure all required fields are present with defaults
         required_fields = {
-            "plain_language_summary": "",
+            "document_summary": "",
             "agencies_impacted": [],
             "constitution_cited": [],
             "federal_statutes_cited": [],
@@ -527,23 +634,6 @@ REMEMBER:
         elif len(result["topics_or_policy_areas"]) > 8:
             result["topics_or_policy_areas"] = result["topics_or_policy_areas"][:8]
 
-        # Ensure summary starts with action verb if possible
-        summary = result.get("plain_language_summary", "")
-        action_verbs = [
-            "Establishes",
-            "Prohibits",
-            "Requires",
-            "Revokes",
-            "Directs",
-            "Creates",
-            "Modifies",
-            "Authorizes",
-            "Mandates",
-            "Rescinds",
-        ]
-        if summary and not any(summary.startswith(verb) for verb in action_verbs):
-            logger.warning("Executive Order summary doesn't start with action verb")
-
         logger.debug(
             "Successfully extracted EO metadata with %d impacted agencies",
             len(result["agencies_impacted"]),
@@ -557,7 +647,7 @@ REMEMBER:
         )
         # Return minimal valid metadata on error
         return {
-            "plain_language_summary": "Unable to generate summary.",
+            "document_summary": "Unable to generate summary.",
             "agencies_impacted": [],
             "constitution_cited": [],
             "federal_statutes_cited": [],

@@ -358,7 +358,7 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
 
                 # Use standardized fallback messages
                 llm_fields = {
-                    "plain_language_summary": "Unable to generate summary.",
+                    "document_summary": "Unable to generate summary.",
                     "constitution_cited": [],
                     "federal_statutes_cited": [],
                     "federal_regulations_cited": [],
@@ -437,7 +437,7 @@ def build_payloads_from_document(doc: Document) -> List[Dict[str, Any]]:
 
                 # Use standardized fallback messages
                 llm_fields = {
-                    "plain_language_summary": "Unable to generate summary.",
+                    "document_summary": "Unable to generate summary.",
                     "agencies_impacted": [],
                     "constitution_cited": [],
                     "federal_statutes_cited": [],

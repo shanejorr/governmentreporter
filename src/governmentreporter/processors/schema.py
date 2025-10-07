@@ -67,8 +67,8 @@ class SharedMetadata(BaseModel):
     url: str = Field(description="Canonical web URL for the full document")
 
     # LLM-generated fields (populated by GPT-5-nano)
-    plain_language_summary: str = Field(
-        description="User-friendly summary in everyday language"
+    document_summary: str = Field(
+        description="Document-level technical summary (1-2 dense sentences) optimized for RAG retrieval and LLM comprehension"
     )
     constitution_cited: List[str] = Field(
         default_factory=list,

@@ -110,7 +110,7 @@ This module provides client implementations for various government data sources.
 ### 2. Database Module (`src/governmentreporter/database/`)
 
 #### `qdrant_client.py` - Qdrant Vector Database Client
-- **Purpose**: Manages document embeddings and metadata in Qdrant vector database
+- **Purpose**: Manages document chunk embeddings and document-level metadata in Qdrant vector database
 - **Key Features**:
   - Persistent local storage of vectors
   - 1536-dimensional vectors (OpenAI text-embedding-3-small)
@@ -188,18 +188,20 @@ This module provides document processing capabilities for transforming raw gover
   - `generate_batch_embeddings()`: Efficient batch embedding generation
 - **Error Handling**: Falls back to zero vectors on complete failure
 
-#### `llm_extraction.py` - AI-Powered Metadata Generation
-- **Purpose**: Uses GPT-5-nano to extract rich metadata from document text
+#### `llm_extraction.py` - Document-Level Metadata Generation
+- **Purpose**: Uses GPT-5-nano to extract document-level metadata optimized for RAG retrieval
 - **Key Functions**:
-  - `generate_scotus_llm_fields()`: Extracts legal metadata from Supreme Court opinions
-    - Legal topics and key questions
-    - Constitutional provisions and statutes cited
-    - Holdings and vote breakdowns
-  - `generate_eo_llm_fields()`: Extracts policy metadata from Executive Orders
-    - Policy summaries and topics
-    - Impacted agencies and legal authorities
-    - Economic sectors affected
-- **Implementation**: Structured prompts with JSON output for reliable extraction
+  - `generate_scotus_llm_fields()`: Extracts metadata from Supreme Court opinions
+    - Technical summaries (1-2 dense sentences) using precise legal terminology
+    - Validated citations (text-backed only, preventing hallucinations)
+    - Topics balancing legal doctrines and searchable terms
+    - Holdings, outcomes, and reasoning using legal terminology
+  - `generate_eo_llm_fields()`: Extracts metadata from Executive Orders
+    - Technical summaries with CFR/USC citations and deadlines
+    - Impacted agencies (canonical names, deduplicated)
+    - Validated legal authorities (text-backed only)
+    - Policy topics across areas, mechanisms, and sectors
+- **Implementation**: Structured prompts with explicit reasoning instructions and JSON-only output format
 
 #### `build_payloads.py` - Processing Orchestration
 - **Purpose**: Main entry point that coordinates all processing steps

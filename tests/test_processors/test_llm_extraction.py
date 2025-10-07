@@ -64,7 +64,7 @@ class TestGenerateSCOTUSLLMFields:
 
         # Mock LLM response with complete metadata
         mock_metadata = {
-            "plain_language_summary": "The Court held that the First Amendment protects...",
+            "document_summary": "The Court held that the First Amendment protects...",
             "constitution_cited": ["First Amendment", "Fourteenth Amendment"],
             "federal_statutes_cited": ["42 U.S.C. § 1983"],
             "federal_regulations_cited": [],
@@ -94,7 +94,7 @@ class TestGenerateSCOTUSLLMFields:
 
         # Assert
         assert (
-            result["plain_language_summary"] == mock_metadata["plain_language_summary"]
+            result["document_summary"] == mock_metadata["document_summary"]
         )
         assert result["holding_plain"] == mock_metadata["holding_plain"]
         assert result["constitution_cited"] == mock_metadata["constitution_cited"]
@@ -125,7 +125,7 @@ class TestGenerateSCOTUSLLMFields:
         mock_openai_class.return_value = mock_client
 
         mock_metadata = {
-            "plain_language_summary": "The Court addressed the question of...",
+            "document_summary": "The Court addressed the question of...",
             "constitution_cited": ["Fourth Amendment"],
             "federal_statutes_cited": [],
             "federal_regulations_cited": [],
@@ -150,7 +150,7 @@ class TestGenerateSCOTUSLLMFields:
 
         # Assert
         assert (
-            result["plain_language_summary"] == mock_metadata["plain_language_summary"]
+            result["document_summary"] == mock_metadata["document_summary"]
         )
         assert result["constitution_cited"] == ["Fourth Amendment"]
         assert "search and seizure" in result["topics_or_policy_areas"]
@@ -183,7 +183,7 @@ class TestGenerateSCOTUSLLMFields:
         mock_openai_class.return_value = mock_client
 
         mock_metadata = {
-            "plain_language_summary": "Test summary",
+            "document_summary": "Test summary",
             "constitution_cited": [],
             "federal_statutes_cited": [],
             "federal_regulations_cited": [],
@@ -210,7 +210,7 @@ class TestGenerateSCOTUSLLMFields:
         result = generate_scotus_llm_fields("Test opinion text")
 
         # Assert
-        assert result["plain_language_summary"] == "Test summary"
+        assert result["document_summary"] == "Test summary"
         assert mock_client.chat.completions.create.call_count == 2
         mock_sleep.assert_called_once()
 
@@ -234,7 +234,7 @@ class TestGenerateSCOTUSLLMFields:
 
         # Mock empty/minimal response for empty input
         mock_metadata = {
-            "plain_language_summary": "",
+            "document_summary": "",
             "constitution_cited": [],
             "federal_statutes_cited": [],
             "federal_regulations_cited": [],
@@ -256,7 +256,7 @@ class TestGenerateSCOTUSLLMFields:
         result = generate_scotus_llm_fields("")
 
         # Assert
-        assert result["plain_language_summary"] == ""
+        assert result["document_summary"] == ""
         assert result["constitution_cited"] == []
         assert result["topics_or_policy_areas"] == []
 
@@ -292,7 +292,7 @@ class TestGenerateSCOTUSLLMFields:
 
         # Assert - Should return fallback data, not raise exception
         assert result is not None
-        assert result["plain_language_summary"] == "Unable to generate summary."
+        assert result["document_summary"] == "Unable to generate summary."
         assert isinstance(result["topics_or_policy_areas"], list)
 
 
@@ -445,7 +445,7 @@ class TestGenerateEOLLMFields:
 
         # Assert - Should return fallback data, not raise exception
         assert result is not None
-        assert result["plain_language_summary"] == "Unable to generate summary."
+        assert result["document_summary"] == "Unable to generate summary."
         assert isinstance(result["topics_or_policy_areas"], list)
         assert "federal policy" in result["topics_or_policy_areas"]
 
@@ -492,7 +492,7 @@ class TestLLMExtractionIntegration:
 
         # Complex metadata response
         mock_metadata = {
-            "plain_language_summary": "In a 5-4 decision, the Court held...",
+            "document_summary": "In a 5-4 decision, the Court held...",
             "constitution_cited": [
                 "First Amendment",
                 "Fourteenth Amendment",
@@ -660,7 +660,7 @@ def mock_openai_response():
             message=MagicMock(
                 content=json.dumps(
                     {
-                        "plain_language_summary": "Test summary",
+                        "document_summary": "Test summary",
                         "topics_or_policy_areas": ["test topic"],
                     }
                 )

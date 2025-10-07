@@ -413,7 +413,7 @@ class TestBuildPayloadsFromDocument:
         )
 
         mock_llm.return_value = {
-            "plain_language_summary": "Summary",
+            "document_summary": "Summary",
             "constitution_cited": [],
             "federal_statutes_cited": [],
             "federal_regulations_cited": [],

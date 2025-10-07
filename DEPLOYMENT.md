@@ -50,7 +50,7 @@ Your MCP server is now running and connected to a Qdrant vector database!
 
 - **Docker** 20.10+ and **Docker Compose** 1.29+ (for containerized deployment)
 - **Python** 3.11+ (for direct installation)
-- **OpenAI API Key** (for embeddings and metadata extraction)
+- **OpenAI API Key** (for embeddings and document-level metadata extraction)
 - **CourtListener API Token** (for SCOTUS ingestion only)
 
 ### Storage Requirements
