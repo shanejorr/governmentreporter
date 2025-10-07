@@ -369,8 +369,10 @@ The GovernmentReporter MCP server is **production-ready** and fully compliant wi
 - ✅ stdio transport (JSON-RPC 2.0)
 - ✅ Server lifecycle management (initialize, start, shutdown)
 - ✅ 5 semantic search tools for government documents
+- ✅ 2 resource types for full document access
 - ✅ Qdrant vector database integration
 - ✅ Query result formatting optimized for LLM consumption
+- ✅ Polymorphic API client architecture for document retrieval
 - ✅ Environment variable configuration
 - ✅ Error handling and logging
 
@@ -397,6 +399,28 @@ The GovernmentReporter MCP server is **production-ready** and fully compliant wi
 5. **`list_collections`** - Collection information
    - List all available collections with statistics
    - Metadata field descriptions
+
+### MCP Resources Available to LLMs
+
+Resources provide direct access to full government documents, complementing the search tools with complete document content fetched on-demand from government APIs.
+
+1. **`scotus://opinion/{opinion_id}`** - Supreme Court Opinion
+   - Full text of a Supreme Court opinion by opinion ID
+   - Fetched in real-time from CourtListener API
+   - Includes complete opinion text with all sections
+   - Example: `scotus://opinion/12345678`
+
+2. **`eo://document/{document_number}`** - Executive Order
+   - Full text of a Presidential Executive Order
+   - Fetched in real-time from Federal Register API
+   - Includes complete order text with all sections
+   - Example: `eo://document/2024-12345`
+
+**Resource Features:**
+- **Polymorphic Design**: Uses abstract base class interface for consistent document fetching
+- **Fresh Data**: Always retrieves current version from government APIs
+- **No Storage Overhead**: Documents fetched on-demand, not stored locally
+- **Future-Proof**: Easy to add new document types (Congress bills, Federal Register notices, etc.)
 
 ## Claude Desktop Integration Tutorial
 
@@ -565,9 +589,9 @@ Claude should mention the 5 government document search tools.
 
 ### Step 8: Using the MCP Server
 
-Now you can ask Claude legal research questions that will trigger the MCP tools:
+Now you can ask Claude legal research questions that will trigger the MCP tools and resources:
 
-#### Example Queries:
+#### Example Tool Queries (Semantic Search):
 
 **Supreme Court Research:**
 ```
@@ -589,11 +613,42 @@ Now you can ask Claude legal research questions that will trigger the MCP tools:
 "Find cases and executive orders related to cryptocurrency regulation"
 ```
 
+#### Example Resource Queries (Full Document Access):
+
+**Get Full Supreme Court Opinion:**
+```
+User: "Find cases about CFPB"
+Claude: [Uses search tool, finds opinion ID 12345678]
+
+User: "Show me the full text of that opinion"
+Claude: [Uses resource scotus://opinion/12345678 to fetch complete opinion]
+```
+
+**Get Full Executive Order:**
+```
+User: "Find executive orders about cryptocurrency"
+Claude: [Uses search tool, finds document number 2024-12345]
+
+User: "Read the full executive order text"
+Claude: [Uses resource eo://document/2024-12345 to fetch complete order]
+```
+
+**Workflow Combining Search and Resources:**
+```
+User: "What did Justice Alito say in the CFPB case, and show me the full opinion"
+
+Claude workflow:
+1. Uses search_scotus_opinions tool with query "CFPB" and justice filter "Alito"
+2. Finds relevant chunks from dissenting opinion
+3. Uses scotus://opinion/{id} resource to fetch full opinion text
+4. Analyzes and quotes specific passages from Justice Alito's dissent
+```
+
 ### Step 9: Understanding Claude's Responses
 
 When Claude uses the MCP server, you'll see:
 
-1. **Tool Usage Indicator** - Claude will show when it's searching documents
+1. **Tool Usage Indicator** - Claude will show when it's searching documents or accessing resources
 2. **Structured Results** - Claude will present findings with:
    - Case names and citations
    - Opinion types (majority, dissenting, etc.)
@@ -601,10 +656,14 @@ When Claude uses the MCP server, you'll see:
    - Relevant legal metadata
    - Direct quotes from documents
    - Relevance scores
+3. **Resource Access** - When Claude fetches full documents via resources:
+   - Complete opinion or order text
+   - All sections and subsections
+   - Full metadata
+   - Fresh data from government APIs
+4. **Source Attribution** - Claude will reference specific documents and provide context
 
-3. **Source Attribution** - Claude will reference specific documents and provide context
-
-The MCP server returns results formatted specifically for LLM consumption, with hierarchical document structure (sections, opinion types) and rich legal/policy metadata.
+The MCP server returns results formatted specifically for LLM consumption, with hierarchical document structure (sections, opinion types) and rich legal/policy metadata. Resources provide complete documents when chunks aren't sufficient.
 
 ### Advanced Configuration
 

@@ -31,6 +31,8 @@ from mcp.server.stdio import stdio_server
 from mcp.types import (
     EmbeddedResource,
     ImageContent,
+    Resource,
+    ResourcesCapability,
     ServerCapabilities,
     TextContent,
     Tool,
@@ -47,6 +49,7 @@ from .handlers import (
     handle_search_government_documents,
     handle_search_scotus_opinions,
 )
+from .resources import list_available_resources, read_resource
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -91,7 +94,36 @@ class GovernmentReporterMCP:
         self._register_handlers()
 
     def _register_handlers(self):
-        """Register all MCP tool handlers with the server."""
+        """Register all MCP tool and resource handlers with the server."""
+
+        @self.server.list_resources()
+        async def list_resources() -> List[Resource]:
+            """
+            List available resources for the LLM.
+
+            Resources provide direct access to full government documents,
+            complementing the search tools with complete document content.
+
+            Returns:
+                List of Resource objects describing available resource types.
+            """
+            return list_available_resources()
+
+        @self.server.read_resource()
+        async def handle_read_resource(uri: str) -> str:
+            """
+            Read a resource by URI.
+
+            Fetches full document content from government APIs using the
+            polymorphic GovernmentAPIClient interface.
+
+            Args:
+                uri: Resource URI (e.g., "scotus://opinion/12345678")
+
+            Returns:
+                Formatted document content with metadata.
+            """
+            return await read_resource(uri)
 
         @self.server.list_tools()
         async def list_tools() -> List[Tool]:
@@ -395,7 +427,10 @@ class GovernmentReporterMCP:
                 InitializationOptions(
                     server_name=self.config.server_name,
                     server_version=self.config.server_version,
-                    capabilities=ServerCapabilities(tools=ToolsCapability()),
+                    capabilities=ServerCapabilities(
+                        tools=ToolsCapability(),
+                        resources=ResourcesCapability(subscribe=False, listChanged=False),
+                    ),
                 ),
             )
 

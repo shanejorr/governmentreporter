@@ -11,9 +11,15 @@ The server exposes tools for:
 - Collection information and statistics
 - Specialized searches with metadata filtering
 
+The server also provides resources for:
+- Full document access via polymorphic API clients
+- Direct retrieval of Supreme Court opinions and Executive Orders
+- On-demand fetching from government APIs
+
 Components:
     mcp_server: Main MCP server implementation
     handlers: Tool handlers for processing LLM requests
+    resources: Resource handlers for full document access
     query_processor: Formatting and processing of query results
     config: Server configuration and settings
 
@@ -38,6 +44,13 @@ from .handlers import (
 )
 from .mcp_server import GovernmentReporterMCP, create_and_run_server
 from .query_processor import QueryProcessor
+from .resources import (
+    format_document_resource,
+    get_api_client,
+    list_available_resources,
+    parse_resource_uri,
+    read_resource,
+)
 
 __all__ = [
     # Main server class
@@ -55,6 +68,12 @@ __all__ = [
     "handle_list_collections",
     # Query processing
     "QueryProcessor",
+    # Resources
+    "read_resource",
+    "list_available_resources",
+    "parse_resource_uri",
+    "get_api_client",
+    "format_document_resource",
 ]
 
 # Version information
