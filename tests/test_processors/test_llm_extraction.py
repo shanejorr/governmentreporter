@@ -93,9 +93,7 @@ class TestGenerateSCOTUSLLMFields:
         result = generate_scotus_llm_fields(opinion_text, syllabus_text)
 
         # Assert
-        assert (
-            result["document_summary"] == mock_metadata["document_summary"]
-        )
+        assert result["document_summary"] == mock_metadata["document_summary"]
         assert result["holding_plain"] == mock_metadata["holding_plain"]
         assert result["constitution_cited"] == mock_metadata["constitution_cited"]
         assert len(result["topics_or_policy_areas"]) == 3
@@ -149,9 +147,7 @@ class TestGenerateSCOTUSLLMFields:
         result = generate_scotus_llm_fields(opinion_text, syllabus=None)
 
         # Assert
-        assert (
-            result["document_summary"] == mock_metadata["document_summary"]
-        )
+        assert result["document_summary"] == mock_metadata["document_summary"]
         assert result["constitution_cited"] == ["Fourth Amendment"]
         assert "search and seizure" in result["topics_or_policy_areas"]
 
