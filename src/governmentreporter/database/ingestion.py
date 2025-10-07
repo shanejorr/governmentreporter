@@ -165,22 +165,18 @@ class QdrantIngestionClient:
         # Convert payloads to Document format
         for i, (payload, embedding) in enumerate(zip(payloads, embeddings)):
             try:
-                # Extract text from chunk_metadata
-                chunk_text = ""
-                if isinstance(payload.get("chunk_metadata"), dict):
-                    chunk_text = payload["chunk_metadata"].get("text", "")
+                # Extract text from payload
+                # The payload structure from build_payloads_from_document is:
+                # {"id": chunk_id, "text": chunk_text, "metadata": {...}, "embedding": []}
+                chunk_text = payload.get("text", "")
 
-                # Generate unique ID for this chunk
-                # Use document_id + chunk index if available
-                doc_id = payload.get("document_id", str(uuid4()))
-                chunk_index = i
-                if (
-                    "chunk_metadata" in payload
-                    and "chunk_index" in payload["chunk_metadata"]
-                ):
-                    chunk_index = payload["chunk_metadata"]["chunk_index"]
-
-                chunk_id = f"{doc_id}_chunk_{chunk_index}"
+                # Use the chunk_id from the payload (already includes document_id + chunk index)
+                # Fallback: if no id in payload, use document_id + index
+                chunk_id = payload.get("id")
+                if not chunk_id:
+                    doc_id = payload.get("document_id", str(uuid4()))
+                    chunk_index = payload.get("metadata", {}).get("chunk_index", i)
+                    chunk_id = f"{doc_id}_chunk_{chunk_index}"
 
                 # Create Document object
                 doc = Document(

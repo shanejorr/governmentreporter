@@ -165,30 +165,32 @@ class TestBatchDocumentUpsert:
         """
         Create sample payloads for testing.
 
-        These payloads simulate the output from the processing pipeline.
+        These payloads simulate the output from build_payloads_from_document().
+        The format is: {"id": chunk_id, "text": chunk_text, "metadata": {...}}
         """
         payloads = []
         for i in range(3):
             payload = {
-                "chunk_metadata": {
-                    "text": f"Chunk {i} text content",
+                "id": f"doc-123_chunk_{i}",  # Full chunk ID from build_payloads
+                "text": f"Chunk {i} text content",  # Text at top level
+                "embedding": [],  # Placeholder (filled by caller)
+                "metadata": {
+                    # Combined metadata from all sources
+                    "chunk_id": f"doc-123_chunk_{i}",
                     "chunk_index": i,
                     "total_chunks": 3,
                     "start_char": i * 100,
                     "end_char": (i + 1) * 100,
-                },
-                "document_metadata": {
+                    "section_label": "Unknown",
                     "title": "Test Document",
                     "date": "2024-01-15",
                     "type": "opinion",
                     "source": "courtlistener",
-                },
-                "llm_extracted_metadata": {
-                    "summary": "Test summary",
-                    "topics": ["law", "testing"],
+                    "document_summary": "Test summary",
+                    "topics_or_policy_areas": ["law", "testing"],
                     "entities": ["Supreme Court", "United States"],
                 },
-                "document_id": "doc-123",
+                "document_id": "doc-123",  # Added by ingester
             }
             payloads.append(payload)
         return payloads
@@ -238,26 +240,26 @@ class TestBatchDocumentUpsert:
         assert doc.id == "doc-123_chunk_0"
         assert doc.text == "Chunk 0 text content"
         assert doc.embedding == sample_embeddings[0]
+        # The entire payload is stored as metadata
         assert doc.metadata["document_id"] == "doc-123"
-        assert doc.metadata["chunk_metadata"]["chunk_index"] == 0
+        assert doc.metadata["metadata"]["chunk_index"] == 0
 
     def test_batch_upsert_with_missing_chunk_text(
         self, client_with_mock, sample_embeddings
     ):
         """
-        Test handling of payloads without chunk text.
+        Test handling of payloads without text field.
 
-        Verifies graceful handling when chunk_metadata doesn't contain text.
+        Verifies graceful handling when the text field is missing from payload.
         """
         client, mock_qdrant = client_with_mock
 
-        # Payload without text in chunk_metadata
+        # Payload without text field (new format from build_payloads)
         payloads = [
             {
-                "chunk_metadata": {
-                    "chunk_index": 0
-                    # No "text" field
-                },
+                "id": "doc-123_chunk_0",
+                # No "text" field
+                "metadata": {"chunk_index": 0},
                 "document_id": "doc-123",
             }
         ]
@@ -344,15 +346,19 @@ class TestBatchDocumentUpsert:
         """
         client, mock_qdrant = client_with_mock
 
-        # Mix of valid and invalid payloads
+        # Mix of valid and invalid payloads (new format)
         payloads = [
             {
-                "chunk_metadata": {"text": "Valid text", "chunk_index": 0},
+                "id": "doc-1_chunk_0",
+                "text": "Valid text",
+                "metadata": {"chunk_index": 0},
                 "document_id": "doc-1",
             },
             None,  # Invalid payload
             {
-                "chunk_metadata": {"text": "Another valid", "chunk_index": 2},
+                "id": "doc-3_chunk_2",
+                "text": "Another valid",
+                "metadata": {"chunk_index": 2},
                 "document_id": "doc-3",
             },
         ]
@@ -402,28 +408,29 @@ class TestBatchDocumentUpsert:
         """
         client, mock_qdrant = client_with_mock
 
-        # Payload without document_id
+        # Payload without document_id (new format)
         payloads = [
             {
-                "chunk_metadata": {"text": "Text without doc ID", "chunk_index": 0}
+                "id": "some_chunk_0",  # Has id but no document_id
+                "text": "Text without doc ID",
+                "metadata": {"chunk_index": 0},
                 # No document_id
             }
         ]
 
         mock_qdrant.store_documents_batch.return_value = (1, [])
 
-        # Should generate unique ID
+        # Should use the id from payload
         success, failed = client.batch_upsert_documents(
             payloads, [sample_embeddings[0]], batch_size=100
         )
 
         assert success == 1
 
-        # Verify UUID was generated
+        # Verify ID was used from payload
         call_args = mock_qdrant.store_documents_batch.call_args
         documents = call_args[0][0]
-        assert documents[0].id is not None
-        assert "_chunk_0" in documents[0].id
+        assert documents[0].id == "some_chunk_0"
 
     def test_batch_upsert_complete_failure(
         self, client_with_mock, sample_payloads, sample_embeddings
@@ -617,24 +624,22 @@ class TestIngestionWorkflows:
         # Step 1: Verify initialization created collection
         mock_qdrant.create_collection.assert_called_once_with("workflow_collection")
 
-        # Step 2: Prepare document chunks
+        # Step 2: Prepare document chunks (new format from build_payloads)
         payloads = []
         embeddings = []
         for i in range(10):
             payload = {
-                "chunk_metadata": {
-                    "text": f"Chunk {i} of Supreme Court opinion",
+                "id": f"scotus-2024-001_chunk_{i}",
+                "text": f"Chunk {i} of Supreme Court opinion",
+                "embedding": [],
+                "metadata": {
                     "chunk_index": i,
                     "total_chunks": 10,
-                },
-                "document_metadata": {
                     "title": "Test v. United States",
                     "date": "2024-01-15",
                     "court": "SCOTUS",
-                },
-                "llm_extracted_metadata": {
-                    "summary": "Important legal ruling",
-                    "topics": ["constitutional law", "civil rights"],
+                    "document_summary": "Important legal ruling",
+                    "topics_or_policy_areas": ["constitutional law", "civil rights"],
                 },
                 "document_id": "scotus-2024-001",
             }
@@ -681,16 +686,18 @@ class TestIngestionWorkflows:
         all_payloads = []
         all_embeddings = []
 
-        # Create chunks for 3 different documents
+        # Create chunks for 3 different documents (new format)
         for doc_idx in range(3):
             for chunk_idx in range(5):
                 payload = {
-                    "chunk_metadata": {
-                        "text": f"Document {doc_idx}, Chunk {chunk_idx}",
+                    "id": f"doc-{doc_idx}_chunk_{chunk_idx}",
+                    "text": f"Document {doc_idx}, Chunk {chunk_idx}",
+                    "embedding": [],
+                    "metadata": {
                         "chunk_index": chunk_idx,
                         "total_chunks": 5,
+                        "title": f"Document {doc_idx}",
                     },
-                    "document_metadata": {"title": f"Document {doc_idx}"},
                     "document_id": f"doc-{doc_idx}",
                 }
                 all_payloads.append(payload)
@@ -727,10 +734,12 @@ class TestIngestionWorkflows:
         """
         client, mock_qdrant, mock_base, mock_info = full_mock_setup
 
-        # Prepare test data
+        # Prepare test data (new format)
         payloads = [
             {
-                "chunk_metadata": {"text": f"Chunk {i}", "chunk_index": i},
+                "id": f"doc-1_chunk_{i}",
+                "text": f"Chunk {i}",
+                "metadata": {"chunk_index": i},
                 "document_id": "doc-1",
             }
             for i in range(5)
@@ -788,60 +797,67 @@ class TestEdgeCasesAndValidation:
             client = QdrantIngestionClient("test_collection")
             return client, mock_instance
 
-    def test_payload_without_chunk_metadata(self, client_with_mock):
+    def test_payload_without_metadata(self, client_with_mock):
         """
-        Test handling of payload without chunk_metadata.
+        Test handling of payload without metadata field.
 
-        Verifies graceful handling when chunk_metadata is missing.
+        Verifies graceful handling when metadata is missing.
         """
         client, mock_qdrant = client_with_mock
 
         payloads = [
             {
-                "document_id": "doc-1"
-                # No chunk_metadata
+                "id": "doc-1_chunk_0",
+                "text": "Some text",
+                "document_id": "doc-1",
+                # No metadata
             }
         ]
         embeddings = [[0.1] * 1536]
 
         mock_qdrant.store_documents_batch.return_value = (1, [])
 
-        # Should handle missing chunk_metadata
+        # Should handle missing metadata
         success, failed = client.batch_upsert_documents(payloads, embeddings)
 
         assert success == 1
         assert failed == 0
 
-        # Verify document created with empty text
+        # Verify document created successfully
         call_args = mock_qdrant.store_documents_batch.call_args
         documents = call_args[0][0]
-        assert documents[0].text == ""
+        assert documents[0].text == "Some text"
 
-    def test_payload_with_non_dict_chunk_metadata(self, client_with_mock):
+    def test_payload_with_non_dict_metadata(self, client_with_mock):
         """
-        Test handling of non-dict chunk_metadata.
+        Test handling of non-dict metadata.
 
-        Verifies that non-dict chunk_metadata is handled safely.
+        Verifies that non-dict metadata is handled safely.
         """
         client, mock_qdrant = client_with_mock
 
         payloads = [
-            {"chunk_metadata": "not a dict", "document_id": "doc-1"}  # Wrong type
+            {
+                "id": "doc-1_chunk_0",
+                "text": "Some text",
+                "metadata": "not a dict",  # Wrong type
+                "document_id": "doc-1",
+            }
         ]
         embeddings = [[0.1] * 1536]
 
         mock_qdrant.store_documents_batch.return_value = (1, [])
 
-        # Should handle invalid chunk_metadata
+        # Should handle invalid metadata
         success, failed = client.batch_upsert_documents(payloads, embeddings)
 
         assert success == 1
         assert failed == 0
 
-        # Verify document created with empty text
+        # Verify document created
         call_args = mock_qdrant.store_documents_batch.call_args
         documents = call_args[0][0]
-        assert documents[0].text == ""
+        assert documents[0].text == "Some text"
 
     def test_very_large_batch(self, client_with_mock):
         """
@@ -851,14 +867,16 @@ class TestEdgeCasesAndValidation:
         """
         client, mock_qdrant = client_with_mock
 
-        # Create large batch
+        # Create large batch (new format)
         large_size = 1000
         payloads = []
         embeddings = []
         for i in range(large_size):
             payloads.append(
                 {
-                    "chunk_metadata": {"text": f"Chunk {i}", "chunk_index": i},
+                    "id": f"doc-{i // 100}_chunk_{i % 100}",
+                    "text": f"Chunk {i}",
+                    "metadata": {"chunk_index": i},
                     "document_id": f"doc-{i // 100}",  # 10 docs, 100 chunks each
                 }
             )
@@ -885,10 +903,12 @@ class TestEdgeCasesAndValidation:
         """
         client, mock_qdrant = client_with_mock
 
-        # Payloads with same document_id but different chunks
+        # Payloads with same document_id but different chunks (new format)
         payloads = [
             {
-                "chunk_metadata": {"text": f"Chunk {i}", "chunk_index": i},
+                "id": f"same-doc_chunk_{i}",
+                "text": f"Chunk {i}",
+                "metadata": {"chunk_index": i},
                 "document_id": "same-doc",
             }
             for i in range(5)

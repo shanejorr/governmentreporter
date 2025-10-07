@@ -11,11 +11,12 @@ uv sync
 # Start MCP server for LLM integration
 uv run governmentreporter server
 
-# Ingest Supreme Court opinions
-uv run governmentreporter ingest scotus --start-date 2024-01-01 --end-date 2024-12-31
+# Ingest both Supreme Court opinions and Executive Orders
+uv run governmentreporter ingest all --start-date 2024-01-01 --end-date 2024-12-31
 
-# Ingest Executive Orders
-uv run governmentreporter ingest eo --start-date 2024-01-01 --end-date 2024-12-31
+# Or ingest individually:
+# uv run governmentreporter ingest scotus --start-date 2024-01-01 --end-date 2024-12-31
+# uv run governmentreporter ingest eo --start-date 2024-01-01 --end-date 2024-12-31
 
 # View database information
 uv run governmentreporter info collections
@@ -299,19 +300,29 @@ uv run python -m governmentreporter.server
 
 ### Ingest Documents
 ```bash
+# Ingest both SCOTUS and Executive Orders sequentially (recommended)
+uv run governmentreporter ingest all --start-date 2024-01-01 --end-date 2024-12-31
+
+# Keep system awake during long ingestion (macOS)
+caffeinate -i uv run governmentreporter ingest all --start-date 2024-01-01 --end-date 2024-12-31
+
+# Or ingest individually:
 # Ingest Supreme Court opinions for a date range
 uv run governmentreporter ingest scotus --start-date 2024-01-01 --end-date 2024-12-31
 
 # Ingest Executive Orders for a date range
 uv run governmentreporter ingest eo --start-date 2024-01-01 --end-date 2024-12-31
 
-# Customize batch size and database paths
+# Customize batch size and database paths (individual commands only)
 uv run governmentreporter ingest scotus \
   --start-date 2024-01-01 \
   --end-date 2024-12-31 \
   --batch-size 100 \
   --progress-db ./data/progress/scotus.db \
   --qdrant-db-path ./data/qdrant/qdrant_db
+
+# Dry run to test without storing
+uv run governmentreporter ingest all --start-date 2024-01-01 --end-date 2024-12-31 --dry-run
 ```
 
 ### Delete Collections

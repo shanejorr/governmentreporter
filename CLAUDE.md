@@ -28,6 +28,7 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 - `uv run governmentreporter server` - Start MCP server
 - `uv run governmentreporter ingest scotus --start-date YYYY-MM-DD --end-date YYYY-MM-DD` - Ingest SCOTUS opinions
 - `uv run governmentreporter ingest eo --start-date YYYY-MM-DD --end-date YYYY-MM-DD` - Ingest Executive Orders
+- `uv run governmentreporter ingest all --start-date YYYY-MM-DD --end-date YYYY-MM-DD` - Ingest both SCOTUS and EO sequentially
 - `uv run governmentreporter delete --all` - Delete all Qdrant collections (with confirmation)
 - `uv run governmentreporter delete --scotus` - Delete SCOTUS collection + progress database
 - `uv run governmentreporter delete --eo` - Delete Executive Orders collection + progress database
