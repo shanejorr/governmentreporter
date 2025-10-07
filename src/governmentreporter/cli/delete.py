@@ -248,7 +248,9 @@ def delete_command(
                 click.echo(f"    └─ Progress database: {PROGRESS_DB_MAPPING[coll]}")
 
     click.echo("\n⚠️  WARNING: This action cannot be undone!")
-    click.echo("This will delete both the Qdrant collection and any associated progress tracking databases.")
+    click.echo(
+        "This will delete both the Qdrant collection and any associated progress tracking databases."
+    )
 
     # Confirmation prompt (unless --yes flag is used)
     if not yes:
@@ -272,10 +274,14 @@ def delete_command(
 
                     # Also delete progress database if it exists
                     if coll in PROGRESS_DB_MAPPING:
-                        progress_db_path = Path("./data/progress") / PROGRESS_DB_MAPPING[coll]
+                        progress_db_path = (
+                            Path("./data/progress") / PROGRESS_DB_MAPPING[coll]
+                        )
                         if progress_db_path.exists():
                             delete_progress_database(coll)
-                            click.echo(f"    └─ Deleted progress database: {PROGRESS_DB_MAPPING[coll]}")
+                            click.echo(
+                                f"    └─ Deleted progress database: {PROGRESS_DB_MAPPING[coll]}"
+                            )
                 else:
                     click.echo(f"  ✗ Failed to delete {coll}", err=True)
             else:
