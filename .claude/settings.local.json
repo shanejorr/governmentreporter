@@ -41,7 +41,9 @@
       "Bash(git restore:*)",
       "Bash(python3:*)",
       "Bash(awk:*)",
-      "Bash(caffeinate:*)"
+      "Bash(caffeinate:*)",
+      "Bash(env)",
+      "Bash(timeout 120 uv run:*)"
     ],
     "deny": [],
     "additionalDirectories": [

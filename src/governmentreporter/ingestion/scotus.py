@@ -124,62 +124,10 @@ class SCOTUSIngester(DocumentIngester):
 
             # Create HTTP client with longer timeout for pagination
             with httpx.Client(timeout=60.0) as client:
-                # Get total count first
-                count_params = params.copy()
-                count_params["count"] = "on"
-                count_params["page_size"] = 1
-
-                logger.debug(f"Fetching count with params: {count_params}")
-                count_response = client.get(
-                    url, headers=self.api_client.headers, params=count_params
-                )
-                count_response.raise_for_status()
-                count_data = count_response.json()
-
-                total_count = count_data.get("count", 0)
-                if isinstance(total_count, str):
-                    # If it's a URL string, fetch it
-                    try:
-                        actual_count_response = client.get(
-                            total_count, headers=self.api_client.headers
-                        )
-                        count_json = actual_count_response.json()
-                        total_count = count_json.get("count", 0)
-                    except Exception as e:
-                        logger.warning(f"Could not fetch count from URL: {e}")
-                        total_count = None
-
-                if total_count:
-                    logger.info(
-                        f"Total SCOTUS clusters available in date range: {total_count}"
-                    )
-
-                    # Sanity check - SCOTUS typically issues 60-80 opinions per term
-                    years_in_range = (
-                        datetime.strptime(self.end_date, "%Y-%m-%d")
-                        - datetime.strptime(self.start_date, "%Y-%m-%d")
-                    ).days / 365
-                    expected_max = int(
-                        years_in_range * 100
-                    )  # ~100 opinions per year max
-
-                    if total_count > max(1000, expected_max * 2):
-                        logger.error(
-                            f"ERROR: Found {total_count} clusters, which is "
-                            "far more than expected for SCOTUS."
-                        )
-                        logger.error(
-                            "The filter may not be working correctly. "
-                            "Aborting to prevent excessive API calls."
-                        )
-                        return all_opinion_ids
-
-                    max_clusters = total_count
-                else:
-                    logger.warning(
-                        "Could not determine total count, proceeding with caution"
-                    )
-                    max_clusters = 1000  # Conservative default
+                # We'll get the count from the first paginated request
+                # The CourtListener API returns count in the response even without count=on
+                total_count = None
+                max_clusters = 1000  # Conservative default until we know the real count
 
                 # Paginate through cluster results
                 page = 1
@@ -196,6 +144,41 @@ class SCOTUSIngester(DocumentIngester):
 
                     data = response.json()
                     results = data.get("results", [])
+
+                    # Get the total count from the first response
+                    if page == 1 and total_count is None:
+                        total_count = data.get("count", 0)
+
+                        if total_count:
+                            logger.info(
+                                f"Total SCOTUS clusters available in date range: {total_count}"
+                            )
+
+                            # Sanity check - SCOTUS typically issues 60-80 opinions per term
+                            years_in_range = (
+                                datetime.strptime(self.end_date, "%Y-%m-%d")
+                                - datetime.strptime(self.start_date, "%Y-%m-%d")
+                            ).days / 365
+                            expected_max = int(
+                                years_in_range * 100
+                            )  # ~100 opinions per year max
+
+                            if total_count > max(1000, expected_max * 2):
+                                logger.error(
+                                    f"ERROR: Found {total_count} clusters, which is "
+                                    "far more than expected for SCOTUS."
+                                )
+                                logger.error(
+                                    "The filter may not be working correctly. "
+                                    "Aborting to prevent excessive API calls."
+                                )
+                                return all_opinion_ids
+
+                            max_clusters = total_count
+                        else:
+                            logger.warning(
+                                "Could not determine total count, proceeding with caution"
+                            )
 
                     if not results:
                         logger.info(f"No more results on page {page}, stopping.")
