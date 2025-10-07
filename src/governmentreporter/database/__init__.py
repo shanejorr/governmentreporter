@@ -33,10 +33,10 @@ Python Learning Notes:
     - Dataclasses provide clean data structures with automatic methods
 
 Example Usage:
-    from governmentreporter.database import QdrantClient, Document
+    from governmentreporter.database import QdrantDBClient, Document
 
     # Initialize client
-    client = QdrantClient(db_path="./data/qdrant/qdrant_db")
+    client = QdrantDBClient(db_path="./data/qdrant/qdrant_db")
 
     # Store a document
     doc = Document(

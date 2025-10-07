@@ -60,7 +60,7 @@ def query(
         governmentreporter query "executive order climate change" --collection eo
         governmentreporter query "supreme court precedent" --limit 10 --show-text
     """
-    from ..database.qdrant import QdrantClient
+    from ..database.qdrant import QdrantDBClient
     from ..processors.embeddings import EmbeddingGenerator
 
     try:
@@ -84,12 +84,17 @@ def query(
 
         all_results = []
 
+        # Initialize client once to avoid locking issues
+        client = QdrantDBClient(db_path=qdrant_path)
+
         # Search each collection
         for coll_name in collections:
             try:
-                client = QdrantClient(coll_name, qdrant_path)
                 results = client.search(
-                    query_vector=query_embedding, limit=limit, score_threshold=min_score
+                    query_embedding=query_embedding,
+                    collection_name=coll_name,
+                    limit=limit,
+                    score_threshold=min_score,
                 )
 
                 for result in results:
@@ -97,7 +102,10 @@ def query(
                         {
                             "collection": coll_name,
                             "score": result.score,
-                            "payload": result.payload,
+                            "payload": {
+                                "text": result.document.text,
+                                **(result.document.metadata or {}),
+                            },
                         }
                     )
 
