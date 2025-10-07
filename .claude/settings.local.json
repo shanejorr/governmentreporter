@@ -40,7 +40,8 @@
       "Bash(pytest:*)",
       "Bash(git restore:*)",
       "Bash(python3:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(caffeinate:*)"
     ],
     "deny": [],
     "additionalDirectories": [
