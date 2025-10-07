@@ -33,7 +33,6 @@ env.bak/
 venv.bak/
 
 # UV specific
-uv.lock
 .python-version
 
 # IDE
