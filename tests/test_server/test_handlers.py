@@ -1,6 +1,5 @@
-import pytest
-
 import mcp.types as types
+import pytest
 
 from governmentreporter.apis.base import Document as ApiDocument
 from governmentreporter.database.qdrant import Document as QdrantDocument
