@@ -314,6 +314,28 @@ uv run governmentreporter ingest scotus \
   --qdrant-db-path ./data/qdrant/qdrant_db
 ```
 
+### Delete Collections
+
+```bash
+# Delete all collections (with confirmation prompt)
+uv run governmentreporter delete --all
+
+# Delete specific collections
+uv run governmentreporter delete --scotus
+uv run governmentreporter delete --eo
+
+# Delete multiple collections at once
+uv run governmentreporter delete --scotus --eo
+
+# Delete by collection name
+uv run governmentreporter delete --collection supreme_court_opinions
+
+# Skip confirmation prompt (use with caution!)
+uv run governmentreporter delete --all -y
+```
+
+**Note:** The `delete` command automatically removes both the Qdrant collection AND its associated ingestion progress database (stored in `./data/progress/`). This ensures a clean slate when re-ingesting data.
+
 ### View Database Information
 ```bash
 # List all collections and their statistics

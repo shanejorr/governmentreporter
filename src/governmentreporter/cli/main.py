@@ -10,6 +10,7 @@ import sys
 
 import click
 
+from .delete import delete_command
 from .info import info
 from .ingest import ingest
 from .query import query
@@ -103,6 +104,7 @@ main.add_command(ingest)
 main.add_command(server)
 main.add_command(query)
 main.add_command(info)
+main.add_command(delete_command)
 
 
 if __name__ == "__main__":
