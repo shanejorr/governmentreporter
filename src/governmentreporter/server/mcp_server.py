@@ -429,7 +429,9 @@ class GovernmentReporterMCP:
                     server_version=self.config.server_version,
                     capabilities=ServerCapabilities(
                         tools=ToolsCapability(),
-                        resources=ResourcesCapability(subscribe=False, listChanged=False),
+                        resources=ResourcesCapability(
+                            subscribe=False, listChanged=False
+                        ),
                     ),
                 ),
             )

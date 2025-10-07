@@ -130,9 +130,7 @@ class TestFormatDocumentResource:
         assert "By the authority vested in me..." in formatted
         assert "**president:** Biden" in formatted
         assert "**policy_topics:** cryptocurrency, financial regulation" in formatted
-        assert (
-            "**impacted_agencies:** Treasury, SEC, CFTC" in formatted
-        )
+        assert "**impacted_agencies:** Treasury, SEC, CFTC" in formatted
 
 
 class TestReadResource:

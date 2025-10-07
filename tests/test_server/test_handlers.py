@@ -114,6 +114,10 @@ async def test_call_tool_returns_call_tool_result(monkeypatch):
     assert isinstance(server_result.root, types.CallToolResult)
     assert not server_result.root.isError
     assert server_result.root.content
-    text_blocks = [block for block in server_result.root.content if isinstance(block, types.TextContent)]
+    text_blocks = [
+        block
+        for block in server_result.root.content
+        if isinstance(block, types.TextContent)
+    ]
     assert text_blocks, "Expected text content in CallToolResult."
     assert any("Document Retrieved" in block.text for block in text_blocks)

@@ -275,7 +275,11 @@ class QueryProcessor:
                 "supreme_court_opinions", metadata
             )
         elif doc_type == "executive_order":
-            title = metadata.get("title") or chunk_metadata.get("title") or "Executive Order"
+            title = (
+                metadata.get("title")
+                or chunk_metadata.get("title")
+                or "Executive Order"
+            )
             eo_number = metadata.get("executive_order_number") or chunk_metadata.get(
                 "executive_order_number", ""
             )
@@ -286,7 +290,9 @@ class QueryProcessor:
                 or ""
             )
 
-            president_value = metadata.get("president") or chunk_metadata.get("president")
+            president_value = metadata.get("president") or chunk_metadata.get(
+                "president"
+            )
             if isinstance(president_value, dict):
                 president = (
                     president_value.get("name")
