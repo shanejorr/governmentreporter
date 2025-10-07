@@ -89,8 +89,10 @@ class SCOTUSIngester(DocumentIngester):
         """
         Fetch all Supreme Court opinion IDs in the date range.
 
-        This method fetches opinion IDs in batches using pagination
-        to handle large date ranges that may contain thousands of opinions.
+        This method queries the clusters endpoint (not opinions) because:
+        - The opinions endpoint with cluster__date_filed filters causes timeouts
+        - The clusters endpoint is the recommended approach per CourtListener API docs
+        - Clusters contain the sub_opinions field which provides opinion IDs
 
         The method includes:
         - Count validation (SCOTUS typically issues 60-80 opinions per term)
@@ -101,20 +103,20 @@ class SCOTUSIngester(DocumentIngester):
         Returns:
             List of opinion IDs to process
         """
-        logger.info("Fetching opinion IDs from CourtListener API...")
+        logger.info("Fetching opinion IDs from CourtListener clusters API...")
         logger.info(f"Date range: {self.start_date} to {self.end_date}")
 
         all_opinion_ids = []
 
-        # Build initial API URL and parameters
-        # IMPORTANT: The CourtListener API limits page_size to 20 for opinions endpoint
-        url = f"{self.api_client.base_url}/opinions/"
+        # Query clusters endpoint instead of opinions endpoint
+        # This avoids the timeout issues with complex opinion filters
+        url = f"{self.api_client.base_url}/clusters/"
         params = {
-            "cluster__docket__court": "scotus",  # Supreme Court only
-            "order_by": "-cluster__date_filed",  # Most recent first
-            "cluster__date_filed__gte": self.start_date,
-            "cluster__date_filed__lte": self.end_date,
-            "page_size": 20,  # API maximum for opinions endpoint
+            "docket__court": "scotus",  # Supreme Court only
+            "order_by": "-date_filed",  # Most recent first
+            "date_filed__gte": self.start_date,
+            "date_filed__lte": self.end_date,
+            "page_size": 20,  # API maximum for clusters endpoint
         }
 
         try:
@@ -149,7 +151,7 @@ class SCOTUSIngester(DocumentIngester):
 
                 if total_count:
                     logger.info(
-                        f"Total SCOTUS opinions available in date range: {total_count}"
+                        f"Total SCOTUS clusters available in date range: {total_count}"
                     )
 
                     # Sanity check - SCOTUS typically issues 60-80 opinions per term
@@ -163,23 +165,26 @@ class SCOTUSIngester(DocumentIngester):
 
                     if total_count > max(1000, expected_max * 2):
                         logger.error(
-                            f"ERROR: Found {total_count} opinions, which is far more than expected for SCOTUS."
+                            f"ERROR: Found {total_count} clusters, which is "
+                            "far more than expected for SCOTUS."
                         )
                         logger.error(
-                            "The filter may not be working correctly. Aborting to prevent excessive API calls."
+                            "The filter may not be working correctly. "
+                            "Aborting to prevent excessive API calls."
                         )
                         return all_opinion_ids
 
-                    max_opinions = total_count
+                    max_clusters = total_count
                 else:
                     logger.warning(
                         "Could not determine total count, proceeding with caution"
                     )
-                    max_opinions = 1000  # Conservative default
+                    max_clusters = 1000  # Conservative default
 
-                # Paginate through results
+                # Paginate through cluster results
                 page = 1
-                while url and len(all_opinion_ids) < max_opinions:
+                clusters_processed = 0
+                while url and clusters_processed < max_clusters:
                     # Rate limiting
                     time.sleep(self.api_client._get_rate_limit_delay())
 
@@ -196,21 +201,38 @@ class SCOTUSIngester(DocumentIngester):
                         logger.info(f"No more results on page {page}, stopping.")
                         break
 
-                    # Process each opinion in the current page
-                    for opinion_summary in results:
-                        opinion_id = opinion_summary.get("id")
-                        if opinion_id:
-                            all_opinion_ids.append(str(opinion_id))
+                    # Process each cluster in the current page
+                    for cluster in results:
+                        clusters_processed += 1
 
-                            if len(all_opinion_ids) >= max_opinions:
-                                logger.info(
-                                    f"Reached maximum opinion limit ({max_opinions}), stopping."
+                        # Each cluster has a sub_opinions field with URLs
+                        sub_opinions = cluster.get("sub_opinions", [])
+
+                        for opinion_url in sub_opinions:
+                            # Extract opinion ID from URL
+                            # Format: .../api/rest/v4/opinions/{id}/
+                            try:
+                                opinion_id = opinion_url.rstrip("/").split("/")[-1]
+                                all_opinion_ids.append(str(opinion_id))
+                            except (IndexError, AttributeError) as e:
+                                logger.warning(
+                                    f"Could not extract opinion ID from "
+                                    f"URL: {opinion_url}, error: {e}"
                                 )
-                                break
+
+                        if clusters_processed >= max_clusters:
+                            logger.info(
+                                f"Reached maximum cluster limit "
+                                f"({max_clusters}), stopping."
+                            )
+                            break
 
                     # Log progress
                     logger.info(
-                        f"Fetched page {page}: {len(results)} opinions (total: {len(all_opinion_ids)}/{total_count or 'unknown'})"
+                        f"Fetched page {page}: {len(results)} clusters, "
+                        f"{len(all_opinion_ids)} total opinions "
+                        f"(clusters: {clusters_processed}/"
+                        f"{total_count or 'unknown'})"
                     )
 
                     # Get next page URL
@@ -221,11 +243,15 @@ class SCOTUSIngester(DocumentIngester):
                     # Safety check to prevent infinite loops
                     if page > 100:  # Maximum 100 pages
                         logger.warning(
-                            "Reached maximum page limit (100 pages), stopping pagination"
+                            "Reached maximum page limit (100 pages), "
+                            "stopping pagination"
                         )
                         break
 
-            logger.info(f"Successfully fetched {len(all_opinion_ids)} opinion IDs")
+            logger.info(
+                f"Successfully fetched {len(all_opinion_ids)} opinion IDs "
+                f"from {clusters_processed} clusters"
+            )
 
         except Exception as e:
             logger.error(f"Error fetching opinion IDs: {e}")
