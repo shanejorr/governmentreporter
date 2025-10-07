@@ -240,9 +240,9 @@ class TestBatchDocumentUpsert:
         assert doc.id == "doc-123_chunk_0"
         assert doc.text == "Chunk 0 text content"
         assert doc.embedding == sample_embeddings[0]
-        # The entire payload is stored as metadata
+        # Both top-level fields and metadata fields are flattened into metadata
         assert doc.metadata["document_id"] == "doc-123"
-        assert doc.metadata["metadata"]["chunk_index"] == 0
+        assert doc.metadata["chunk_index"] == 0
 
     def test_batch_upsert_with_missing_chunk_text(
         self, client_with_mock, sample_embeddings
@@ -997,12 +997,14 @@ class TestIngestionClientAdvancedScenarios:
         # Same document_id and chunk_index creates duplicate IDs
         payloads = [
             {
-                "chunk_metadata": {"text": "Version 1", "chunk_index": 0},
-                "document_id": "doc-1",
+                "id": "doc-1_chunk_0",
+                "text": "Version 1",
+                "metadata": {"chunk_index": 0},
             },
             {
-                "chunk_metadata": {"text": "Version 2", "chunk_index": 0},
-                "document_id": "doc-1",
+                "id": "doc-1_chunk_0",
+                "text": "Version 2",
+                "metadata": {"chunk_index": 0},
             },
         ]
         embeddings = [[0.1] * 1536, [0.2] * 1536]
@@ -1033,8 +1035,9 @@ class TestIngestionClientAdvancedScenarios:
         large_text = "A" * 1_000_000  # 1MB of text
         payloads = [
             {
-                "chunk_metadata": {"text": large_text, "chunk_index": 0},
-                "document_id": "large-doc",
+                "id": "large-doc_chunk_0",
+                "text": large_text,
+                "metadata": {"chunk_index": 0, "document_id": "large-doc"},
             }
         ]
         embeddings = [[0.1] * 1536]
@@ -1121,18 +1124,17 @@ class TestIngestionClientAdvancedScenarios:
 
         payloads = [
             {
-                "chunk_metadata": {
-                    "text": "Legal text with émojis 🎯⚖️ and symbols €£¥",
+                "id": "unicode-doc-2024_chunk_0",
+                "text": "Legal text with émojis 🎯⚖️ and symbols €£¥",
+                "metadata": {
                     "chunk_index": 0,
+                    "document_id": "unicode-doc-2024",
                     "languages": ["English", "Español", "中文", "العربية"],
-                },
-                "document_metadata": {
                     "title": "Case № 2024-001: Müller vs. O'Connor",
                     "special_chars": "∀x∈ℝ: x²≥0",
                     "rtl_text": "مرحبا بك",
                     "emoji_tags": ["📚", "🔍", "⚖️"],
                 },
-                "document_id": "unicode-doc-2024",
             }
         ]
         embeddings = [[0.1] * 1536]
@@ -1149,12 +1151,9 @@ class TestIngestionClientAdvancedScenarios:
 
         assert "émojis 🎯⚖️" in documents[0].text
         metadata = documents[0].metadata
-        assert "中文" in metadata["chunk_metadata"]["languages"]
-        assert (
-            metadata["document_metadata"]["title"]
-            == "Case № 2024-001: Müller vs. O'Connor"
-        )
-        assert metadata["document_metadata"]["emoji_tags"][0] == "📚"
+        assert "中文" in metadata["languages"]
+        assert metadata["title"] == "Case № 2024-001: Müller vs. O'Connor"
+        assert metadata["emoji_tags"][0] == "📚"
 
     def test_concurrent_batch_processing(self, client_with_mock):
         """

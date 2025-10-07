@@ -179,11 +179,31 @@ class QdrantIngestionClient:
                     chunk_id = f"{doc_id}_chunk_{chunk_index}"
 
                 # Create Document object
+                # Build metadata by combining:
+                # 1. Fields from the payload's metadata dict
+                # 2. Any additional top-level fields (except id, text, embedding)
+                # This handles both production payloads (all in metadata) and test payloads
+                payload_metadata = payload.get("metadata", {})
+
+                # Handle case where metadata is not a dict (invalid but should not crash)
+                if isinstance(payload_metadata, dict):
+                    metadata = payload_metadata.copy()
+                else:
+                    logger.warning(
+                        f"Payload {i} has non-dict metadata: {type(payload_metadata)}"
+                    )
+                    metadata = {}
+
+                # Add any top-level fields that aren't id/text/embedding/metadata
+                for key, value in payload.items():
+                    if key not in ("id", "text", "embedding", "metadata"):
+                        metadata[key] = value
+
                 doc = Document(
                     id=chunk_id,
                     text=chunk_text,
                     embedding=embedding,
-                    metadata=payload,  # Store entire payload as metadata
+                    metadata=metadata,
                 )
                 documents.append(doc)
 
