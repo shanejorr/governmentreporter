@@ -434,14 +434,23 @@ async def handle_get_document_by_id(
                     return formatted_response
             elif collection == "executive_orders":
                 # Extract document number from metadata
-                doc_number = payload.get("document_number")
+                doc_number = payload.get("document_number") or payload.get(
+                    "executive_order_number"
+                )
                 if doc_number:
                     client = FederalRegisterClient()
-                    # Note: FederalRegisterClient would need a get_document method
-                    # For now, we'll just return the chunk
-                    logger.debug(
-                        f"Full document retrieval not implemented for EO {doc_number}"
-                    )
+                    try:
+                        full_doc = client.get_document(doc_number)
+                        formatted_response = processor.format_full_document(
+                            "executive_order", full_doc, payload
+                        )
+                        return formatted_response
+                    except Exception as exc:
+                        logger.error(
+                            "Failed to retrieve full executive order %s: %s",
+                            doc_number,
+                            exc,
+                        )
 
         # Return the chunk with metadata
         formatted_response = processor.format_document_chunk(

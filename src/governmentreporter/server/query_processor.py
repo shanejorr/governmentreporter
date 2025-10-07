@@ -212,25 +212,112 @@ class QueryProcessor:
         """
         output = [f"## Full Document Retrieved\n"]
 
+        metadata: Dict[str, Any] = dict(chunk_metadata or {})
+
+        # Merge metadata from the full document when available.
+        if hasattr(full_document, "metadata"):
+            doc_metadata = getattr(full_document, "metadata")
+            if isinstance(doc_metadata, dict):
+                metadata = {**metadata, **doc_metadata}
+        elif isinstance(full_document, dict):
+            metadata = {**metadata, **full_document}
+
+        # Resolve the full document text with sensible fallbacks.
+        if hasattr(full_document, "content"):
+            document_text = getattr(full_document, "content")
+        elif isinstance(full_document, dict):
+            document_text = (
+                full_document.get("plain_text")
+                or full_document.get("content")
+                or full_document.get("text")
+            )
+        elif isinstance(full_document, str):
+            document_text = full_document
+        else:
+            document_text = None
+
+        if document_text is None and full_document is not None:
+            document_text = str(full_document)
+
         if doc_type == "scotus":
-            # Format full SCOTUS opinion
-            output.append(
-                f"### {chunk_metadata.get('case_name', 'Supreme Court Opinion')}"
+            case_name = (
+                metadata.get("case_name")
+                or chunk_metadata.get("case_name")
+                or "Supreme Court Opinion"
             )
-            output.append(f"**Date:** {chunk_metadata.get('date', '')}\n")
-            output.append("### Full Opinion Text:")
-            # Note: full_document would need proper parsing
-            output.append(str(full_document))
+            opinion_date = (
+                metadata.get("date")
+                or metadata.get("decision_date")
+                or chunk_metadata.get("date")
+                or ""
+            )
+            opinion_type = (
+                metadata.get("opinion_type") or chunk_metadata.get("opinion_type") or ""
+            )
+            justice = (
+                metadata.get("justice")
+                or metadata.get("author")
+                or chunk_metadata.get("justice")
+            )
+
+            output.append(f"### {case_name}")
+            if opinion_date:
+                output.append(f"**Date:** {opinion_date}")
+            if opinion_type:
+                descriptor = f"**Opinion Type:** {str(opinion_type).title()}"
+                if justice:
+                    descriptor = f"{descriptor} by {justice}"
+                output.append(descriptor)
+            output.append("\n### Full Opinion Text:")
+            output.append(document_text or "Full opinion text unavailable.")
+
+            additional_metadata = self._extract_relevant_metadata(
+                "supreme_court_opinions", metadata
+            )
         elif doc_type == "executive_order":
-            # Format full Executive Order
-            output.append(f"### {chunk_metadata.get('title', 'Executive Order')}")
-            output.append(
-                f"**EO Number:** {chunk_metadata.get('executive_order_number', '')}"
+            title = metadata.get("title") or chunk_metadata.get("title") or "Executive Order"
+            eo_number = metadata.get("executive_order_number") or chunk_metadata.get(
+                "executive_order_number", ""
             )
-            output.append(f"**President:** {chunk_metadata.get('president', '')}")
-            output.append(f"**Date:** {chunk_metadata.get('signing_date', '')}\n")
-            output.append("### Full Order Text:")
-            output.append(str(full_document))
+            signing_date = (
+                metadata.get("signing_date")
+                or metadata.get("publication_date")
+                or chunk_metadata.get("signing_date")
+                or ""
+            )
+
+            president_value = metadata.get("president") or chunk_metadata.get("president")
+            if isinstance(president_value, dict):
+                president = (
+                    president_value.get("name")
+                    or president_value.get("full_name")
+                    or president_value.get("title")
+                )
+            else:
+                president = president_value
+
+            output.append(f"### {title}")
+            if eo_number:
+                output.append(f"**EO Number:** {eo_number}")
+            if president:
+                output.append(f"**President:** {president}")
+            if signing_date:
+                output.append(f"**Date:** {signing_date}")
+            output.append("\n### Full Order Text:")
+            output.append(document_text or "Full executive order text unavailable.")
+
+            additional_metadata = self._extract_relevant_metadata(
+                "executive_orders", metadata
+            )
+        else:
+            output.append("### Document")
+            output.append(document_text or "Full document text unavailable.")
+            additional_metadata = {}
+
+        if additional_metadata:
+            output.append("\n### Metadata:")
+            for key, value in additional_metadata.items():
+                output.append(f"- **{key}:** {value}")
 
         return "\n".join(output)
 
@@ -529,6 +616,11 @@ class QueryProcessor:
                 # Format lists nicely
                 if isinstance(value, list):
                     value = ", ".join(str(v) for v in value)
+                elif isinstance(value, dict):
+                    if "name" in value:
+                        value = value["name"]
+                    else:
+                        value = json.dumps(value, ensure_ascii=False)
                 metadata[field.replace("_", " ").title()] = value
 
         return metadata
