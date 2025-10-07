@@ -38,7 +38,9 @@
       "Bash(do echo \"=== $file ===\")",
       "Bash(done)",
       "Bash(pytest:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(python3:*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "additionalDirectories": [

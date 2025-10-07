@@ -259,6 +259,7 @@ Extract the following fields in JSON format:
     - Use precise legal terminology
 
     Example: "Applied rational basis review to appropriations challenges. Statutory authorization constitutes valid appropriation under historical practice dating to founding era. Distinguished from nondelegation doctrine cases where Congress delegates legislative power rather than authorizing expenditures. Relied on precedent upholding standing appropriations for judicial salaries and mint operations."
+"""
 
         # User prompt with the opinion text
         user_prompt = (
@@ -670,15 +671,15 @@ if __name__ == "__main__":
     # Example SCOTUS opinion with Syllabus
     sample_scotus = """
     SYLLABUS
-    
+
     Held: The Fourth Amendment requires police to obtain a warrant before
     conducting a search of digital devices seized incident to arrest.
-    
+
     The Court reasoned that digital devices differ from physical objects due to
     their immense storage capacity and the breadth of private information they contain.
-    
+
     JUSTICE ROBERTS delivered the opinion of the Court.
-    
+
     The question presented is whether the police may, without a warrant, search
     digital information on a cell phone seized from an individual who has been arrested.
     """
@@ -700,13 +701,13 @@ if __name__ == "__main__":
     # Example Executive Order
     sample_eo = """
     Executive Order 14999
-    
+
     Section 1. Purpose. This order directs federal agencies to prioritize
     climate resilience in all infrastructure investments.
-    
+
     Sec. 2. Policy. It is the policy of my Administration to ensure that
     Federal investments in infrastructure projects consider climate change impacts.
-    
+
     Sec. 3. Requirements. The Department of Transportation shall develop new
     guidelines pursuant to 42 U.S.C. § 4332 for assessing climate risks.
     """
