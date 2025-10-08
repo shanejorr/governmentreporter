@@ -113,7 +113,10 @@ class SCOTUSIngester(DocumentIngester):
         url = f"{self.api_client.base_url}/clusters/"
         params = {
             "docket__court": "scotus",  # Supreme Court only
-            "order_by": "-date_filed",  # Most recent first
+            # Most recent first, with id as tie-breaker for consistent ordering
+            # Per API docs: tie-breaker prevents inconsistent results when
+            # multiple clusters have the same date_filed
+            "order_by": "-date_filed,id",
             "date_filed__gte": self.start_date,
             "date_filed__lte": self.end_date,
             "page_size": 20,  # API maximum for clusters endpoint
