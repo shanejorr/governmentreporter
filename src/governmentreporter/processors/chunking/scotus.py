@@ -95,23 +95,23 @@ def chunk_supreme_court_opinion(
     patterns = {
         "syllabus": re.compile(r"^\s*SYLLABUS\s*$", re.MULTILINE | re.IGNORECASE),
         "majority": re.compile(
-            r"^(?:(?:Per Curiam\.)|"
-            r"(?:JUSTICE\s+[A-Z][A-Za-z\-]+,?\s+delivered the opinion of the Court\.?)|"
+            r"^\s*(?:(?:Per Curiam\.)|"
+            r"(?:JUSTICE\s+[A-Z][A-Za-z\-]+\s+delivered the opinion of the Court\.?)|"
             r"(?:Opinion of the Court))",
             re.MULTILINE | re.IGNORECASE,
         ),
         "concurring": re.compile(
-            r"^JUSTICE\s+[A-Z][A-Za-z\-]+,\s+(?:with whom.*?join,\s+)?concurring",
-            re.MULTILINE,
+            r"^\s*JUSTICE\s+[A-Z][A-Za-z\-]+,\s+(?:with whom.*?joins?,\s+)?concurring",
+            re.MULTILINE | re.IGNORECASE,
         ),
         "dissenting": re.compile(
-            r"^JUSTICE\s+[A-Z][A-Za-z\-]+,\s+(?:with whom.*?join,\s+)?dissenting",
-            re.MULTILINE,
+            r"^\s*JUSTICE\s+[A-Z][A-Za-z\-]+,\s+(?:with whom.*?joins?,\s+)?dissenting",
+            re.MULTILINE | re.IGNORECASE,
         ),
         "concur_dissent": re.compile(
-            r"^JUSTICE\s+[A-Z][A-Za-z\-]+,\s+(?:with whom.*?join,\s+)?"
+            r"^\s*JUSTICE\s+[A-Z][A-Za-z\-]+,\s+(?:with whom.*?joins?,\s+)?"
             r"concurring in part and dissenting in part",
-            re.MULTILINE,
+            re.MULTILINE | re.IGNORECASE,
         ),
     }
 
@@ -174,9 +174,16 @@ def chunk_supreme_court_opinion(
             if syllabus_content:
                 syllabus_text = syllabus_content
 
-        # Handle Roman numeral subsections within opinions
-        roman_pattern = re.compile(r"^\s*[IVX]+\.\s*$", re.MULTILINE)
-        subsections = list(roman_pattern.finditer(section_text))
+        # Handle hierarchical subsections within opinions (per Supreme Court formatting guide)
+        # According to the parsing guide:
+        # - Roman numerals (I, II, III) = Level 1 sections (20+ leading spaces, no period)
+        # - Capital letters (A, B, C) = Level 2 subsections (20+ leading spaces)
+        # - Arabic numerals (1, 2, 3) = Level 3 sub-subsections (20+ leading spaces)
+
+        # Pattern matches lines with 20+ spaces followed by section marker alone
+        # Matches Roman numerals (I, II, III), capital letters (A, B, C), or numbers (1, 2, 3)
+        section_pattern = re.compile(r"^\s{20,}(?:[IVX]+|[A-Z]|\d+)\s*$", re.MULTILINE)
+        subsections = list(section_pattern.finditer(section_text))
 
         if subsections and len(subsections) > 1:
             # Process each subsection separately
@@ -189,9 +196,9 @@ def chunk_supreme_court_opinion(
                 )
                 subsection_text = section_text[subsection_start:subsection_end].strip()
 
-                # Create section label with Roman numeral
-                roman_numeral = match.group().strip().rstrip(".")
-                subsection_label = f"{section_label} - Part {roman_numeral}"
+                # Create section label with the section marker (Roman numeral, letter, or number)
+                section_marker = match.group().strip()
+                subsection_label = f"{section_label} - Part {section_marker}"
 
                 # Chunk the subsection with SCOTUS config
                 chunk_results = chunk_text_with_tokens(
