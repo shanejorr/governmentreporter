@@ -15,8 +15,8 @@ uv run governmentreporter server
 uv run governmentreporter ingest all --start-date 2024-01-01 --end-date 2024-12-31
 
 # Or ingest individually:
-# uv run governmentreporter ingest scotus --start-date 2024-01-01 --end-date 2024-12-31
-# uv run governmentreporter ingest eo --start-date 2024-01-01 --end-date 2024-12-31
+# uv run governmentreporter ingest scotus --start-date 2025-01-01 --end-date 2025-12-31
+# uv run governmentreporter ingest eo --start-date 2025-01-01 --end-date 2025-12-31
 
 # View database information
 uv run governmentreporter info collections
@@ -92,7 +92,7 @@ The system includes a Model Context Protocol server that enables Large Language 
 - **Package Manager**: uv (modern Python package manager)
 - **Vector Database**: Qdrant (embeddings + metadata only)
 - **AI Services**:
-  - OpenAI GPT-5-mini for document-level metadata generation (technical summaries, citation extraction)
+  - OpenAI GPT-5-nano for document-level metadata generation (technical summaries, citation extraction)
   - OpenAI text-embedding-3-small for semantic embeddings
 - **Government APIs**:
   - CourtListener API (Supreme Court opinions)
@@ -129,7 +129,7 @@ The system includes a Model Context Protocol server that enables Large Language 
     - `scotus.py`: Supreme Court-specific chunking with opinion type detection
     - `executive_orders.py`: Executive Order-specific chunking by sections
   - `embeddings.py`: OpenAI embedding generation with batch support
-  - `llm_extraction.py`: GPT-5-mini document-level metadata extraction (technical summaries, validated citations)
+  - `llm_extraction.py`: GPT-5-nano document-level metadata extraction (technical summaries, validated citations)
   - `schema.py`: Pydantic data validation models
   - `build_payloads.py`: Processing orchestration
 
@@ -198,7 +198,7 @@ governmentreporter/
    - **Intelligent Chunking**:
      - **SCOTUS Opinions**: Break down by opinion type (syllabus, majority, concurring, dissenting), legal sections (I, II, III) and subsections (A, B, C), justice attribution
      - **Executive Orders**: Break down by header, sections (Sec. 1, Sec. 2), subsections, and signature blocks
-   - **Document-Level Metadata Extraction**: Use GPT-5-mini to extract:
+   - **Document-Level Metadata Extraction**: Use GPT-5-nano to extract:
      - Technical summaries optimized for LLM comprehension and semantic search (1-2 dense sentences)
      - Validated citations (Constitution, statutes, regulations, cases) - text-backed only, no hallucinations
      - Topics balancing technical precision and searchability
@@ -803,7 +803,7 @@ The system follows a structured processing pipeline powered by the processors mo
    - Executive Orders: Split by header → sections → subsections → tail (300/400 tokens)
 
 3. **Document-Level Metadata Extraction** (Processors Module - `llm_extraction.py`):
-   - Use GPT-5-mini to extract metadata providing context for understanding chunks
+   - Use GPT-5-nano to extract metadata providing context for understanding chunks
    - Generate technical summaries (1-2 dense sentences) optimized for LLM comprehension
    - Extract validated Bluebook citations (text-backed only, preventing hallucinations)
    - Extract topics balancing legal doctrines and searchable terms
@@ -946,7 +946,7 @@ GovernmentReporter automatically identifies and chunks Supreme Court opinions us
 4. **Opinion Type Detection** (`processors/chunking/scotus.py`): Use regex patterns to identify different opinion types
 5. **Section Parsing** (`processors/chunking/scotus.py`): Detect Roman numeral sections and lettered subsections
 6. **Intelligent Chunking** (`processors/chunking/base.py`, `scotus.py`): Target 600 tokens, max 800 tokens while preserving legal structure
-7. **Document-Level Metadata Extraction** (`processors/llm_extraction.py`): Use GPT-5-mini to generate technical summaries, extract validated citations, and identify topics
+7. **Document-Level Metadata Extraction** (`processors/llm_extraction.py`): Use GPT-5-nano to generate technical summaries, extract validated citations, and identify topics
 8. **Citation Formatting** (`utils/citations.py`): Build proper bluebook citations from cluster data
 9. **Payload Building** (`processors/build_payloads.py`): Orchestrate processing and create Qdrant-ready payloads
 10. **Embedding Generation** (`processors/embeddings.py`): Create semantic embeddings for each chunk
@@ -960,7 +960,7 @@ GovernmentReporter automatically identifies and chunks Supreme Court opinions us
 4. **Structure Detection** (`processors/chunking/executive_orders.py`): Identify header, sections, subsections, and tail blocks
 5. **HTML Cleaning** (`apis/federal_register.py`): Remove markup and extract clean text
 6. **Intelligent Chunking** (`processors/chunking/base.py`, `executive_orders.py`): Target 300 tokens, max 400 tokens with sentence overlap
-7. **Document-Level Metadata Extraction** (`processors/llm_extraction.py`): Use GPT-5-mini to generate technical summaries with CFR/USC citations, extract validated authorities, and identify policy topics
+7. **Document-Level Metadata Extraction** (`processors/llm_extraction.py`): Use GPT-5-nano to generate technical summaries with CFR/USC citations, extract validated authorities, and identify policy topics
 8. **Schema Validation** (`processors/schema.py`): Validate metadata with Pydantic models
 9. **Payload Building** (`processors/build_payloads.py`): Orchestrate processing and create Qdrant-ready payloads
 10. **Embedding Generation** (`processors/embeddings.py`): Create semantic embeddings for each chunk

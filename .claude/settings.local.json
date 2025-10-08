@@ -44,7 +44,9 @@
       "Bash(caffeinate:*)",
       "Bash(env)",
       "Bash(timeout 120 uv run:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "WebFetch(domain:openai.com)",
+      "WebFetch(domain:community.openai.com)"
     ],
     "deny": [],
     "additionalDirectories": [
