@@ -266,19 +266,19 @@ Extract the following fields in JSON format:
             f"Extract metadata from this Supreme Court opinion:\n\n{analysis_content}"
         )
 
-        # Call GPT-5-nano with JSON response format and retry logic
+        # Call GPT-5-mini with JSON response format and retry logic
         max_retries = 3
         for attempt in range(max_retries):
             try:
                 response = client.chat.completions.create(
-                    model="gpt-5-nano",
+                    model="gpt-5-mini",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
                     response_format={"type": "json_object"},
-                    reasoning_effort="low",  # GPT-5-nano requires this parameter
                     max_completion_tokens=2000,
+                    reasoning_effort="minimal",
                 )
                 break  # Success, exit retry loop
             except RateLimitError as e:
@@ -312,6 +312,10 @@ Extract the following fields in JSON format:
                     time.sleep(wait_time)
                     continue
                 raise  # Re-raise on final attempt or non-retryable errors
+
+        # Log finish_reason and refusal for debugging content filter issues
+        logger.info(f"Finish reason: {response.choices[0].finish_reason}")
+        logger.info(f"Refusal: {response.choices[0].message.refusal}")
 
         # Check if response has content
         if not response.choices or not response.choices[0].message.content:
@@ -540,19 +544,19 @@ Extract the following fields in JSON format:
         # User prompt with the Executive Order text
         user_prompt = f"Extract metadata from this Executive Order:\n\n{text}"
 
-        # Call GPT-5-nano with JSON response format and retry logic
+        # Call GPT-5-mini with JSON response format and retry logic
         max_retries = 3
         for attempt in range(max_retries):
             try:
                 response = client.chat.completions.create(
-                    model="gpt-5-nano",
+                    model="gpt-5-mini",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
                     response_format={"type": "json_object"},
-                    reasoning_effort="low",  # GPT-5-nano requires this parameter
                     max_completion_tokens=1500,
+                    reasoning_effort="minimal",
                 )
                 break  # Success, exit retry loop
             except RateLimitError as e:
@@ -586,6 +590,10 @@ Extract the following fields in JSON format:
                     time.sleep(wait_time)
                     continue
                 raise  # Re-raise on final attempt or non-retryable errors
+
+        # Log finish_reason and refusal for debugging content filter issues
+        logger.info(f"Finish reason: {response.choices[0].finish_reason}")
+        logger.info(f"Refusal: {response.choices[0].message.refusal}")
 
         # Check if response has content
         if not response.choices or not response.choices[0].message.content:

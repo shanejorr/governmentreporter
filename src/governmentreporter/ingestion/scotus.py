@@ -291,6 +291,11 @@ class SCOTUSIngester(DocumentIngester):
             logger.debug(f"Fetching opinion {doc_id}")
             document = self.api_client.get_document(doc_id)
 
+            # Log the document being ingested
+            if document:
+                opinion_url = document.metadata.get("url", f"Opinion ID: {doc_id}")
+                logger.info(f"Ingesting SCOTUS opinion: {opinion_url}")
+
             if not document:
                 raise ValueError(f"Could not fetch document for opinion {doc_id}")
 

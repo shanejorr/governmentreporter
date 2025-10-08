@@ -190,6 +190,11 @@ class ExecutiveOrderIngester(DocumentIngester):
             if not order_metadata:
                 raise ValueError(f"No metadata found for order {doc_id}")
 
+            # Log the document being ingested
+            html_url = order_metadata.get("html_url", f"Document Number: {doc_id}")
+            eo_number = order_metadata.get("executive_order_number", "N/A")
+            logger.info(f"Ingesting Executive Order {eo_number}: {html_url}")
+
             # Get raw text URL
             raw_text_url = order_metadata.get("raw_text_url")
             if not raw_text_url:

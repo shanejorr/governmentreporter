@@ -106,7 +106,7 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
   - `scotus.py` - SCOTUS-specific chunking (opinion types, sections, subsections, justice attribution)
   - `executive_orders.py` - EO-specific chunking (header, sections, subsections, tail, no cross-section overlap)
 - `embeddings.py` - OpenAI text-embedding-3-small integration with batch processing and retry logic
-- `llm_extraction.py` - GPT-5-nano metadata extraction (summaries, validated citations, topics)
+- `llm_extraction.py` - GPT-5-mini metadata extraction (summaries, validated citations, topics)
 - `schema.py` - Pydantic data validation models for type safety
 - `build_payloads.py` - Orchestrates chunking and metadata extraction into Qdrant-ready payloads
 
@@ -128,7 +128,7 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 **Indexing Pipeline:**
 1. **Fetch Documents** - CourtListener API (SCOTUS) or Federal Register API (Executive Orders)
 2. **Hierarchical Chunking** - Opinion types/sections for SCOTUS; header/sections/subsections for EOs
-3. **Document-Level Metadata Extraction** - GPT-5-nano extracts technical summaries, validated citations, topics
+3. **Document-Level Metadata Extraction** - GPT-5-mini extracts technical summaries, validated citations, topics
 4. **Generate Embeddings** - OpenAI text-embedding-3-small (1536-dimensional vectors)
 5. **Store in Qdrant** - Batch ingestion with duplicate detection and progress tracking
 
@@ -146,7 +146,7 @@ GovernmentReporter is an MCP (Model Context Protocol) server that provides LLMs 
 
 **AI Services:**
 - **OpenAI API** (api.openai.com)
-  - `gpt-5-nano` - Document-level metadata extraction (summaries, validated citations, topics)
+  - `gpt-5-mini` - Document-level metadata extraction (summaries, validated citations, topics)
   - `text-embedding-3-small` - 1536-dimensional semantic embeddings
 
 **Government APIs:**
@@ -208,7 +208,7 @@ Reference files in `scratch/` directory show actual API response structures:
   - Target: 340 tokens, Max: 400 tokens, Overlap: 10% within sections only
 
 ### Metadata Extraction
-- **GPT-5-nano for Document-Level Context**: Generates technical summaries (1-2 dense sentences) optimized for LLM comprehension
+- **GPT-5-mini for Document-Level Context**: Generates technical summaries (1-2 dense sentences) optimized for LLM comprehension
 - **Validated Citations Only**: Extracts text-backed citations (Constitution, statutes, regulations) - no hallucinations allowed
 - **Topic Extraction**: Balances technical legal precision with searchability
 - **Pydantic Validation**: All metadata validated with schemas before storage
