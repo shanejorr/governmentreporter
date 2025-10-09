@@ -23,6 +23,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
 from ..database.ingestion import QdrantIngestionClient
+from ..database.qdrant import QdrantDBClient
 from ..processors.embeddings import EmbeddingGenerator
 from ..utils.monitoring import PerformanceMonitor
 from .progress import ProgressTracker
@@ -89,6 +90,7 @@ class DocumentIngester(ABC):
         progress_db: str = "ingestion.db",
         qdrant_db_path: str = "./data/qdrant/qdrant_db",
         document_type: str = "generic",
+        shared_db_client: Optional[QdrantDBClient] = None,
     ):
         """
         Initialize the document ingester.
@@ -101,6 +103,9 @@ class DocumentIngester(ABC):
             progress_db: Path to SQLite database for progress tracking
             qdrant_db_path: Path to Qdrant database directory
             document_type: Type identifier for progress tracking
+            shared_db_client: Optional pre-initialized QdrantDBClient for shared access.
+                            When provided, multiple ingesters can share the same database
+                            connection, which is required for local Qdrant storage.
         """
         self.start_date = start_date
         self.end_date = end_date
@@ -110,9 +115,18 @@ class DocumentIngester(ABC):
         # Initialize tracking and monitoring
         self.progress_tracker = ProgressTracker(progress_db, document_type)
         self.embedding_generator = EmbeddingGenerator()
+
+        # Create QdrantIngestionClient for this collection
+        # If a shared_db_client is provided, use it; otherwise create a new connection
+        # This allows multiple ingesters to share the same underlying database client,
+        # which is necessary because Qdrant local storage only allows one client
+        # at a time to access the same database path
         self.qdrant_client = QdrantIngestionClient(
-            self._get_collection_name(), qdrant_db_path
+            collection_name=self._get_collection_name(),
+            db_path=qdrant_db_path,
+            db_client=shared_db_client,
         )
+
         self.performance_monitor = PerformanceMonitor()
 
         # Reset any stuck documents from previous runs

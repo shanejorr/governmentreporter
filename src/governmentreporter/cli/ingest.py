@@ -248,6 +248,7 @@ def all(start_date, end_date, qdrant_db_path, dry_run, verbose):
         sys.exit(1)
 
     # Import here to avoid loading heavy dependencies unless needed
+    from ..database.qdrant import QdrantDBClient
     from ..ingestion.executive_orders import ExecutiveOrderIngester
     from ..ingestion.scotus import SCOTUSIngester
     from ..utils.monitoring import setup_logging
@@ -262,6 +263,12 @@ def all(start_date, end_date, qdrant_db_path, dry_run, verbose):
     click.echo(f"Dry Run: {dry_run}")
     click.echo("=" * 80)
 
+    # Create a shared Qdrant database client
+    # This is necessary because local Qdrant storage only allows one client
+    # connection at a time. Both ingesters will share this client but create
+    # their own collections
+    shared_db_client = QdrantDBClient(db_path=qdrant_db_path)
+
     # 1. Run SCOTUS ingestion
     click.echo("\n[1/2] Running SCOTUS Opinion Ingestion...")
     click.echo("-" * 80)
@@ -273,6 +280,7 @@ def all(start_date, end_date, qdrant_db_path, dry_run, verbose):
             dry_run=dry_run,
             progress_db="./data/progress/scotus_ingestion.db",
             qdrant_db_path=qdrant_db_path,
+            shared_db_client=shared_db_client,
         )
         scotus_ingester.run()
         click.echo("\n✓ SCOTUS ingestion completed successfully")
@@ -295,6 +303,7 @@ def all(start_date, end_date, qdrant_db_path, dry_run, verbose):
             dry_run=dry_run,
             progress_db="./data/progress/executive_orders_ingestion.db",
             qdrant_db_path=qdrant_db_path,
+            shared_db_client=shared_db_client,
         )
         eo_ingester.run()
         click.echo("\n✓ Executive Order ingestion completed successfully")

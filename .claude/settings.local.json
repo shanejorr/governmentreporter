@@ -46,7 +46,9 @@
       "Bash(timeout 120 uv run:*)",
       "Bash(curl:*)",
       "WebFetch(domain:openai.com)",
-      "WebFetch(domain:community.openai.com)"
+      "WebFetch(domain:community.openai.com)",
+      "Bash(./scratch/pull_opinion_text.sh:*)",
+      "Bash(sqlite3:*)"
     ],
     "deny": [],
     "additionalDirectories": [

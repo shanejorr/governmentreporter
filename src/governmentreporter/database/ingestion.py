@@ -19,7 +19,7 @@ Python Learning Notes:
 """
 
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
 from .qdrant import Document, QdrantDBClient
@@ -64,7 +64,12 @@ class QdrantIngestionClient:
         - Logging provides visibility into operations
     """
 
-    def __init__(self, collection_name: str, db_path: str = "./data/qdrant/qdrant_db"):
+    def __init__(
+        self,
+        collection_name: str,
+        db_path: str = "./data/qdrant/qdrant_db",
+        db_client: Optional[QdrantDBClient] = None,
+    ):
         """
         Initialize the ingestion client for a specific collection.
 
@@ -73,6 +78,10 @@ class QdrantIngestionClient:
                                   Common values: "supreme_court_opinions", "executive_orders"
             db_path (str): Path to the Qdrant database directory.
                           Defaults to "./data/qdrant/qdrant_db" in the current directory.
+            db_client (Optional[QdrantDBClient]): Optional pre-initialized Qdrant database
+                          client. If provided, db_path is ignored. This allows multiple
+                          QdrantIngestionClient instances to share the same underlying
+                          database connection, which is necessary for local Qdrant storage.
 
         Raises:
             ValueError: If collection_name is empty
@@ -82,12 +91,21 @@ class QdrantIngestionClient:
             - Default parameters provide sensible defaults
             - Instance variables store configuration
             - Logging helps with debugging
+            - Optional parameters allow flexible initialization patterns
         """
         if not collection_name:
             raise ValueError("collection_name is required")
 
         self.collection_name = collection_name
-        self.client = QdrantDBClient(db_path)
+
+        # Use provided client or create new one
+        # When multiple ingesters run sequentially (e.g., "ingest all" command),
+        # they must share the same QdrantDBClient because local Qdrant storage
+        # only allows one client connection at a time
+        if db_client is not None:
+            self.client = db_client
+        else:
+            self.client = QdrantDBClient(db_path)
 
         # Ensure collection exists
         self.client.create_collection(collection_name)

@@ -57,6 +57,7 @@ class ExecutiveOrderIngester(DocumentIngester):
         dry_run: bool = False,
         progress_db: str = "executive_orders_ingestion.db",
         qdrant_db_path: str = "./data/qdrant/qdrant_db",
+        shared_db_client=None,
     ):
         """
         Initialize the Executive Order ingester.
@@ -68,6 +69,7 @@ class ExecutiveOrderIngester(DocumentIngester):
             dry_run: If True, don't actually store documents
             progress_db: Path to SQLite progress database
             qdrant_db_path: Path to Qdrant database directory
+            shared_db_client: Optional pre-initialized QdrantDBClient for shared access
         """
         # Initialize base class
         super().__init__(
@@ -78,6 +80,7 @@ class ExecutiveOrderIngester(DocumentIngester):
             progress_db=progress_db,
             qdrant_db_path=qdrant_db_path,
             document_type="executive_order",
+            shared_db_client=shared_db_client,
         )
 
         # Initialize EO-specific API client
