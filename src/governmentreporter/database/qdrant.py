@@ -539,7 +539,7 @@ class QdrantDBClient:
                 query_embedding=query_vector,
                 collection_name="scotus_opinions",
                 limit=5,
-                score_threshold=0.7,
+                score_threshold=0.3,
                 metadata_filter={"year": 2024}
             )
 

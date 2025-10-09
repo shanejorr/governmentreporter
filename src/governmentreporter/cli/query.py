@@ -28,8 +28,8 @@ import click
 @click.option(
     "--min-score",
     type=float,
-    default=0.7,
-    help="Minimum similarity score (0.0-1.0, default: 0.7)",
+    default=0.2,
+    help="Minimum similarity score (0.0-1.0, default: 0.2)",
 )
 @click.option(
     "--qdrant-path",
