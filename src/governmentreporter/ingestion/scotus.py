@@ -85,6 +85,96 @@ class SCOTUSIngester(DocumentIngester):
         """Get the Qdrant collection name for SCOTUS opinions."""
         return "supreme_court_opinions"
 
+    def _validate_court(self, opinion_id: str) -> tuple[bool, str]:
+        """
+        Validate that an opinion belongs to the Supreme Court.
+
+        This method provides defense against API index inconsistencies by directly
+        fetching the docket data and verifying the court_id. It bypasses potentially
+        stale search indexes and validates against the source of truth.
+
+        Validation Process:
+            1. Fetch opinion data to get cluster URL
+            2. Fetch cluster data to get docket URL
+            3. Fetch docket data to get court_id
+            4. Verify court_id == "scotus"
+
+        This approach catches cases where:
+        - API search indexes are temporarily inconsistent
+        - Bulk uploads haven't been fully indexed
+        - Filter parameters don't work as expected
+        - Data has been mislabeled or incorrectly tagged
+
+        Args:
+            opinion_id: Opinion ID to validate
+
+        Returns:
+            Tuple of (is_valid, error_message):
+            - (True, "") if opinion belongs to SCOTUS
+            - (False, error_message) if opinion belongs to different court
+
+        Raises:
+            Exception: If API calls fail (propagated to caller for handling)
+
+        Example:
+            >>> ingester = SCOTUSIngester(...)
+            >>> is_valid, error = ingester._validate_court("123456")
+            >>> if not is_valid:
+            ...     logger.warning(f"Skipping: {error}")
+
+        Performance Impact:
+            - Adds 2 additional API calls per opinion (cluster + docket)
+            - Adds ~100-200ms per opinion with rate limiting
+            - Trade-off: Slower ingestion vs guaranteed data quality
+            - Critical for preventing incorrect data from entering the system
+
+        Python Learning Notes:
+            - Tuple return: Returns multiple values (bool, str)
+            - Early return: Returns immediately when condition met
+            - Type hints: tuple[bool, str] specifies return type
+            - Defensive programming: Validate assumptions before proceeding
+        """
+        try:
+            # Fetch opinion to get cluster URL
+            opinion_data = self.api_client.get_opinion(int(opinion_id))
+            cluster_url = opinion_data.get("cluster")
+
+            if not cluster_url:
+                return False, f"Opinion {opinion_id} has no cluster URL"
+
+            # Fetch cluster to get docket URL
+            cluster_data = self.api_client.get_opinion_cluster(cluster_url)
+            docket_url = cluster_data.get("docket")
+
+            if not docket_url:
+                return (
+                    False,
+                    f"Opinion {opinion_id} cluster has no docket URL",
+                )
+
+            # Fetch docket to get court_id
+            docket_data = self.api_client.get_docket(docket_url)
+            court_id = docket_data.get("court_id")
+
+            if not court_id:
+                return False, f"Opinion {opinion_id} docket has no court_id"
+
+            # Validate court is SCOTUS
+            if court_id != "scotus":
+                case_name = cluster_data.get("case_name", "Unknown Case")
+                return (
+                    False,
+                    f"Opinion {opinion_id} belongs to court '{court_id}' (not scotus). "
+                    f"Case: {case_name}. This likely indicates an API index inconsistency.",
+                )
+
+            return True, ""
+
+        except Exception as e:
+            # Propagate exception to caller - this is a validation failure
+            # but we want the caller to decide how to handle API errors
+            raise
+
     def _fetch_document_ids(self) -> List[str]:
         """
         Fetch all Supreme Court opinion IDs in the date range.
@@ -265,13 +355,17 @@ class SCOTUSIngester(DocumentIngester):
         batch_embeddings: List[List[float]],
     ) -> bool:
         """
-        Process a single Supreme Court opinion.
+        Process a single Supreme Court opinion with court validation.
 
         This method:
-        1. Fetches the opinion from CourtListener
-        2. Builds payloads (chunking + metadata extraction)
-        3. Generates embeddings
-        4. Adds to batch lists
+        1. Validates the opinion belongs to SCOTUS (court_id check)
+        2. Fetches the opinion from CourtListener
+        3. Builds payloads (chunking + metadata extraction)
+        4. Generates embeddings
+        5. Adds to batch lists
+
+        The court validation step defends against API index inconsistencies
+        by directly verifying the docket's court_id before processing.
 
         Args:
             doc_id: Opinion ID to process
@@ -280,12 +374,28 @@ class SCOTUSIngester(DocumentIngester):
 
         Returns:
             True if successful, False if failed
+
+        Validation Failure Handling:
+            - Non-SCOTUS opinions are logged with WARNING level
+            - Marked as failed in progress tracker with descriptive error
+            - Not processed further (no embedding/storage overhead)
         """
         start_time = time.time()
 
         try:
             # Mark as processing
             self.progress_tracker.mark_processing(doc_id)
+
+            # VALIDATION: Verify this opinion belongs to SCOTUS
+            # This defends against API index inconsistencies where non-SCOTUS
+            # opinions may temporarily appear in SCOTUS-filtered queries
+            logger.debug(f"Validating court for opinion {doc_id}")
+            is_valid, error_message = self._validate_court(doc_id)
+
+            if not is_valid:
+                logger.warning(f"Skipping opinion {doc_id}: {error_message}")
+                self.progress_tracker.mark_failed(doc_id, error_message)
+                return False
 
             # Fetch opinion data
             logger.debug(f"Fetching opinion {doc_id}")

@@ -802,3 +802,87 @@ class CourtListenerClient(GovernmentAPIClient):
             response = client.get(cluster_url, headers=self.headers)
             response.raise_for_status()
             return response.json()
+
+    def get_docket(self, docket_url: str) -> Dict[str, Any]:
+        """
+        Fetch docket data from docket URL for court identification and case metadata.
+
+        This method retrieves docket data from Court Listener, which contains
+        case-level information including the court identifier. Dockets are the
+        foundation of the Court Listener data model and link cases to specific courts.
+
+        Docket Data Model:
+            - Docket: Complete case record with court information
+            - Contains: court_id, docket_number, case_name, dates, parties
+            - Links to: Clusters (opinion groups) and Audio files (oral arguments)
+
+        Data Retrieved:
+            Docket data includes:
+            - court_id: Court identifier (e.g., "scotus", "ca9", "nyappdiv")
+            - court: URL to court details
+            - case_name: Full case name
+            - docket_number: Case docket/filing number
+            - date_filed: When the case was filed
+            - assigned_to: Assigned judge information
+            - clusters: Associated opinion clusters
+
+        Args:
+            docket_url (str): Complete URL to the docket API endpoint.
+                            Typically from cluster data's 'docket' field.
+                            Format: "https://www.courtlistener.com/api/rest/v4/dockets/{id}/"
+                            Must be a full URL, not just an ID.
+
+        Returns:
+            Dict[str, Any]: Complete docket data from Court Listener API containing:
+                - court_id: Court identifier string (CRITICAL for validation)
+                - court: URL to court information
+                - case_name: Full case name
+                - docket_number: Docket/case number
+                - date_filed: Filing date
+                - clusters: List of associated cluster URLs
+                Plus additional docket-specific metadata from the API
+
+        Raises:
+            httpx.HTTPError: For various HTTP-related failures:
+                - 404: Docket not found (invalid URL)
+                - 401: Authentication failed
+                - 403: Access forbidden
+                - 429: Rate limit exceeded
+                - 500+: Server errors
+
+            httpx.RequestError: For network-related failures
+
+        Example Usage:
+            >>> client = CourtListenerClient()
+            >>> opinion = client.get_opinion(123456)
+            >>> cluster_url = opinion['cluster']
+            >>> cluster = client.get_opinion_cluster(cluster_url)
+            >>> docket_url = cluster['docket']
+            >>> docket = client.get_docket(docket_url)
+            >>> print(f"Court: {docket['court_id']}")
+            >>> print(f"Case: {docket['case_name']}")
+            >>> print(f"Docket #: {docket['docket_number']}")
+
+        Integration Notes:
+            - Used by SCOTUS ingestion to validate court_id == "scotus"
+            - Provides defense against API index inconsistencies
+            - Direct lookup bypasses search index lag issues
+            - Critical for ensuring data quality during ingestion
+
+        Performance Considerations:
+            - Additional API request per opinion during validation
+            - Docket data is small (few KB)
+            - Adds ~100-200ms per opinion (with rate limiting)
+            - Trade-off: Slower ingestion vs guaranteed data quality
+
+        Python Learning Notes:
+            - URL parameter: Takes full URL, not just an ID
+            - HTTP timeout: 30.0 seconds for docket requests
+            - Direct URL usage: No URL construction needed
+            - Context manager: Automatic HTTP client cleanup
+            - JSON parsing: Converts API response to Python dictionary
+        """
+        with httpx.Client(timeout=30.0) as client:
+            response = client.get(docket_url, headers=self.headers)
+            response.raise_for_status()
+            return response.json()
