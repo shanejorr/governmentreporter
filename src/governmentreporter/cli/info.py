@@ -105,16 +105,30 @@ def collections(
                     if points_count is not None
                     else "Documents:        N/A"
                 )
-                click.echo(
-                    f"Vectors:          {vectors_count:,}"
-                    if vectors_count is not None
-                    else "Vectors:          N/A"
-                )
-                click.echo(
-                    f"Indexed Vectors:  {indexed_count:,}"
-                    if indexed_count is not None
-                    else "Indexed Vectors:  N/A"
-                )
+
+                # vectors_count can be None in newer Qdrant versions
+                if vectors_count is not None:
+                    click.echo(f"Vectors:          {vectors_count:,}")
+                else:
+                    # vectors_count is None - show points_count as proxy
+                    click.echo(
+                        f"Vectors:          {points_count:,} (using points count)"
+                        if points_count is not None
+                        else "Vectors:          N/A"
+                    )
+
+                # indexed_vectors_count shows HNSW index size (0 if using exact search)
+                if indexed_count == 0 and points_count is not None and points_count > 0:
+                    click.echo(
+                        f"Indexed Vectors:  {indexed_count:,} (using exact search)"
+                    )
+                else:
+                    click.echo(
+                        f"Indexed Vectors:  {indexed_count:,}"
+                        if indexed_count is not None
+                        else "Indexed Vectors:  N/A"
+                    )
+
                 click.echo(f"Status:           {status}")
 
                 # Get a sample document to extract metadata
@@ -396,16 +410,28 @@ def stats(
             if points_count is not None
             else "Total Documents:     N/A"
         )
-        click.echo(
-            f"Total Vectors:       {vectors_count:,}"
-            if vectors_count is not None
-            else "Total Vectors:       N/A"
-        )
-        click.echo(
-            f"Indexed Vectors:     {indexed_count:,}"
-            if indexed_count is not None
-            else "Indexed Vectors:     N/A"
-        )
+
+        # vectors_count can be None in newer Qdrant versions
+        if vectors_count is not None:
+            click.echo(f"Total Vectors:       {vectors_count:,}")
+        else:
+            # vectors_count is None - show points_count as proxy
+            click.echo(
+                f"Total Vectors:       {points_count:,} (using points count)"
+                if points_count is not None
+                else "Total Vectors:       N/A"
+            )
+
+        # indexed_vectors_count shows HNSW index size (0 if using exact search)
+        if indexed_count == 0 and points_count is not None and points_count > 0:
+            click.echo(f"Indexed Vectors:     {indexed_count:,} (using exact search)")
+        else:
+            click.echo(
+                f"Indexed Vectors:     {indexed_count:,}"
+                if indexed_count is not None
+                else "Indexed Vectors:     N/A"
+            )
+
         click.echo(f"Collection Status:   {status}")
         click.echo(f"Sample Size:         {len(results):,} documents analyzed")
 
