@@ -15,8 +15,8 @@ uv run governmentreporter server
 uv run governmentreporter ingest all --start-date 2025-01-01 --end-date 2025-12-31
 
 # Or ingest individually:
-# uv run governmentreporter ingest scotus --start-date 2025-01-01 --end-date 2025-12-31
-# uv run governmentreporter ingest eo --start-date 2025-01-01 --end-date 2025-12-31
+uv run governmentreporter ingest scotus --start-date 2025-01-01 --end-date 2025-12-31
+uv run governmentreporter ingest eo --start-date 2025-01-01 --end-date 2025-12-31
 
 # View database information
 uv run governmentreporter info collections
