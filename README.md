@@ -85,6 +85,7 @@ The system includes a Model Context Protocol server that enables Large Language 
 - **Structured Output**: Results formatted for optimal LLM comprehension with citations and metadata
 - **Real-time Search**: Live semantic search with relevance scoring
 - **Chunk-level Precision**: Returns relevant document segments with hierarchical context
+- **Intelligent Full-Document Loading**: Automatic hints guide LLMs to load complete documents when appropriate for multi-turn conversations, eliminating redundant API calls for follow-up questions
 
 ## Architecture
 
@@ -433,6 +434,42 @@ The GovernmentReporter MCP server is **production-ready** and fully compliant wi
 5. **`list_collections`** - Collection information
    - List all available collections with statistics
    - Metadata field descriptions
+
+#### Intelligent Full-Document Context Loading
+
+**Problem**: When users ask follow-up questions about a specific case or order, repeatedly fetching full documents via tool calls creates friction and delays.
+
+**Solution**: The query processor automatically generates **context-aware hints** in search results that guide the LLM to proactively load complete documents when appropriate.
+
+**How It Works:**
+- When search returns ≤3 highly relevant results (score ≥ 0.4), the response includes a "📄 Full Document Access" section
+- This section provides ready-to-use `get_document_by_id` tool invocations with proper parameters
+- The LLM can proactively load the full document into context for multi-turn conversations
+- Subsequent follow-up questions use the loaded context without additional API calls
+
+**Example Flow:**
+```
+User: "Summarize the most recent SCOTUS opinion on the 4th Amendment"
+↓
+LLM searches, gets 2 highly relevant chunks + hint:
+  📄 Full Document Access
+  For detailed analysis of this case, load the complete opinion:
+  get_document_by_id(document_id="12345_chunk_0", collection="supreme_court_opinions", full_document=true)
+↓
+LLM proactively calls tool to load full document
+↓
+User: "What was Justice Sotomayor's dissent?"
+LLM: [Reads from loaded document - no tool call needed!]
+↓
+User: "How did the majority respond to that argument?"
+LLM: [Still using same context - instant answer!]
+```
+
+**Benefits:**
+- **Reduced latency**: One proactive fetch vs. multiple reactive fetches
+- **Better UX**: Seamless multi-turn conversations without repeated approvals
+- **Smart thresholds**: Only triggers for focused searches (not broad queries)
+- **Deduplication**: Shows one hint per document (not per chunk)
 
 ### MCP Resources Available to LLMs
 

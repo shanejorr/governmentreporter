@@ -137,16 +137,21 @@ class GovernmentReporterMCP:
                 Tool(
                     name="search_government_documents",
                     description=(
-                        "Search across all US government documents including Supreme Court "
-                        "opinions and Executive Orders. Returns relevant document chunks with "
-                        "metadata for context-aware responses."
+                        "Perform semantic search across ALL government documents (Supreme Court opinions "
+                        "AND Executive Orders by default). Returns hierarchically-chunked text segments "
+                        "with rich legal metadata ranked by semantic relevance. Each chunk preserves document "
+                        "structure (opinion type, section labels, justice attribution). Use this tool for broad "
+                        "searches across document types or when the user doesn't specify a document type. "
+                        "For specialized filtering (by justice, president, agencies, opinion type, dates), "
+                        "use document-specific search tools instead. Results include document context, "
+                        "citations, structural information, and relevance scores."
                     ),
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "query": {
                                 "type": "string",
-                                "description": "The search query to find relevant documents",
+                                "description": "Natural language search query to find semantically relevant documents",
                             },
                             "document_types": {
                                 "type": "array",
@@ -154,11 +159,15 @@ class GovernmentReporterMCP:
                                     "type": "string",
                                     "enum": ["scotus", "executive_orders"],
                                 },
-                                "description": "Optional: Types of documents to search (default: both types)",
+                                "description": (
+                                    "Optional: Restrict search to specific document types. "
+                                    "Options are 'scotus' (Supreme Court opinions) or 'executive_orders'. "
+                                    "Default: searches both types."
+                                ),
                             },
                             "limit": {
                                 "type": "integer",
-                                "description": "Maximum number of results to return (default: 10)",
+                                "description": "Maximum number of results to return (default: 10, max: 50)",
                                 "minimum": 1,
                                 "maximum": 50,
                             },
@@ -169,15 +178,21 @@ class GovernmentReporterMCP:
                 Tool(
                     name="search_scotus_opinions",
                     description=(
-                        "Search specifically within Supreme Court opinions with advanced "
-                        "filtering by opinion type, justice, date range, and legal topics."
+                        "Search Supreme Court opinions with advanced filtering capabilities. "
+                        "Returns hierarchically-chunked opinion segments with rich legal metadata including "
+                        "case names, vote breakdowns, constitutional provisions cited, statutes interpreted, "
+                        "holdings, section labels, and justice attribution. Use this tool when you need "
+                        "SCOTUS-specific filtering (opinion type, justice, date) beyond the general search. "
+                        "Supports filtering by: opinion_type (majority/concurring/dissenting/syllabus), "
+                        "justice (last name like 'Roberts' or 'Sotomayor'), and date range (decision date). "
+                        "Results ranked by semantic relevance to the query."
                     ),
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "query": {
                                 "type": "string",
-                                "description": "The search query for SCOTUS opinions",
+                                "description": "Natural language search query for semantic matching within SCOTUS opinions",
                             },
                             "opinion_type": {
                                 "type": "string",
@@ -187,25 +202,39 @@ class GovernmentReporterMCP:
                                     "dissenting",
                                     "syllabus",
                                 ],
-                                "description": "Filter by type of opinion",
+                                "description": (
+                                    "Optional: Filter by opinion type. 'majority' = main Court opinion, "
+                                    "'concurring' = agreeing but separate reasoning, 'dissenting' = disagreeing opinion, "
+                                    "'syllabus' = official case summary."
+                                ),
                             },
                             "justice": {
                                 "type": "string",
-                                "description": "Filter by authoring justice name",
+                                "description": (
+                                    "Optional: Filter by authoring justice. Use last name only "
+                                    "(e.g., 'Roberts', 'Sotomayor', 'Kagan'). Applies to majority, concurring, "
+                                    "and dissenting opinions."
+                                ),
                             },
                             "start_date": {
                                 "type": "string",
                                 "format": "date",
-                                "description": "Start date for filtering (YYYY-MM-DD)",
+                                "description": (
+                                    "Optional: Filter opinions decided on or after this date (YYYY-MM-DD format). "
+                                    "Filters on the decision_date field."
+                                ),
                             },
                             "end_date": {
                                 "type": "string",
                                 "format": "date",
-                                "description": "End date for filtering (YYYY-MM-DD)",
+                                "description": (
+                                    "Optional: Filter opinions decided on or before this date (YYYY-MM-DD format). "
+                                    "Filters on the decision_date field."
+                                ),
                             },
                             "limit": {
                                 "type": "integer",
-                                "description": "Maximum number of results (default: 10)",
+                                "description": "Maximum number of results to return (default: 10, max: 50)",
                                 "minimum": 1,
                                 "maximum": 50,
                             },
@@ -216,43 +245,66 @@ class GovernmentReporterMCP:
                 Tool(
                     name="search_executive_orders",
                     description=(
-                        "Search specifically within federal Executive Orders with filtering by "
-                        "president, agencies, policy topics, and date range."
+                        "Search Executive Orders with advanced filtering capabilities. "
+                        "Returns hierarchically-chunked order segments with rich policy metadata including "
+                        "EO numbers, signing dates, presidents, impacted agencies, policy topics, "
+                        "legal authorities cited, economic sectors, and section structure. Use this tool when "
+                        "you need EO-specific filtering (president, agencies, policy topics, dates) beyond "
+                        "general search. Supports filtering by: president (last name), agencies (federal agency "
+                        "codes), policy_topics (topic strings matching indexed values), and date range (signing date). "
+                        "Results ranked by semantic relevance to the query."
                     ),
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "query": {
                                 "type": "string",
-                                "description": "The search query for Executive Orders",
+                                "description": "Natural language search query for semantic matching within Executive Orders",
                             },
                             "president": {
                                 "type": "string",
-                                "description": "Filter by president name",
+                                "description": (
+                                    "Optional: Filter by president. Use last name only "
+                                    "(e.g., 'Biden', 'Trump', 'Obama'). Case-sensitive."
+                                ),
                             },
                             "agencies": {
                                 "type": "array",
                                 "items": {"type": "string"},
-                                "description": "Filter by impacted agency codes (e.g., ['EPA', 'DOJ'])",
+                                "description": (
+                                    "Optional: Filter by impacted federal agencies. Provide array of agency codes "
+                                    "(e.g., ['EPA', 'DOJ', 'NASA', 'HHS', 'DOD']). Matches orders affecting ANY "
+                                    "of the specified agencies."
+                                ),
                             },
                             "policy_topics": {
                                 "type": "array",
                                 "items": {"type": "string"},
-                                "description": "Filter by policy topics",
+                                "description": (
+                                    "Optional: Filter by policy topics. Provide array of topic strings "
+                                    "(e.g., ['environment', 'healthcare', 'national security', 'immigration']). "
+                                    "Matches orders tagged with ANY of the specified topics."
+                                ),
                             },
                             "start_date": {
                                 "type": "string",
                                 "format": "date",
-                                "description": "Start date for filtering (YYYY-MM-DD)",
+                                "description": (
+                                    "Optional: Filter orders signed on or after this date (YYYY-MM-DD format). "
+                                    "Filters on the signing_date field."
+                                ),
                             },
                             "end_date": {
                                 "type": "string",
                                 "format": "date",
-                                "description": "End date for filtering (YYYY-MM-DD)",
+                                "description": (
+                                    "Optional: Filter orders signed on or before this date (YYYY-MM-DD format). "
+                                    "Filters on the signing_date field."
+                                ),
                             },
                             "limit": {
                                 "type": "integer",
-                                "description": "Maximum number of results (default: 10)",
+                                "description": "Maximum number of results to return (default: 10, max: 50)",
                                 "minimum": 1,
                                 "maximum": 50,
                             },
@@ -263,24 +315,40 @@ class GovernmentReporterMCP:
                 Tool(
                     name="get_document_by_id",
                     description=(
-                        "Retrieve a specific document or document chunk by its ID. "
-                        "Useful for getting more context about a previously found document."
+                        "Retrieve a specific document chunk by its ID (obtained from search results). "
+                        "By default, returns the stored chunk with metadata. Set full_document=true to fetch "
+                        "the complete, unabridged document text directly from government APIs in real-time "
+                        "(CourtListener for SCOTUS opinions, Federal Register for Executive Orders). "
+                        "Use this tool to: (1) get additional context beyond a retrieved chunk, "
+                        "(2) access the full document when chunks are insufficient for the user's needs, or "
+                        "(3) retrieve the complete text of a specific document the user references. "
+                        "Note: full_document=true may have higher latency due to API fetch."
                     ),
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "document_id": {
                                 "type": "string",
-                                "description": "The ID of the document to retrieve",
+                                "description": (
+                                    "The unique document/chunk ID to retrieve. Obtain this from search results "
+                                    "(appears in metadata or result IDs)."
+                                ),
                             },
                             "collection": {
                                 "type": "string",
-                                "description": "The collection to search in",
+                                "description": (
+                                    "The collection containing the document. Use 'supreme_court_opinions' for "
+                                    "SCOTUS opinions or 'executive_orders' for Executive Orders."
+                                ),
                                 "enum": ["supreme_court_opinions", "executive_orders"],
                             },
                             "full_document": {
                                 "type": "boolean",
-                                "description": "Whether to retrieve the full document from the API (default: false)",
+                                "description": (
+                                    "Optional: If true, fetches the complete unabridged document from government APIs "
+                                    "instead of just the stored chunk. Default: false. Set to true when the user needs "
+                                    "the full document text or when chunk context is insufficient."
+                                ),
                             },
                         },
                         "required": ["document_id", "collection"],
@@ -289,8 +357,12 @@ class GovernmentReporterMCP:
                 Tool(
                     name="list_collections",
                     description=(
-                        "List all available document collections in the vector database "
-                        "with statistics about each collection."
+                        "List all available document collections with database statistics (total chunks, "
+                        "vector counts, vector dimensions, available metadata fields). Use this tool ONLY "
+                        "when the user explicitly asks about: (1) what collections are available, "
+                        "(2) database contents or statistics, (3) system capabilities or indexed documents, or "
+                        "(4) what metadata fields can be filtered on. DO NOT use this tool for regular document "
+                        "searches - use the search tools instead. This is a diagnostic/informational tool."
                     ),
                     inputSchema={"type": "object", "properties": {}},
                 ),

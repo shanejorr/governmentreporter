@@ -195,6 +195,7 @@ Reference files in `scratch/` directory show actual API response structures:
 - **2 Resource Types**: Full document access via `scotus://opinion/{id}` and `eo://document/{number}`
 - **stdio Transport**: JSON-RPC 2.0 communication for Claude Desktop integration
 - **Real-Time API Retrieval**: Resources fetch fresh document text on-demand from government APIs
+- **Intelligent Full-Document Hints**: Query processor automatically generates context-aware hints in search results, guiding LLMs to proactively load complete documents when appropriate (≤3 results, score ≥0.4). Eliminates redundant tool calls for multi-turn conversations. Implementation: `query_processor.py::_generate_full_document_hint()` integrated into all format methods.
 
 ### Hierarchical Chunking System
 - **SCOTUS Opinions**:

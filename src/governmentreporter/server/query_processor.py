@@ -100,6 +100,11 @@ class QueryProcessor:
 
             output.append("")  # Add blank line between results
 
+        # Add full document access hint if appropriate
+        hint = self._generate_full_document_hint(results)
+        if hint:
+            output.append(hint)
+
         return "\n".join(output)
 
     def format_scotus_results(self, query: str, results: List[Dict[str, Any]]) -> str:
@@ -126,6 +131,11 @@ class QueryProcessor:
             output.append(self._format_scotus_chunk(i, payload, score, detailed=True))
             output.append("")
 
+        # Add full document access hint if appropriate
+        hint = self._generate_full_document_hint(results)
+        if hint:
+            output.append(hint)
+
         return "\n".join(output)
 
     def format_eo_results(self, query: str, results: List[Dict[str, Any]]) -> str:
@@ -151,6 +161,11 @@ class QueryProcessor:
             payload = result.get("payload", {})
             output.append(self._format_eo_chunk(i, payload, score, detailed=True))
             output.append("")
+
+        # Add full document access hint if appropriate
+        hint = self._generate_full_document_hint(results)
+        if hint:
+            output.append(hint)
 
         return "\n".join(output)
 
@@ -630,3 +645,114 @@ class QueryProcessor:
                 metadata[field.replace("_", " ").title()] = value
 
         return metadata
+
+    def _generate_full_document_hint(
+        self,
+        results: List[Dict[str, Any]],
+        max_results: int = 3,
+        min_score: float = 0.4,
+    ) -> str:
+        """
+        Generate a hint suggesting full document retrieval when appropriate.
+
+        This method analyzes search results and provides explicit guidance to the LLM
+        about when and how to fetch full documents for detailed analysis. Hints are
+        only generated when results are focused enough that full document context
+        would be beneficial without overwhelming the context window.
+
+        The hint includes specific document IDs and tool invocation examples,
+        making it easy for the LLM to perform follow-up actions.
+
+        Args:
+            results: List of search results with type, score, and payload
+            max_results: Maximum number of results to trigger hint (default: 3)
+            min_score: Minimum relevance score to trigger hint (default: 0.4)
+
+        Returns:
+            String containing full document access hint, or empty string if
+            conditions aren't met for hint generation.
+
+        Conditions for hint generation:
+            1. Number of results <= max_results (focused search)
+            2. Highest relevance score >= min_score (relevant matches)
+            3. Results contain document_id in metadata
+
+        Example Output:
+            ## 📄 Full Document Access
+
+            For detailed analysis of these 2 cases, you can load the complete opinion text:
+
+            **Trump v. CASA, Inc.:**
+            ```
+            get_document_by_id(
+                document_id="11085138_chunk_0",
+                collection="supreme_court_opinions",
+                full_document=true
+            )
+            ```
+
+            This loads the full opinion into context for comprehensive follow-up questions.
+        """
+        # Don't generate hints if too many results (would overwhelm context)
+        if not results or len(results) > max_results:
+            return ""
+
+        # Check if any result meets minimum relevance threshold
+        max_score = max(r.get("score", 0) for r in results)
+        if max_score < min_score:
+            return ""
+
+        # Group results by document to avoid duplicate hints
+        seen_docs = set()
+        doc_hints = []
+
+        for result in results:
+            payload = result.get("payload", {})
+            doc_type = result.get("type")
+
+            # Extract document ID (opinion ID for SCOTUS, document number for EO)
+            document_id = payload.get("document_id")
+            if not document_id or document_id in seen_docs:
+                continue
+
+            seen_docs.add(document_id)
+
+            # Determine collection name
+            if doc_type == "scotus" or "case_name" in payload:
+                collection = "supreme_court_opinions"
+                doc_title = payload.get("case_name", payload.get("title", "Document"))
+            elif doc_type == "executive_order" or "executive_order_number" in payload:
+                collection = "executive_orders"
+                eo_number = payload.get("executive_order_number", "")
+                doc_title = payload.get("title", f"Executive Order {eo_number}")
+            else:
+                continue
+
+            # Generate hint for this document
+            # Use first chunk ID for document retrieval
+            chunk_id = payload.get("chunk_id", f"{document_id}_chunk_0")
+
+            hint = f"""**{doc_title}:**
+```
+get_document_by_id(
+    document_id="{chunk_id}",
+    collection="{collection}",
+    full_document=true
+)
+```"""
+            doc_hints.append(hint)
+
+        # Only generate section if we have hints
+        if not doc_hints:
+            return ""
+
+        doc_count = len(doc_hints)
+        intro = f"For detailed analysis of {'this case' if doc_count == 1 else f'these {doc_count} documents'}, you can load the complete {'opinion' if results[0].get('type') == 'scotus' else 'document'} text:"
+
+        output = ["\n---\n", "## 📄 Full Document Access\n", intro, ""]
+        output.extend(doc_hints)
+        output.append(
+            "\nLoading the full document enables comprehensive follow-up questions without additional searches."
+        )
+
+        return "\n".join(output)

@@ -244,18 +244,26 @@ def format_document_resource(document) -> str:
 
 def list_available_resources() -> List[Resource]:
     """
-    List available resource types for LLM discovery.
+    List available resource types for client application discovery.
 
     This function returns a list of Resource objects that describe the types
-    of resources available. Since documents are fetched dynamically by ID,
-    we provide example/template resources to show the LLM what's possible.
+    of resources available. Resources in MCP are APPLICATION-CONTROLLED, meaning
+    the MCP client/host application (not the LLM) decides when to fetch them.
+
+    Resources are fetched dynamically by ID and provide complete, unabridged
+    document text from government APIs. The client application can pre-fetch
+    resources and inject them into LLM context, or fetch them on-demand based
+    on user citations/references.
 
     Returns:
-        List of Resource objects describing available resource types.
+        List of Resource objects describing available resource URI templates.
 
     Note:
-        Actual document IDs must be obtained through search tools first.
-        These are template resources showing the URI format.
+        Resources complement tools by providing alternative access patterns:
+        - Tools: LLM autonomously decides to call them (model-controlled)
+        - Resources: Client application explicitly fetches and manages them (application-controlled)
+
+        Document IDs should be obtained from search tool results first.
 
     Example:
         >>> resources = list_available_resources()
@@ -269,8 +277,15 @@ def list_available_resources() -> List[Resource]:
             uri=AnyUrl("scotus://opinion/{opinion_id}"),
             name="Supreme Court Opinion",
             description=(
-                "Full text of a Supreme Court opinion. Use the opinion_id from "
-                "search results. Example: scotus://opinion/12345678"
+                "APPLICATION-CONTROLLED RESOURCE: Full text of a Supreme Court opinion fetched "
+                "on-demand from CourtListener API. The MCP client application (not the LLM) "
+                "explicitly fetches this resource by URI and injects it into context. "
+                "Use this when: (1) user provides a specific opinion_id or citation, "
+                "(2) pre-loading multiple documents for batch context, or "
+                "(3) client wants control over document fetching. "
+                "For LLM-autonomous fetching, use the 'get_document_by_id' tool instead. "
+                "URI format: scotus://opinion/{opinion_id} where opinion_id is from CourtListener "
+                "(obtainable via search_scotus_opinions tool results)."
             ),
             mimeType="text/markdown",
         ),
@@ -278,8 +293,15 @@ def list_available_resources() -> List[Resource]:
             uri=AnyUrl("eo://document/{document_number}"),
             name="Executive Order",
             description=(
-                "Full text of a Presidential Executive Order. Use the document_number "
-                "from search results. Example: eo://document/2024-12345"
+                "APPLICATION-CONTROLLED RESOURCE: Full text of a Presidential Executive Order "
+                "fetched on-demand from Federal Register API. The MCP client application "
+                "(not the LLM) explicitly fetches this resource by URI and injects it into context. "
+                "Use this when: (1) user provides a specific EO number or document_number, "
+                "(2) pre-loading multiple orders for batch context, or "
+                "(3) client wants control over document fetching. "
+                "For LLM-autonomous fetching, use the 'get_document_by_id' tool instead. "
+                "URI format: eo://document/{document_number} where document_number is from "
+                "Federal Register (obtainable via search_executive_orders tool results)."
             ),
             mimeType="text/markdown",
         ),
