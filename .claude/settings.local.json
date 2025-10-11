@@ -48,7 +48,12 @@
       "WebFetch(domain:openai.com)",
       "WebFetch(domain:community.openai.com)",
       "Bash(./scratch/pull_opinion_text.sh:*)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Read(//Users/shaneorr/Library/Application Support/Claude/**)",
+      "Bash(/Users/shaneorr/.local/bin/uv run --directory /Users/shaneorr/repos/personal/governmentreporter governmentreporter --help)",
+      "Bash(/Users/shaneorr/.local/bin/uv run --directory /Users/shaneorr/repos/personal/governmentreporter governmentreporter --version)",
+      "Bash(/Users/shaneorr/.local/bin/uv run python:*)",
+      "Bash(/Users/shaneorr/.local/bin/uv run --directory /Users/shaneorr/repos/personal/governmentreporter governmentreporter server)"
     ],
     "deny": [],
     "additionalDirectories": [

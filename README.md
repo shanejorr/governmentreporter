@@ -218,36 +218,6 @@ governmentreporter/
    - Results include precise section references and justice attribution
    - Legal metadata enables topic-specific and citation-based searches
 
-## Recent Updates
-
-### Version 0.1.0 - Major Restructure (September 2025)
-
-The codebase underwent a comprehensive restructure for improved maintainability and user experience:
-
-**New CLI Framework:**
-- Unified `governmentreporter` command with Click-based CLI
-- Subcommands: `server`, `ingest scotus`, `ingest eo`, `query`
-- Shell completion support for bash/zsh/fish
-- Improved help documentation and option validation
-
-**Modular Architecture:**
-- New `cli/` module with dedicated command handlers
-- New `ingestion/` module with base class pattern (eliminates ~500 lines of code duplication)
-- Chunking split into organized submodules: `base.py`, `scotus.py`, `executive_orders.py`
-- Better separation of concerns across all modules
-
-**Developer Experience:**
-- All scripts migrated to proper CLI commands
-- Backwards-compatible imports through `__init__.py` exports
-- Comprehensive docstrings and type hints
-- Modern `src/` layout for Python packaging best practices
-
-**Key Benefits:**
-- Single entry point (`governmentreporter`) for all operations
-- Consistent command structure across all features
-- Easy to extend with new document types or commands
-- Better error handling and user feedback
-
 ## Prerequisites
 
 - Python 3.11+
