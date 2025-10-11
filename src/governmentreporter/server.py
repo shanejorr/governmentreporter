@@ -45,28 +45,28 @@ from typing import Optional
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+# Configure logging IMMEDIATELY before any application imports
+# This MUST happen before importing any governmentreporter modules
+logs_dir = Path("logs")
+logs_dir.mkdir(exist_ok=True)
+
+# Remove all existing handlers to prevent console output
+root_logger = logging.getLogger()
+for handler in root_logger.handlers[:]:
+    root_logger.removeHandler(handler)
+
+# Set up file-only logging
+file_handler = logging.FileHandler(logs_dir / "mcp_server.log", mode="a")
+file_handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+)
+root_logger.addHandler(file_handler)
+root_logger.setLevel(logging.INFO)
+
+# Now import application modules (they will use the file-only logger)
 from governmentreporter.server.config import ServerConfig, get_config, set_config
 from governmentreporter.server.mcp_server import GovernmentReporterMCP
 from governmentreporter.utils.config import get_openai_api_key
-
-
-# Configure logging
-def setup_logging(log_level: str = "INFO") -> None:
-    """
-    Set up logging configuration for the server.
-
-    Args:
-        log_level: The logging level (DEBUG, INFO, WARNING, ERROR).
-    """
-    logging.basicConfig(
-        level=getattr(logging, log_level.upper()),
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            # Optionally add file handler
-            # logging.FileHandler('mcp_server.log')
-        ],
-    )
 
 
 async def main(config: Optional[ServerConfig] = None) -> None:
@@ -90,9 +90,6 @@ async def main(config: Optional[ServerConfig] = None) -> None:
     else:
         # If custom config provided, set it as the singleton
         set_config(config)
-
-    # Set up logging
-    setup_logging(config.log_level)
     logger = logging.getLogger(__name__)
 
     logger.info("=" * 60)
