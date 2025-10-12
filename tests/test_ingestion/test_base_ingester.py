@@ -10,8 +10,9 @@ Python Learning Notes:
     - Testing abstract classes requires creating test implementations
 """
 
-from abc import ABC
-from unittest.mock import MagicMock, call, patch
+import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -62,30 +63,70 @@ def mock_dependencies():
     }
 
 
+@pytest.fixture
+def isolated_test_paths():
+    """
+    Create isolated temporary paths for each test.
+
+    This fixture creates unique temporary directories for Qdrant database
+    and progress tracking to prevent file locking conflicts between tests.
+    Qdrant's local storage uses file locking and only allows one client
+    to access a database path at a time.
+
+    Yields:
+        dict: Dictionary with 'qdrant_path' and 'progress_path' keys.
+
+    Python Learning Notes:
+        - tempfile.TemporaryDirectory() creates isolated temp directories
+        - Cleanup happens automatically when the context manager exits
+        - This ensures complete test isolation
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        yield {
+            "qdrant_path": str(temp_path / "qdrant_db"),
+            "progress_path": str(temp_path / "progress.db"),
+        }
+        # Automatic cleanup on exit
+
+
 class TestDocumentIngesterInitialization:
     """Test base ingester initialization."""
 
-    def test_ingester_initialization_with_required_params(self):
+    def test_ingester_initialization_with_required_params(self, isolated_test_paths):
         """Test ingester initializes with required parameters."""
-        ingester = ConcreteIngester(start_date="2024-01-01", end_date="2024-12-31")
+        ingester = ConcreteIngester(
+            start_date="2024-01-01",
+            end_date="2024-12-31",
+            progress_db=isolated_test_paths["progress_path"],
+            qdrant_db_path=isolated_test_paths["qdrant_path"],
+        )
 
         assert ingester.start_date == "2024-01-01"
         assert ingester.end_date == "2024-12-31"
         assert ingester.batch_size > 0
         assert ingester.dry_run is False
 
-    def test_ingester_initialization_with_custom_batch_size(self):
+    def test_ingester_initialization_with_custom_batch_size(self, isolated_test_paths):
         """Test ingester accepts custom batch size."""
         ingester = ConcreteIngester(
-            start_date="2024-01-01", end_date="2024-12-31", batch_size=100
+            start_date="2024-01-01",
+            end_date="2024-12-31",
+            batch_size=100,
+            progress_db=isolated_test_paths["progress_path"],
+            qdrant_db_path=isolated_test_paths["qdrant_path"],
         )
 
         assert ingester.batch_size == 100
 
-    def test_ingester_initialization_with_dry_run(self):
+    def test_ingester_initialization_with_dry_run(self, isolated_test_paths):
         """Test ingester accepts dry run flag."""
         ingester = ConcreteIngester(
-            start_date="2024-01-01", end_date="2024-12-31", dry_run=True
+            start_date="2024-01-01",
+            end_date="2024-12-31",
+            dry_run=True,
+            progress_db=isolated_test_paths["progress_path"],
+            qdrant_db_path=isolated_test_paths["qdrant_path"],
         )
 
         assert ingester.dry_run is True
@@ -102,10 +143,15 @@ class TestDocumentIngesterInitialization:
         # Progress tracker is initialized internally, we just verify no errors
         assert ingester is not None
 
-    def test_ingester_validates_date_format(self):
+    def test_ingester_validates_date_format(self, isolated_test_paths):
         """Test ingester validates date format during initialization."""
         # Valid dates should work
-        ingester = ConcreteIngester(start_date="2024-01-01", end_date="2024-12-31")
+        ingester = ConcreteIngester(
+            start_date="2024-01-01",
+            end_date="2024-12-31",
+            progress_db=isolated_test_paths["progress_path"],
+            qdrant_db_path=isolated_test_paths["qdrant_path"],
+        )
         assert ingester is not None
 
         # Invalid dates might raise error or be handled differently
