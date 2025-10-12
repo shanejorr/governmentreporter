@@ -20,9 +20,43 @@ The processor ensures that:
 import json
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
+
+
+def format_timestamp_to_date(
+    timestamp: Union[int, None], format_str: str = "%B %d, %Y"
+) -> str:
+    """
+    Convert a Unix timestamp to a human-readable date string.
+
+    Args:
+        timestamp: Unix timestamp (seconds since epoch) or None
+        format_str: strftime format string for output (default: "Month DD, YYYY")
+
+    Returns:
+        Formatted date string, or empty string if timestamp is None
+
+    Example:
+        >>> format_timestamp_to_date(1704067200)
+        "January 1, 2024"
+        >>> format_timestamp_to_date(1704067200, "%Y-%m-%d")
+        "2024-01-01"
+
+    Python Learning Notes:
+        - datetime.fromtimestamp() creates datetime from Unix timestamp
+        - strftime() formats datetime as string using format codes
+        - Gracefully handles None values for optional date fields
+    """
+    if timestamp is None:
+        return ""
+    try:
+        dt = datetime.fromtimestamp(timestamp)
+        return dt.strftime(format_str)
+    except (ValueError, OSError, OverflowError) as e:
+        logger.warning("Failed to format timestamp %s: %s", timestamp, e)
+        return ""
 
 
 class QueryProcessor:
@@ -260,12 +294,12 @@ class QueryProcessor:
                 or chunk_metadata.get("case_name")
                 or "Supreme Court Opinion"
             )
-            opinion_date = (
-                metadata.get("date")
-                or metadata.get("decision_date")
-                or chunk_metadata.get("date")
-                or ""
+            opinion_date_timestamp = (
+                metadata.get("publication_date")
+                or metadata.get("decided_date")
+                or chunk_metadata.get("publication_date")
             )
+            opinion_date = format_timestamp_to_date(opinion_date_timestamp)
             opinion_type = (
                 metadata.get("opinion_type") or chunk_metadata.get("opinion_type") or ""
             )
@@ -298,12 +332,12 @@ class QueryProcessor:
             eo_number = metadata.get("executive_order_number") or chunk_metadata.get(
                 "executive_order_number", ""
             )
-            signing_date = (
+            signing_date_timestamp = (
                 metadata.get("signing_date")
                 or metadata.get("publication_date")
                 or chunk_metadata.get("signing_date")
-                or ""
             )
+            signing_date = format_timestamp_to_date(signing_date_timestamp)
 
             president_value = metadata.get("president") or chunk_metadata.get(
                 "president"
@@ -497,7 +531,8 @@ class QueryProcessor:
 
         # President and date
         president = payload.get("president", "")
-        signing_date = payload.get("signing_date", "")
+        signing_date_timestamp = payload.get("signing_date")
+        signing_date = format_timestamp_to_date(signing_date_timestamp)
         if president or signing_date:
             info_parts = []
             if president:
@@ -605,12 +640,21 @@ class QueryProcessor:
         """
         metadata = {}
 
+        # Define date fields that need timestamp-to-string conversion
+        date_fields = {
+            "publication_date",
+            "signing_date",
+            "argued_date",
+            "decided_date",
+            "effective_date",
+        }
+
         if collection == "supreme_court_opinions":
             fields = [
                 "opinion_type",
                 "justice",
                 "section",
-                "date",
+                "publication_date",
                 "legal_topics",
                 "constitutional_provisions",
                 "statutes_interpreted",
@@ -634,8 +678,11 @@ class QueryProcessor:
         for field in fields:
             if field in payload and payload[field]:
                 value = payload[field]
+                # Convert timestamps to readable dates
+                if field in date_fields and isinstance(value, int):
+                    value = format_timestamp_to_date(value)
                 # Format lists nicely
-                if isinstance(value, list):
+                elif isinstance(value, list):
                     value = ", ".join(str(v) for v in value)
                 elif isinstance(value, dict):
                     if "name" in value:

@@ -66,7 +66,7 @@ def eo_results():
                 "title": "Protecting Consumer Data",
                 "executive_order_number": "14123",
                 "president": "Biden",
-                "signing_date": "2024-01-15",
+                "signing_date": 1705294800,  # 2024-01-15 as Unix timestamp
                 "text": "By the authority vested in me as President...",
             },
         }

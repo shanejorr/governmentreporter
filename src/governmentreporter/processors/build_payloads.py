@@ -29,7 +29,7 @@ Python Learning Notes:
 
 import re
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from ..apis.base import Document
 from ..utils import get_logger
@@ -77,6 +77,37 @@ def extract_year_from_date(date_str: str) -> int:
     except (ValueError, AttributeError, IndexError, TypeError):
         logger.warning("Failed to parse date '%s', using current year", date_str)
         return datetime.now().year
+
+
+def date_string_to_timestamp(date_str: str) -> Optional[int]:
+    """
+    Convert a date string to Unix timestamp for Qdrant range filtering.
+
+    Qdrant's Range filter requires numeric values, so we convert date strings
+    to Unix timestamps (seconds since epoch) to enable date range queries.
+    If conversion fails, returns None to allow the document to be stored
+    without a timestamp (filtering won't work but storage will succeed).
+
+    Args:
+        date_str: Date in YYYY-MM-DD format
+
+    Returns:
+        Unix timestamp (int) or None if conversion fails
+
+    Python Learning Notes:
+        - datetime.strptime() parses strings into datetime objects
+        - timestamp() method converts to Unix time (float)
+        - int() truncates to whole seconds for Qdrant compatibility
+        - Returning None allows graceful degradation
+    """
+    try:
+        if not date_str:
+            return None
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+        return int(dt.timestamp())
+    except (ValueError, AttributeError, TypeError) as e:
+        logger.warning("Failed to convert date '%s' to timestamp: %s", date_str, e)
+        return None
 
 
 def normalize_scotus_metadata(doc: Document) -> Dict[str, Any]:
@@ -137,7 +168,7 @@ def normalize_scotus_metadata(doc: Document) -> Dict[str, Any]:
     return {
         "document_id": doc.id,
         "title": case_name,  # Use case_name which prefers metadata over doc.title
-        "publication_date": doc.date,
+        "publication_date": date_string_to_timestamp(doc.date),
         "year": extract_year_from_date(doc.date),
         "source": source,  # Normalized to "CourtListener"
         "type": doc_type,  # Normalized to "Supreme Court Opinion"
@@ -208,10 +239,12 @@ def normalize_eo_metadata(doc: Document) -> Dict[str, Any]:
     if doc_type and doc_type.lower() == "executive_order":
         doc_type = "Executive Order"
 
+    signing_date = metadata.get("signing_date", doc.date)
+
     return {
         "document_id": doc.id,
         "title": doc.title,
-        "publication_date": doc.date,
+        "publication_date": date_string_to_timestamp(doc.date),
         "year": extract_year_from_date(doc.date),
         "source": source,  # Normalized to "Federal Register"
         "type": doc_type,  # Normalized to "Executive Order"
@@ -220,7 +253,7 @@ def normalize_eo_metadata(doc: Document) -> Dict[str, Any]:
         "executive_order_number": eo_number,  # Alias for eo_number for backwards compatibility
         "president": president_name,
         "agencies": metadata.get("agencies", []),
-        "signing_date": metadata.get("signing_date", doc.date),
+        "signing_date": date_string_to_timestamp(signing_date),
     }
 
 

@@ -20,6 +20,7 @@ Each handler follows the pattern:
 """
 
 import logging
+from datetime import datetime
 from typing import Any, Dict
 
 from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue, Range
@@ -31,6 +32,32 @@ from ..processors.embeddings import generate_embedding
 from .query_processor import QueryProcessor
 
 logger = logging.getLogger(__name__)
+
+
+def date_string_to_timestamp(date_str: str) -> int:
+    """
+    Convert a date string in YYYY-MM-DD format to a Unix timestamp.
+
+    Qdrant's Range filter requires numeric values, so we convert date strings
+    to Unix timestamps (seconds since epoch) for range comparisons.
+
+    Args:
+        date_str: Date string in YYYY-MM-DD format (e.g., "2024-01-01")
+
+    Returns:
+        Unix timestamp as an integer (seconds since epoch)
+
+    Example:
+        >>> date_string_to_timestamp("2024-01-01")
+        1704067200
+
+    Python Learning Notes:
+        - datetime.strptime() parses a string into a datetime object
+        - timestamp() converts datetime to Unix timestamp (float)
+        - int() converts to integer for Qdrant compatibility
+    """
+    dt = datetime.strptime(date_str, "%Y-%m-%d")
+    return int(dt.timestamp())
 
 
 async def handle_search_government_documents(
@@ -208,15 +235,18 @@ async def handle_search_scotus_opinions(
             )
 
         if start_date or end_date:
-            # Build range condition for dates
+            # Build range condition for dates using timestamps
+            # Note: Qdrant's Range filter requires numeric values. We convert
+            # user input (YYYY-MM-DD strings) to Unix timestamps and filter on
+            # the publication_date field (which stores timestamps).
             range_params = {}
             if start_date:
-                range_params["gte"] = start_date
+                range_params["gte"] = date_string_to_timestamp(start_date)
             if end_date:
-                range_params["lte"] = end_date
+                range_params["lte"] = date_string_to_timestamp(end_date)
 
             filter_conditions.append(
-                FieldCondition(key="date", range=Range(**range_params))
+                FieldCondition(key="publication_date", range=Range(**range_params))
             )
 
         # Create proper Qdrant Filter object
@@ -324,12 +354,15 @@ async def handle_search_executive_orders(
             )
 
         if start_date or end_date:
-            # Build range condition for dates
+            # Build range condition for dates using timestamps
+            # Note: Qdrant's Range filter requires numeric values. We convert
+            # user input (YYYY-MM-DD strings) to Unix timestamps and filter on
+            # the signing_date field (which stores timestamps).
             range_params = {}
             if start_date:
-                range_params["gte"] = start_date
+                range_params["gte"] = date_string_to_timestamp(start_date)
             if end_date:
-                range_params["lte"] = end_date
+                range_params["lte"] = date_string_to_timestamp(end_date)
 
             filter_conditions.append(
                 FieldCondition(key="signing_date", range=Range(**range_params))

@@ -32,7 +32,7 @@ async def test_handle_get_document_by_id_returns_full_executive_order(monkeypatc
             "title": "Strengthening Example Infrastructure",
             "executive_order_number": "14099",
             "president": "Doe",
-            "signing_date": "2024-04-01",
+            "signing_date": 1711944000,  # 2024-04-01 as Unix timestamp
         },
     )
 
@@ -46,7 +46,7 @@ async def test_handle_get_document_by_id_returns_full_executive_order(monkeypatc
         metadata={
             "executive_order_number": "14099",
             "president": {"name": "Jane Doe"},
-            "signing_date": "2024-04-01",
+            "signing_date": 1711944000,  # 2024-04-01 as Unix timestamp
         },
         url="https://example.com/eo/14099",
     )
@@ -89,7 +89,7 @@ async def test_call_tool_returns_call_tool_result(monkeypatch):
             "title": "Strengthening Example Infrastructure",
             "executive_order_number": "14099",
             "president": "Doe",
-            "signing_date": "2024-04-01",
+            "signing_date": 1711944000,  # 2024-04-01 as Unix timestamp
         },
     )
 

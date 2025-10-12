@@ -143,7 +143,9 @@ class TestNormalizeSCOTUSMetadata:
         # Assert
         assert normalized["document_id"] == "cl-opinion-123"
         assert normalized["title"] == "Brown v. Board of Education of Topeka"
-        assert normalized["publication_date"] == "1954-05-17"
+        # publication_date is now a Unix timestamp instead of a string
+        assert isinstance(normalized["publication_date"], int)
+        assert normalized["publication_date"] == -493156800  # 1954-05-17 as timestamp
         assert normalized["year"] == 1954
         assert normalized["source"] == "CourtListener"
         assert normalized["type"] == "Supreme Court Opinion"
@@ -253,7 +255,9 @@ class TestNormalizeEOMetadata:
         # Assert
         assert normalized["document_id"] == "2024-12345"
         assert normalized["title"] == "Executive Order on Climate Action"
-        assert normalized["publication_date"] == "2024-01-20"
+        # publication_date is now a Unix timestamp instead of a string
+        assert isinstance(normalized["publication_date"], int)
+        assert normalized["publication_date"] == 1705726800  # 2024-01-20 as timestamp
         assert normalized["year"] == 2024
         assert normalized["source"] == "Federal Register"
         assert normalized["type"] == "Executive Order"

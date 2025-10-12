@@ -58,7 +58,7 @@ class TestSharedMetadata:
         metadata_dict = {
             "document_id": "doc-12345",
             "title": "Test Case v. United States",
-            "publication_date": "2024-01-15",
+            "publication_date": 1705276800,  # 2024-01-15 as Unix timestamp
             "year": 2024,
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
@@ -100,7 +100,7 @@ class TestSharedMetadata:
         incomplete_dict = {
             "document_id": "doc-12345",
             # "title": missing!
-            "publication_date": "2024-01-15",
+            "publication_date": 1705294800,  # 2024-01-15 as Unix timestamp
             "year": 2024,
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
@@ -126,7 +126,7 @@ class TestSharedMetadata:
         metadata_dict = {
             "document_id": "doc-12345",
             "title": "Test Case",
-            "publication_date": "2024-01-15",
+            "publication_date": 1705294800,  # 2024-01-15 as Unix timestamp
             "year": 2024,
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
@@ -166,7 +166,7 @@ class TestSharedMetadata:
         metadata_dict = {
             "document_id": "doc-12345",
             "title": "Test Case",
-            "publication_date": "2024-01-15",
+            "publication_date": 1705294800,  # 2024-01-15 as Unix timestamp
             "year": 2024,
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
@@ -278,7 +278,7 @@ class TestSupremeCourtMetadata:
             # Shared fields
             "document_id": "scotus-123",
             "title": "Miranda v. Arizona",
-            "publication_date": "1966-06-13",
+            "publication_date": -112132800,  # 1966-06-13 as Unix timestamp
             "year": 1966,
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
@@ -302,8 +302,8 @@ class TestSupremeCourtMetadata:
             "majority_author": "Warren",
             "vote_majority": 5,
             "vote_minority": 4,
-            "argued_date": "1966-02-28",
-            "decided_date": "1966-06-13",
+            "argued_date": -121201200,  # 1966-02-28 as Unix timestamp
+            "decided_date": -112132800,  # 1966-06-13 as Unix timestamp
         }
 
         # Act
@@ -330,7 +330,7 @@ class TestSupremeCourtMetadata:
             # Required shared fields
             "document_id": "scotus-123",
             "title": "Test Case",
-            "publication_date": "2024-01-15",
+            "publication_date": 1705294800,  # 2024-01-15 as Unix timestamp
             "year": 2024,
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
@@ -365,7 +365,7 @@ class TestSupremeCourtMetadata:
         scotus_dict = {
             "document_id": "scotus-123",
             "title": "Test v. Case",
-            "publication_date": "2024-01-15",
+            "publication_date": 1705294800,  # 2024-01-15 as Unix timestamp
             "year": 2024,
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
@@ -412,7 +412,7 @@ class TestExecutiveOrderMetadata:
             # Shared fields
             "document_id": "eo-14123",
             "title": "Executive Order on Climate Action",
-            "publication_date": "2024-01-20",
+            "publication_date": 1705726800,  # 2024-01-20 as Unix timestamp
             "year": 2024,
             "source": "Federal Register",
             "type": "Executive Order",
@@ -433,8 +433,8 @@ class TestExecutiveOrderMetadata:
             "impact_simple": "All agencies must use renewable energy",
             "implementation_requirements": "Quarterly reports required",
             "agencies_or_entities": ["EPA", "DOE", "DOD"],
-            "signing_date": "2024-01-20",
-            "effective_date": "2024-02-01",
+            "signing_date": 1705726800,  # 2024-01-20 as Unix timestamp
+            "effective_date": 1706763600,  # 2024-02-01 as Unix timestamp
             "federal_register_number": "2024-12345",
             "revokes": ["EO 13990", "EO 13834"],
         }
@@ -460,7 +460,7 @@ class TestExecutiveOrderMetadata:
             # Required shared fields
             "document_id": "eo-123",
             "title": "Test Order",
-            "publication_date": "2024-01-15",
+            "publication_date": 1705294800,  # 2024-01-15 as Unix timestamp
             "year": 2024,
             "source": "Federal Register",
             "type": "Executive Order",
@@ -494,7 +494,7 @@ class TestExecutiveOrderMetadata:
         eo_dict = {
             "document_id": "eo-123",
             "title": "Test Order",
-            "publication_date": "2024-01-15",
+            "publication_date": 1705294800,  # 2024-01-15 as Unix timestamp
             "year": 2024,
             "source": "Federal Register",
             "type": "Executive Order",
@@ -539,7 +539,7 @@ class TestQdrantPayload:
         scotus_metadata = {
             "document_id": "scotus-123",
             "title": "Test Case",
-            "publication_date": "2024-01-15",
+            "publication_date": 1705294800,  # 2024-01-15 as Unix timestamp
             "year": 2024,
             "source": "CourtListener",
             "type": "Supreme Court Opinion",
@@ -579,7 +579,7 @@ class TestQdrantPayload:
         eo_metadata = {
             "document_id": "eo-14123",
             "title": "Climate Action Order",
-            "publication_date": "2024-01-20",
+            "publication_date": 1705726800,  # 2024-01-20 as Unix timestamp
             "year": 2024,
             "source": "Federal Register",
             "type": "Executive Order",
@@ -640,7 +640,7 @@ class TestSchemaSerializationDeserialization:
         original = SharedMetadata(
             document_id="doc-123",
             title="Test Document",
-            publication_date="2024-01-15",
+            publication_date=1705294800,  # 2024-01-15 as Unix timestamp
             year=2024,
             source="TestSource",
             type="TestType",
@@ -670,7 +670,7 @@ class TestSchemaSerializationDeserialization:
         metadata = SupremeCourtMetadata(
             document_id="scotus-123",
             title="Test v. Case",
-            publication_date="2024-01-15",
+            publication_date=1705294800,  # 2024-01-15 as Unix timestamp
             year=2024,
             source="CourtListener",
             type="Supreme Court Opinion",
@@ -712,7 +712,7 @@ class TestSchemaSerializationDeserialization:
             metadata={
                 "document_id": "doc-123",
                 "title": "Test",
-                "publication_date": "2024-01-15",
+                "publication_date": 1705294800,  # 2024-01-15 as Unix timestamp
                 "year": 2024,
                 "source": "Test",
                 "type": "Test",
@@ -750,7 +750,7 @@ def valid_shared_metadata_dict():
     return {
         "document_id": "test-123",
         "title": "Test Document Title",
-        "publication_date": "2024-01-15",
+        "publication_date": 1705294800,  # 2024-01-15 as Unix timestamp
         "year": 2024,
         "source": "TestSource",
         "type": "TestType",

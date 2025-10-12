@@ -52,11 +52,11 @@ class SharedMetadata(BaseModel):
     title: str = Field(
         description="Human-readable document name (case name for SCOTUS, title for EOs)"
     )
-    publication_date: str = Field(
-        description="Date in YYYY-MM-DD format when the document was published/filed"
+    publication_date: int = Field(
+        description="Unix timestamp (seconds since epoch) when the document was published/filed"
     )
     year: int = Field(
-        description="Four-digit year extracted from publication_date for efficient filtering"
+        description="Four-digit year extracted from publication_date for efficient year-based filtering"
     )
     source: str = Field(
         description="Data source identifier: 'CourtListener' or 'Federal Register'"
@@ -167,13 +167,13 @@ class SupremeCourtMetadata(SharedMetadata):
         default=None,
         description="Number of justices in the minority",
     )
-    argued_date: Optional[str] = Field(
+    argued_date: Optional[int] = Field(
         default=None,
-        description="Date the case was argued (YYYY-MM-DD format)",
+        description="Unix timestamp when the case was argued",
     )
-    decided_date: Optional[str] = Field(
+    decided_date: Optional[int] = Field(
         default=None,
-        description="Date the case was decided (YYYY-MM-DD format)",
+        description="Unix timestamp when the case was decided",
     )
 
     # LLM-generated fields specific to SCOTUS
@@ -220,13 +220,13 @@ class ExecutiveOrderMetadata(SharedMetadata):
         default=None,
         description="Name of the president who signed the order",
     )
-    signing_date: Optional[str] = Field(
+    signing_date: Optional[int] = Field(
         default=None,
-        description="Date the order was signed (YYYY-MM-DD format)",
+        description="Unix timestamp when the order was signed",
     )
-    effective_date: Optional[str] = Field(
+    effective_date: Optional[int] = Field(
         default=None,
-        description="Date the order becomes effective (YYYY-MM-DD format)",
+        description="Unix timestamp when the order becomes effective",
     )
     federal_register_number: Optional[str] = Field(
         default=None,
