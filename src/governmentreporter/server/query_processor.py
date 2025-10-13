@@ -38,6 +38,9 @@ def format_timestamp_to_date(
     Returns:
         Formatted date string, or empty string if timestamp is None
 
+    Raises:
+        TypeError: If timestamp is a string (indicates data quality issue)
+
     Example:
         >>> format_timestamp_to_date(1704067200)
         "January 1, 2024"
@@ -51,6 +54,15 @@ def format_timestamp_to_date(
     """
     if timestamp is None:
         return ""
+
+    # Strict type checking - reject strings to catch data quality issues
+    if isinstance(timestamp, str):
+        raise TypeError(
+            f"Expected integer timestamp, got string: {timestamp}. "
+            "All dates must be stored as Unix timestamps. "
+            "Please re-ingest data using date_string_to_timestamp()."
+        )
+
     try:
         dt = datetime.fromtimestamp(timestamp)
         return dt.strftime(format_str)
@@ -261,15 +273,38 @@ class QueryProcessor:
         """
         output = [f"## Full Document Retrieved\n"]
 
+        # Start with chunk_metadata as the base
         metadata: Dict[str, Any] = dict(chunk_metadata or {})
 
         # Merge metadata from the full document when available.
+        # Strategy: API response data is merged first, then chunk_metadata date fields
+        # override to preserve processed timestamps (integers vs strings)
         if hasattr(full_document, "metadata"):
             doc_metadata = getattr(full_document, "metadata")
             if isinstance(doc_metadata, dict):
-                metadata = {**metadata, **doc_metadata}
+                metadata = {**metadata, **doc_metadata}  # API overwrites most fields
+                # But preserve chunk_metadata date fields (processed timestamps)
+                for date_field in [
+                    "publication_date",
+                    "signing_date",
+                    "argued_date",
+                    "decided_date",
+                    "effective_date",
+                ]:
+                    if date_field in chunk_metadata:
+                        metadata[date_field] = chunk_metadata[date_field]
         elif isinstance(full_document, dict):
-            metadata = {**metadata, **full_document}
+            metadata = {**metadata, **full_document}  # API overwrites most fields
+            # But preserve chunk_metadata date fields (processed timestamps)
+            for date_field in [
+                "publication_date",
+                "signing_date",
+                "argued_date",
+                "decided_date",
+                "effective_date",
+            ]:
+                if date_field in chunk_metadata:
+                    metadata[date_field] = chunk_metadata[date_field]
 
         # Resolve the full document text with sensible fallbacks.
         if hasattr(full_document, "content"):

@@ -85,29 +85,34 @@ def date_string_to_timestamp(date_str: str) -> Optional[int]:
 
     Qdrant's Range filter requires numeric values, so we convert date strings
     to Unix timestamps (seconds since epoch) to enable date range queries.
-    If conversion fails, returns None to allow the document to be stored
-    without a timestamp (filtering won't work but storage will succeed).
+    If conversion fails, raises ValueError to prevent storing invalid data.
 
     Args:
         date_str: Date in YYYY-MM-DD format
 
     Returns:
-        Unix timestamp (int) or None if conversion fails
+        Unix timestamp (int) or None if date_str is empty/None
+
+    Raises:
+        ValueError: If date_str cannot be parsed as a valid date
 
     Python Learning Notes:
         - datetime.strptime() parses strings into datetime objects
         - timestamp() method converts to Unix time (float)
         - int() truncates to whole seconds for Qdrant compatibility
-        - Returning None allows graceful degradation
+        - Strict validation prevents data quality issues
     """
+    if not date_str:
+        return None
+
     try:
-        if not date_str:
-            return None
         dt = datetime.strptime(date_str, "%Y-%m-%d")
         return int(dt.timestamp())
     except (ValueError, AttributeError, TypeError) as e:
-        logger.warning("Failed to convert date '%s' to timestamp: %s", date_str, e)
-        return None
+        raise ValueError(
+            f"Failed to convert date '{date_str}' to timestamp: {e}. "
+            "All dates must be in YYYY-MM-DD format."
+        )
 
 
 def normalize_scotus_metadata(doc: Document) -> Dict[str, Any]:

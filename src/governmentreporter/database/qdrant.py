@@ -184,6 +184,57 @@ class QdrantDBClient:
                 "host/port/url for remote connection"
             )
 
+    def _validate_date_fields(
+        self, metadata: Optional[Dict[str, Any]], document_id: str
+    ) -> None:
+        """
+        Validate that date fields in metadata are integers (Unix timestamps).
+
+        This validation ensures data quality by catching any string dates that
+        slip through the ingestion pipeline. All date fields must be stored as
+        Unix timestamps for efficient range filtering in Qdrant.
+
+        Args:
+            metadata: Document metadata dictionary
+            document_id: Document ID for error reporting
+
+        Raises:
+            TypeError: If any date field contains a string instead of integer
+
+        Python Learning Notes:
+            - Defensive programming: Validate data at boundaries
+            - Clear error messages help debugging
+            - Type checking with isinstance()
+        """
+        if not metadata:
+            return
+
+        # Date fields that must be integers
+        date_fields = [
+            "publication_date",
+            "signing_date",
+            "argued_date",
+            "decided_date",
+            "effective_date",
+        ]
+
+        for field in date_fields:
+            if field in metadata:
+                value = metadata[field]
+                # Allow None (optional fields) but reject strings
+                if value is not None and isinstance(value, str):
+                    raise TypeError(
+                        f"Document {document_id}: Field '{field}' must be an integer "
+                        f"Unix timestamp, not a string ('{value}'). "
+                        f"Use date_string_to_timestamp() during ingestion to convert dates."
+                    )
+                # Also validate it's actually an integer if present
+                if value is not None and not isinstance(value, int):
+                    raise TypeError(
+                        f"Document {document_id}: Field '{field}' must be an integer "
+                        f"Unix timestamp, got {type(value).__name__} ({value})."
+                    )
+
     def create_collection(self, collection_name: str) -> bool:
         """
         Create a new collection or ensure it exists.
@@ -271,6 +322,9 @@ class QdrantDBClient:
                 f"got {len(document.embedding)}"
             )
 
+        # Validate metadata date fields are integers
+        self._validate_date_fields(document.metadata, document.id)
+
         # Ensure collection exists
         if create_collection:
             self.create_collection(collection_name)
@@ -352,6 +406,8 @@ class QdrantDBClient:
                 raise ValueError(f"All documents must have IDs")
             if not doc.embedding or len(doc.embedding) != self.EMBEDDING_DIMENSION:
                 raise ValueError(f"Document {doc.id} has invalid embedding")
+            # Validate date fields are integers
+            self._validate_date_fields(doc.metadata, doc.id)
 
         # Ensure collection exists
         if create_collection:

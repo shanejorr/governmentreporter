@@ -456,11 +456,11 @@ async def handle_get_document_by_id(
         # If full_document is requested, fetch from API
         if full_document:
             if collection == "supreme_court_opinions":
-                # Extract opinion ID from metadata
-                opinion_id = payload.get("opinion_id")
+                # Extract opinion ID from metadata (stored as document_id)
+                opinion_id = payload.get("document_id")
                 if opinion_id:
                     client = CourtListenerClient()
-                    full_doc = client.get_opinion(opinion_id)
+                    full_doc = client.get_opinion(int(opinion_id))
                     formatted_response = processor.format_full_document(
                         "scotus", full_doc, payload
                     )

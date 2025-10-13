@@ -469,6 +469,55 @@ class TestDocumentStorage:
 
         assert "1536 dimensions" in str(exc_info.value)
 
+    def test_store_document_with_string_date_rejected(self, client_with_mock):
+        """
+        Test that documents with string dates in metadata are rejected.
+
+        Verifies that date fields must be Unix timestamps (integers),
+        not date strings, to ensure data quality and enable efficient
+        range filtering in Qdrant.
+        """
+        doc = Document(
+            id="test-123",
+            text="Test content",
+            embedding=[0.1] * 1536,
+            metadata={
+                "publication_date": "2024-01-15",  # String date - should be rejected
+                "title": "Test Document",
+            },
+        )
+
+        client, _ = client_with_mock
+
+        with pytest.raises(TypeError) as exc_info:
+            client.store_document(doc, "test_collection")
+
+        assert "must be an integer Unix timestamp" in str(exc_info.value)
+        assert "publication_date" in str(exc_info.value)
+        assert "2024-01-15" in str(exc_info.value)
+
+    def test_store_document_with_valid_timestamp(self, client_with_mock):
+        """
+        Test that documents with integer timestamp dates are accepted.
+
+        Verifies that properly formatted Unix timestamps pass validation.
+        """
+        doc = Document(
+            id="test-123",
+            text="Test content",
+            embedding=[0.1] * 1536,
+            metadata={
+                "publication_date": 1705294800,  # Unix timestamp - correct format
+                "title": "Test Document",
+            },
+        )
+
+        client, mock_qdrant = client_with_mock
+
+        # Should not raise exception
+        result = client.store_document(doc, "test_collection")
+        assert result is True
+
     def test_store_documents_batch_success(self, client_with_mock):
         """
         Test batch document storage.
