@@ -390,11 +390,8 @@ class GovernmentReporterMCP:
                     self.qdrant_client = QdrantDBClient(
                         url=self.config.qdrant_url, api_key=self.config.qdrant_api_key
                     )
-                # Then check for remote host/port
-                elif (
-                    self.config.qdrant_host != "localhost"
-                    or self.config.qdrant_port != 6333
-                ):
+                # Then check for remote host/port (only if explicitly configured and NOT localhost)
+                elif self.config.qdrant_host and self.config.qdrant_host != "localhost":
                     self.qdrant_client = QdrantDBClient(
                         host=self.config.qdrant_host,
                         port=self.config.qdrant_port,
@@ -402,7 +399,9 @@ class GovernmentReporterMCP:
                     )
                 # Default to local file-based storage
                 else:
-                    db_path = getattr(self.config, "qdrant_db_path", "./qdrant_db")
+                    db_path = getattr(
+                        self.config, "qdrant_db_path", "./data/qdrant/qdrant_db"
+                    )
                     self.qdrant_client = QdrantDBClient(db_path=db_path)
 
             try:
@@ -456,8 +455,8 @@ class GovernmentReporterMCP:
             self.qdrant_client = QdrantDBClient(
                 url=self.config.qdrant_url, api_key=self.config.qdrant_api_key
             )
-        # Then check for remote host/port
-        elif self.config.qdrant_host != "localhost" or self.config.qdrant_port != 6333:
+        # Then check for remote host/port (only if explicitly configured and NOT localhost)
+        elif self.config.qdrant_host and self.config.qdrant_host != "localhost":
             self.qdrant_client = QdrantDBClient(
                 host=self.config.qdrant_host,
                 port=self.config.qdrant_port,
@@ -465,7 +464,7 @@ class GovernmentReporterMCP:
             )
         # Default to local file-based storage
         else:
-            db_path = getattr(self.config, "qdrant_db_path", "./qdrant_db")
+            db_path = getattr(self.config, "qdrant_db_path", "./data/qdrant/qdrant_db")
             self.qdrant_client = QdrantDBClient(db_path=db_path)
 
         # Verify connection and log available collections

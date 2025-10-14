@@ -1,8 +1,6 @@
 # Docker Compose configuration for GovernmentReporter
 # Provides complete development and deployment environment
 
-version: '3.8'
-
 services:
   # Qdrant vector database service
   qdrant:

@@ -75,46 +75,36 @@ def delete_progress_database(collection_name: str) -> bool:
         return False
 
 
-def get_qdrant_client() -> QdrantDBClient:
+def get_qdrant_client(
+    db_path: Optional[str] = None,
+    host: Optional[str] = None,
+    port: Optional[int] = None,
+) -> QdrantDBClient:
     """
-    Initialize and return a Qdrant client based on environment variables.
+    Initialize and return a Qdrant client.
 
-    This function checks environment variables to determine whether to use
-    local or remote Qdrant, then initializes the appropriate client.
+    Prefers local file-based Qdrant by default. Only uses network connection
+    if host is explicitly provided via parameters.
+
+    Args:
+        db_path: Path to local Qdrant database (default: ./data/qdrant/qdrant_db)
+        host: Qdrant host for remote connection (optional)
+        port: Qdrant port for remote connection (default: 6333)
 
     Returns:
         QdrantDBClient: Configured Qdrant client instance.
 
-    Environment Variables:
-        QDRANT_URL: Full URL for Qdrant cloud (highest priority)
-        QDRANT_HOST: Host for remote Qdrant
-        QDRANT_PORT: Port for remote Qdrant (default: 6333)
-        QDRANT_API_KEY: API key for authentication
-        QDRANT_DB_PATH: Path for local Qdrant (default: ./data/qdrant/qdrant_db)
-
     Python Learning Notes:
-        - Environment variables provide flexible configuration
-        - Priority order ensures correct connection mode
-        - Optional parameters handle different deployment scenarios
+        - Defaults to local file-based storage for simplicity
+        - Remote connection only used when explicitly requested
+        - This matches the pattern used by other CLI commands
     """
-    # Check for cloud/remote connection first
-    qdrant_url = os.getenv("QDRANT_URL")
-    qdrant_host = os.getenv("QDRANT_HOST")
-    qdrant_api_key = os.getenv("QDRANT_API_KEY")
+    # Use remote connection if host is explicitly provided
+    if host:
+        return QdrantDBClient(host=host, port=port or 6333)
 
-    if qdrant_url:
-        # Cloud instance
-        return QdrantDBClient(url=qdrant_url, api_key=qdrant_api_key)
-    elif qdrant_host:
-        # Remote server
-        qdrant_port = int(os.getenv("QDRANT_PORT", "6333"))
-        return QdrantDBClient(
-            host=qdrant_host, port=qdrant_port, api_key=qdrant_api_key
-        )
-    else:
-        # Local database
-        db_path = os.getenv("QDRANT_DB_PATH", "./data/qdrant/qdrant_db")
-        return QdrantDBClient(db_path=db_path)
+    # Otherwise, default to local file-based
+    return QdrantDBClient(db_path=db_path or "./data/qdrant/qdrant_db")
 
 
 @click.command(name="delete")
@@ -145,12 +135,31 @@ def get_qdrant_client() -> QdrantDBClient:
     is_flag=True,
     help="Skip confirmation prompt (use with caution!)",
 )
+@click.option(
+    "--qdrant-path",
+    default="./data/qdrant/qdrant_db",
+    help="Path to Qdrant database (default: ./data/qdrant/qdrant_db)",
+)
+@click.option(
+    "--qdrant-host",
+    default=None,
+    help="Qdrant host for remote connection (e.g., localhost)",
+)
+@click.option(
+    "--qdrant-port",
+    type=int,
+    default=None,
+    help="Qdrant port for remote connection (default: 6333)",
+)
 def delete_command(
     delete_all: bool,
     scotus: bool,
     eo: bool,
     collection: Optional[str],
     yes: bool,
+    qdrant_path: str,
+    qdrant_host: Optional[str],
+    qdrant_port: Optional[int],
 ) -> None:
     """
     Delete Qdrant collections.
@@ -194,7 +203,16 @@ def delete_command(
 
     # Initialize Qdrant client
     try:
-        client = get_qdrant_client()
+        client = get_qdrant_client(
+            db_path=qdrant_path, host=qdrant_host, port=qdrant_port
+        )
+
+        # Show connection info
+        if qdrant_host:
+            click.echo(f"Connected to Qdrant at {qdrant_host}:{qdrant_port or 6333}\n")
+        else:
+            click.echo(f"Connected to local Qdrant at {qdrant_path}\n")
+
     except Exception as e:
         click.echo(f"Error: Failed to connect to Qdrant: {e}", err=True)
         raise click.Abort()
