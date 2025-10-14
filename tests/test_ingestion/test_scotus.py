@@ -1,16 +1,15 @@
 """
-Unit tests for SCOTUS ingestion with court validation.
+Unit tests for SCOTUS ingestion functionality.
 
-This module tests the SCOTUSIngester class, focusing on the court validation
-functionality that defends against API index inconsistencies.
+This module tests the SCOTUSIngester class, which handles fetching and processing
+Supreme Court opinions from the CourtListener API.
 
-NOTE: Court validation now happens at the cluster level during _fetch_document_ids()
-rather than at the opinion level. This is more efficient (1 validation per cluster
-instead of 1 per opinion) and aligns with the CourtListener data model where
-each opinion belongs to exactly one cluster.
+NOTE: As of 2025-10-13, the CourtListener API's docket__court=scotus filter has been
+verified to work correctly, so manual court validation is no longer necessary.
+The ingester relies on the API filter for efficiency.
 
 Test Categories:
-    - Cluster-level court validation during ID fetching
+    - Document ID fetching with API filtering
     - Integration with ingestion pipeline
     - Cluster caching behavior
 """
@@ -113,7 +112,7 @@ class TestSCOTUSIngester:
         assert len(ingester.cluster_cache) == 0
 
     @patch("httpx.Client")
-    def test_fetch_document_ids_validates_scotus_clusters(
+    def test_fetch_document_ids_from_scotus_clusters(
         self,
         mock_httpx_client,
         ingester,
@@ -121,24 +120,18 @@ class TestSCOTUSIngester:
         mock_scotus_docket_data,
     ):
         """
-        Test that _fetch_document_ids validates clusters belong to SCOTUS.
+        Test that _fetch_document_ids fetches SCOTUS clusters via API filter.
 
         Verifies that the method:
-        1. Fetches clusters from the API
-        2. Validates each cluster's docket is SCOTUS
-        3. Extracts opinion IDs from validated clusters
-        4. Caches cluster data for later use
+        1. Fetches clusters from the API using docket__court=scotus filter
+        2. Extracts opinion IDs from clusters (API filter ensures SCOTUS only)
+        3. Caches cluster data for later use
         """
         # Mock HTTP client
         mock_client_instance = MagicMock()
         mock_httpx_client.return_value.__enter__.return_value = mock_client_instance
 
-        # Mock count response
-        count_response = MagicMock()
-        count_response.json.return_value = {"count": 1}
-        count_response.raise_for_status = MagicMock()
-
-        # Mock clusters response
+        # Mock clusters response - API filter ensures SCOTUS only
         clusters_response = MagicMock()
         clusters_response.json.return_value = {
             "results": [mock_scotus_cluster_data],
@@ -146,10 +139,7 @@ class TestSCOTUSIngester:
         }
         clusters_response.raise_for_status = MagicMock()
 
-        mock_client_instance.get.side_effect = [count_response, clusters_response]
-
-        # Mock docket validation
-        ingester.api_client.get_docket.return_value = mock_scotus_docket_data
+        mock_client_instance.get.return_value = clusters_response
 
         # Call the method
         opinion_ids = ingester._fetch_document_ids()
@@ -164,54 +154,13 @@ class TestSCOTUSIngester:
         assert ingester.cluster_cache["123456"] == mock_scotus_cluster_data
         assert ingester.cluster_cache["123457"] == mock_scotus_cluster_data
 
-        # Verify docket validation was called
-        ingester.api_client.get_docket.assert_called_once()
-
-    @patch("httpx.Client")
-    def test_fetch_document_ids_skips_non_scotus_clusters(
-        self,
-        mock_httpx_client,
-        ingester,
-        mock_non_scotus_cluster_data,
-        mock_non_scotus_docket_data,
-    ):
-        """
-        Test that _fetch_document_ids skips non-SCOTUS clusters.
-
-        Verifies that clusters from other courts are filtered out during
-        validation and their opinions are not included in the result list.
-        """
-        # Mock HTTP client
-        mock_client_instance = MagicMock()
-        mock_httpx_client.return_value.__enter__.return_value = mock_client_instance
-
-        # Mock count response
-        count_response = MagicMock()
-        count_response.json.return_value = {"count": 1}
-        count_response.raise_for_status = MagicMock()
-
-        # Mock clusters response with non-SCOTUS cluster
-        clusters_response = MagicMock()
-        clusters_response.json.return_value = {
-            "results": [mock_non_scotus_cluster_data],
-            "next": None,
-        }
-        clusters_response.raise_for_status = MagicMock()
-
-        mock_client_instance.get.side_effect = [count_response, clusters_response]
-
-        # Mock docket validation - returns non-SCOTUS court
-        ingester.api_client.get_docket.return_value = mock_non_scotus_docket_data
-
-        # Call the method
-        opinion_ids = ingester._fetch_document_ids()
-
-        # Verify non-SCOTUS opinions were skipped
-        assert len(opinion_ids) == 0
-        assert len(ingester.cluster_cache) == 0
-
-        # Verify docket was checked
-        ingester.api_client.get_docket.assert_called_once()
+        # Verify API was called with correct filter
+        call_args = mock_client_instance.get.call_args
+        assert call_args is not None
+        # Check that docket__court=scotus filter is in params
+        if "params" in call_args.kwargs:
+            params = call_args.kwargs["params"]
+            assert params.get("docket__court") == "scotus"
 
     @patch("governmentreporter.ingestion.scotus.build_payloads_from_document")
     def test_process_single_document_uses_cached_cluster_data(

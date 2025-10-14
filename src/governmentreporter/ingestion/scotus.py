@@ -95,25 +95,19 @@ class SCOTUSIngester(DocumentIngester):
 
     def _fetch_document_ids(self) -> List[str]:
         """
-        Fetch all Supreme Court opinion IDs in the date range with court validation.
+        Fetch all Supreme Court opinion IDs in the date range.
 
         This method queries the clusters endpoint (not opinions) because:
-        - The opinions endpoint with cluster__date_filed filters causes timeouts
-        - The clusters endpoint is the recommended approach per CourtListener API docs
-        - Clusters contain the sub_opinions field which provides opinion IDs
+        - The clusters endpoint is more efficient (fewer results to paginate)
+        - Each cluster contains sub_opinions field with all opinion IDs
+        - We can cache cluster metadata for later use (avoids redundant API calls)
+        - The docket__court=scotus filter reliably returns only SCOTUS clusters
 
-        The method includes:
-        - Count validation (SCOTUS typically issues 60-80 opinions per term)
-        - Court validation at cluster level (validates docket.court_id == "scotus")
-        - Cluster metadata caching for later use
-        - Pagination handling (20 results per page)
-        - Rate limiting between requests
-        - Safety checks to prevent runaway API calls
-
-        Performance:
-        - Validates court ONCE per cluster (not once per opinion)
-        - Caches cluster data to avoid refetching during processing
-        - Reduces API calls by ~67% compared to opinion-level validation
+        The method:
+        - Uses docket__court=scotus filter (verified to work correctly)
+        - Handles pagination automatically
+        - Caches cluster metadata for performance optimization
+        - Includes retry logic for transient server errors
 
         Returns:
             List of opinion IDs to process
@@ -122,20 +116,19 @@ class SCOTUSIngester(DocumentIngester):
         logger.info(f"Date range: {self.start_date} to {self.end_date}")
 
         all_opinion_ids: List[str] = []
-        validated_clusters = 0
-        skipped_clusters = 0
+        all_clusters: List[Dict[str, Any]] = []
 
-        # Query clusters endpoint instead of opinions endpoint
-        # This avoids the timeout issues with complex opinion filters
+        # Query clusters endpoint with court filter
+        # The docket__court=scotus filter is reliable (verified 2025-10-13)
         url = f"{self.api_client.base_url}/clusters/"
         params: Dict[str, Any] = {
-            "docket__court": "scotus",  # Supreme Court only
+            "docket__court": "scotus",  # Filter to SCOTUS only (reliable)
+            "date_filed__gte": self.start_date,
+            "date_filed__lte": self.end_date,
             # Most recent first, with id as tie-breaker for consistent ordering
             # Per API docs: tie-breaker prevents inconsistent results when
             # multiple clusters have the same date_filed
             "order_by": "-date_filed,id",
-            "date_filed__gte": self.start_date,
-            "date_filed__lte": self.end_date,
             "page_size": 20,  # API maximum for clusters endpoint
         }
 
@@ -143,69 +136,41 @@ class SCOTUSIngester(DocumentIngester):
             import httpx
 
             # Create HTTP client with longer timeout for pagination
-            with httpx.Client(timeout=60.0) as client:
-                # The CourtListener API v4 has changed its count behavior:
-                # - Without count=on: Returns results + URL in count field
-                # - With count=on: Returns only count, no results
-                # Fetch the count first, then paginate for results
-
-                total_count = None
-                # Conservative default until we know the real count
-                max_clusters = 1000
-
-                # First, get the total count with a separate request
-                logger.debug("Fetching total count...")
-                count_params = params.copy()
-                count_params["count"] = "on"
-                count_response = client.get(
-                    url, headers=self.api_client.headers, params=count_params
-                )
-                count_response.raise_for_status()
-                total_count = count_response.json().get("count", 0)
-
-                if total_count:
-                    logger.info("Total SCOTUS clusters available: %s", total_count)
-
-                    # Sanity check - SCOTUS typically issues
-                    # 60-80 opinions per term
-                    years_in_range = (
-                        datetime.strptime(self.end_date, "%Y-%m-%d")
-                        - datetime.strptime(self.start_date, "%Y-%m-%d")
-                    ).days / 365
-                    # ~100 opinions per year max
-                    expected_max = int(years_in_range * 100)
-
-                    if total_count > max(1000, expected_max * 2):
-                        logger.error(
-                            "ERROR: Found %s clusters, which is "
-                            "far more than expected for SCOTUS.",
-                            total_count,
-                        )
-                        logger.error(
-                            "The filter may not be working correctly. "
-                            "Aborting to prevent excessive API calls."
-                        )
-                        return all_opinion_ids
-
-                    max_clusters = total_count
-                else:
-                    logger.warning("Could not determine count, proceeding with caution")
-
-                # Rate limiting after count request
-                time.sleep(self.api_client._get_rate_limit_delay())
-
-                # Paginate through cluster results
+            with httpx.Client(timeout=120.0) as client:
                 page = 1
-                clusters_processed = 0
-                while url and clusters_processed < max_clusters:
+                max_pages = 200  # Safety limit to prevent runaway pagination
+
+                # Paginate through all SCOTUS clusters in date range
+                while url and page <= max_pages:
                     # Rate limiting
                     time.sleep(self.api_client._get_rate_limit_delay())
 
-                    logger.debug(f"Fetching page {page} from: {url}")
-                    response = client.get(
-                        url, headers=self.api_client.headers, params=params
-                    )
-                    response.raise_for_status()
+                    logger.info(f"Fetching page {page}...")
+
+                    # Retry logic for transient errors (502, 503, 504)
+                    max_retries = 3
+                    retry_delay = 5  # seconds
+
+                    for attempt in range(max_retries):
+                        try:
+                            response = client.get(
+                                url, headers=self.api_client.headers, params=params
+                            )
+                            response.raise_for_status()
+                            break  # Success, exit retry loop
+                        except httpx.HTTPStatusError as e:
+                            if (
+                                e.response.status_code in [502, 503, 504]
+                                and attempt < max_retries - 1
+                            ):
+                                logger.warning(
+                                    f"API error {e.response.status_code} on page {page}, "
+                                    f"retrying in {retry_delay}s (attempt {attempt + 1}/{max_retries})..."
+                                )
+                                time.sleep(retry_delay)
+                                retry_delay *= 2  # Exponential backoff
+                            else:
+                                raise  # Re-raise if not retryable or max retries exceeded
 
                     data = response.json()
                     results = data.get("results", [])
@@ -214,98 +179,67 @@ class SCOTUSIngester(DocumentIngester):
                         logger.info(f"No more results on page {page}, stopping.")
                         break
 
-                    # Process each cluster in the current page
-                    for cluster in results:
-                        clusters_processed += 1
-
-                        # COURT VALIDATION: Verify this cluster belongs to SCOTUS
-                        # This defends against API index inconsistencies by checking
-                        # the docket's court_id directly
-                        docket_url = cluster.get("docket")
-                        if not docket_url:
-                            logger.warning(
-                                f"Cluster {cluster.get('id')} has no docket URL, skipping"
-                            )
-                            skipped_clusters += 1
-                            continue
-
-                        try:
-                            # Fetch docket to verify court_id
-                            # Rate limiting before docket request
-                            time.sleep(self.api_client._get_rate_limit_delay())
-                            docket_data = self.api_client.get_docket(docket_url)
-                            court_id = docket_data.get("court_id")
-
-                            if court_id != "scotus":
-                                case_name = cluster.get("case_name", "Unknown Case")
-                                logger.warning(
-                                    f"Skipping cluster {cluster.get('id')} - "
-                                    f"belongs to court '{court_id}' (not scotus). "
-                                    f"Case: {case_name}. "
-                                    f"This indicates an API index inconsistency."
-                                )
-                                skipped_clusters += 1
-                                continue
-
-                            # Court validated - this is a genuine SCOTUS cluster
-                            validated_clusters += 1
-
-                        except Exception as e:
-                            logger.error(
-                                f"Error validating court for cluster {cluster.get('id')}: {e}"
-                            )
-                            skipped_clusters += 1
-                            continue
-
-                        # Extract opinion IDs from sub_opinions
-                        sub_opinions = cluster.get("sub_opinions", [])
-
-                        for opinion_url in sub_opinions:
-                            # Extract opinion ID from URL
-                            # Format: .../api/rest/v4/opinions/{id}/
-                            try:
-                                opinion_id = opinion_url.rstrip("/").split("/")[-1]
-                                all_opinion_ids.append(str(opinion_id))
-
-                                # Cache cluster data for this opinion
-                                # This avoids refetching cluster data during processing
-                                self.cluster_cache[str(opinion_id)] = cluster
-
-                            except (IndexError, AttributeError) as e:
-                                logger.warning(
-                                    f"Could not extract opinion ID from "
-                                    f"URL: {opinion_url}, error: {e}"
-                                )
-
-                        if clusters_processed >= max_clusters:
-                            logger.info(
-                                f"Reached maximum cluster limit "
-                                f"({max_clusters}), stopping."
-                            )
-                            break
+                    # Collect all clusters from this page
+                    # No validation needed - the API filter is reliable
+                    page_clusters = len(results)
+                    all_clusters.extend(results)
 
                     # Log progress
                     logger.info(
-                        f"Fetched page {page}: {len(results)} clusters, "
-                        f"{len(all_opinion_ids)} total opinions "
-                        f"(validated: {validated_clusters}, "
-                        f"skipped: {skipped_clusters}, "
-                        f"processed: {clusters_processed}/"
-                        f"{total_count or 'unknown'})"
+                        f"Page {page}: {page_clusters} clusters collected "
+                        f"({len(all_clusters)} total)"
                     )
 
                     # Get next page URL
-                    url = data.get("next")
+                    next_url = data.get("next")
+
+                    if not next_url:
+                        logger.info("No next URL, pagination complete")
+                        break
+
+                    url = next_url
                     params = {}  # Clear params (they're in the next URL)
                     page += 1
 
                     # Safety check to prevent infinite loops
-                    if page > 100:  # Maximum 100 pages
+                    if page > max_pages:
                         logger.warning(
-                            "Reached maximum page limit (100 pages), "
+                            f"Reached maximum page limit ({max_pages} pages), "
                             "stopping pagination"
                         )
                         break
+
+                # Extract opinion IDs from all collected clusters
+                logger.info(
+                    f"Extracting opinion IDs from {len(all_clusters)} SCOTUS clusters..."
+                )
+
+                for cluster in all_clusters:
+                    # Extract opinion IDs from sub_opinions
+                    sub_opinions = cluster.get("sub_opinions", [])
+
+                    if not sub_opinions:
+                        logger.warning(
+                            f"Cluster {cluster.get('id')} has no sub_opinions, skipping"
+                        )
+                        continue
+
+                    for opinion_url in sub_opinions:
+                        # Extract opinion ID from URL
+                        # Format: .../api/rest/v4/opinions/{id}/
+                        try:
+                            opinion_id = opinion_url.rstrip("/").split("/")[-1]
+                            all_opinion_ids.append(str(opinion_id))
+
+                            # Cache cluster data for this opinion
+                            # This avoids refetching cluster data during processing
+                            self.cluster_cache[str(opinion_id)] = cluster
+
+                        except (IndexError, AttributeError) as e:
+                            logger.warning(
+                                f"Could not extract opinion ID from "
+                                f"URL: {opinion_url}, error: {e}"
+                            )
 
             # Each opinion belongs to exactly one cluster per CourtListener's data model
             # (Court → Docket → Cluster → Opinions hierarchy is strictly one-to-many)
@@ -313,19 +247,46 @@ class SCOTUSIngester(DocumentIngester):
 
             logger.info(
                 f"Successfully fetched {len(all_opinion_ids)} opinion IDs "
-                f"from {validated_clusters} validated SCOTUS clusters "
-                f"({skipped_clusters} non-SCOTUS clusters skipped)"
+                f"from {len(all_clusters)} SCOTUS clusters"
             )
 
             # Log cluster cache size
             logger.info(f"Cached metadata for {len(self.cluster_cache)} opinions")
 
         except Exception as e:
-            logger.error(f"Error fetching opinion IDs: {e}")
-            if len(all_opinion_ids) > 0:
-                logger.info(
-                    f"Partial results: fetched {len(all_opinion_ids)} opinion IDs before error"
+            logger.error(f"Error during cluster fetching: {e}")
+
+            # If we collected any clusters before the error, extract opinion IDs
+            if len(all_clusters) > 0:
+                logger.warning(
+                    f"Collected {len(all_clusters)} SCOTUS clusters before error, "
+                    f"extracting opinion IDs from partial results..."
                 )
+
+                # Extract opinion IDs from clusters we did manage to collect
+                for cluster in all_clusters:
+                    sub_opinions = cluster.get("sub_opinions", [])
+
+                    if not sub_opinions:
+                        continue
+
+                    for opinion_url in sub_opinions:
+                        try:
+                            opinion_id = opinion_url.rstrip("/").split("/")[-1]
+                            all_opinion_ids.append(str(opinion_id))
+                            self.cluster_cache[str(opinion_id)] = cluster
+                        except (IndexError, AttributeError) as e:
+                            logger.warning(
+                                f"Could not extract opinion ID from URL: {opinion_url}, error: {e}"
+                            )
+
+                logger.info(
+                    f"Extracted {len(all_opinion_ids)} opinion IDs from "
+                    f"{len(all_clusters)} SCOTUS clusters "
+                    f"(partial results due to API error)"
+                )
+            else:
+                logger.error("No SCOTUS clusters collected before error occurred")
 
         return all_opinion_ids
 
