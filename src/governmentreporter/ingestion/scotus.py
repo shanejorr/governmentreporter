@@ -84,103 +84,18 @@ class SCOTUSIngester(DocumentIngester):
         # Initialize SCOTUS-specific API client
         self.api_client = CourtListenerClient()
 
+        # Cache for cluster metadata to avoid redundant API calls
+        # Maps opinion_id -> cluster_data dictionary
+        # Populated during _fetch_document_ids() and used in _process_single_document()
+        self.cluster_cache: Dict[str, Dict[str, Any]] = {}
+
     def _get_collection_name(self) -> str:
         """Get the Qdrant collection name for SCOTUS opinions."""
         return "supreme_court_opinions"
 
-    def _validate_court(self, opinion_id: str) -> tuple[bool, str]:
-        """
-        Validate that an opinion belongs to the Supreme Court.
-
-        This method provides defense against API index inconsistencies by directly
-        fetching the docket data and verifying the court_id. It bypasses potentially
-        stale search indexes and validates against the source of truth.
-
-        Validation Process:
-            1. Fetch opinion data to get cluster URL
-            2. Fetch cluster data to get docket URL
-            3. Fetch docket data to get court_id
-            4. Verify court_id == "scotus"
-
-        This approach catches cases where:
-        - API search indexes are temporarily inconsistent
-        - Bulk uploads haven't been fully indexed
-        - Filter parameters don't work as expected
-        - Data has been mislabeled or incorrectly tagged
-
-        Args:
-            opinion_id: Opinion ID to validate
-
-        Returns:
-            Tuple of (is_valid, error_message):
-            - (True, "") if opinion belongs to SCOTUS
-            - (False, error_message) if opinion belongs to different court
-
-        Raises:
-            Exception: If API calls fail (propagated to caller for handling)
-
-        Example:
-            >>> ingester = SCOTUSIngester(...)
-            >>> is_valid, error = ingester._validate_court("123456")
-            >>> if not is_valid:
-            ...     logger.warning(f"Skipping: {error}")
-
-        Performance Impact:
-            - Adds 2 additional API calls per opinion (cluster + docket)
-            - Adds ~100-200ms per opinion with rate limiting
-            - Trade-off: Slower ingestion vs guaranteed data quality
-            - Critical for preventing incorrect data from entering the system
-
-        Python Learning Notes:
-            - Tuple return: Returns multiple values (bool, str)
-            - Early return: Returns immediately when condition met
-            - Type hints: tuple[bool, str] specifies return type
-            - Defensive programming: Validate assumptions before proceeding
-        """
-        try:
-            # Fetch opinion to get cluster URL
-            opinion_data = self.api_client.get_opinion(int(opinion_id))
-            cluster_url = opinion_data.get("cluster")
-
-            if not cluster_url:
-                return False, f"Opinion {opinion_id} has no cluster URL"
-
-            # Fetch cluster to get docket URL
-            cluster_data = self.api_client.get_opinion_cluster(cluster_url)
-            docket_url = cluster_data.get("docket")
-
-            if not docket_url:
-                return (
-                    False,
-                    f"Opinion {opinion_id} cluster has no docket URL",
-                )
-
-            # Fetch docket to get court_id
-            docket_data = self.api_client.get_docket(docket_url)
-            court_id = docket_data.get("court_id")
-
-            if not court_id:
-                return False, f"Opinion {opinion_id} docket has no court_id"
-
-            # Validate court is SCOTUS
-            if court_id != "scotus":
-                case_name = cluster_data.get("case_name", "Unknown Case")
-                return (
-                    False,
-                    f"Opinion {opinion_id} belongs to court '{court_id}' (not scotus). "
-                    f"Case: {case_name}. This likely indicates an API index inconsistency.",
-                )
-
-            return True, ""
-
-        except Exception as e:
-            # Propagate exception to caller - this is a validation failure
-            # but we want the caller to decide how to handle API errors
-            raise
-
     def _fetch_document_ids(self) -> List[str]:
         """
-        Fetch all Supreme Court opinion IDs in the date range.
+        Fetch all Supreme Court opinion IDs in the date range with court validation.
 
         This method queries the clusters endpoint (not opinions) because:
         - The opinions endpoint with cluster__date_filed filters causes timeouts
@@ -189,9 +104,16 @@ class SCOTUSIngester(DocumentIngester):
 
         The method includes:
         - Count validation (SCOTUS typically issues 60-80 opinions per term)
+        - Court validation at cluster level (validates docket.court_id == "scotus")
+        - Cluster metadata caching for later use
         - Pagination handling (20 results per page)
         - Rate limiting between requests
         - Safety checks to prevent runaway API calls
+
+        Performance:
+        - Validates court ONCE per cluster (not once per opinion)
+        - Caches cluster data to avoid refetching during processing
+        - Reduces API calls by ~67% compared to opinion-level validation
 
         Returns:
             List of opinion IDs to process
@@ -199,12 +121,14 @@ class SCOTUSIngester(DocumentIngester):
         logger.info("Fetching opinion IDs from CourtListener clusters API...")
         logger.info(f"Date range: {self.start_date} to {self.end_date}")
 
-        all_opinion_ids = []
+        all_opinion_ids: List[str] = []
+        validated_clusters = 0
+        skipped_clusters = 0
 
         # Query clusters endpoint instead of opinions endpoint
         # This avoids the timeout issues with complex opinion filters
         url = f"{self.api_client.base_url}/clusters/"
-        params = {
+        params: Dict[str, Any] = {
             "docket__court": "scotus",  # Supreme Court only
             # Most recent first, with id as tie-breaker for consistent ordering
             # Per API docs: tie-breaker prevents inconsistent results when
@@ -294,7 +218,46 @@ class SCOTUSIngester(DocumentIngester):
                     for cluster in results:
                         clusters_processed += 1
 
-                        # Each cluster has a sub_opinions field with URLs
+                        # COURT VALIDATION: Verify this cluster belongs to SCOTUS
+                        # This defends against API index inconsistencies by checking
+                        # the docket's court_id directly
+                        docket_url = cluster.get("docket")
+                        if not docket_url:
+                            logger.warning(
+                                f"Cluster {cluster.get('id')} has no docket URL, skipping"
+                            )
+                            skipped_clusters += 1
+                            continue
+
+                        try:
+                            # Fetch docket to verify court_id
+                            # Rate limiting before docket request
+                            time.sleep(self.api_client._get_rate_limit_delay())
+                            docket_data = self.api_client.get_docket(docket_url)
+                            court_id = docket_data.get("court_id")
+
+                            if court_id != "scotus":
+                                case_name = cluster.get("case_name", "Unknown Case")
+                                logger.warning(
+                                    f"Skipping cluster {cluster.get('id')} - "
+                                    f"belongs to court '{court_id}' (not scotus). "
+                                    f"Case: {case_name}. "
+                                    f"This indicates an API index inconsistency."
+                                )
+                                skipped_clusters += 1
+                                continue
+
+                            # Court validated - this is a genuine SCOTUS cluster
+                            validated_clusters += 1
+
+                        except Exception as e:
+                            logger.error(
+                                f"Error validating court for cluster {cluster.get('id')}: {e}"
+                            )
+                            skipped_clusters += 1
+                            continue
+
+                        # Extract opinion IDs from sub_opinions
                         sub_opinions = cluster.get("sub_opinions", [])
 
                         for opinion_url in sub_opinions:
@@ -303,6 +266,11 @@ class SCOTUSIngester(DocumentIngester):
                             try:
                                 opinion_id = opinion_url.rstrip("/").split("/")[-1]
                                 all_opinion_ids.append(str(opinion_id))
+
+                                # Cache cluster data for this opinion
+                                # This avoids refetching cluster data during processing
+                                self.cluster_cache[str(opinion_id)] = cluster
+
                             except (IndexError, AttributeError) as e:
                                 logger.warning(
                                     f"Could not extract opinion ID from "
@@ -320,7 +288,9 @@ class SCOTUSIngester(DocumentIngester):
                     logger.info(
                         f"Fetched page {page}: {len(results)} clusters, "
                         f"{len(all_opinion_ids)} total opinions "
-                        f"(clusters: {clusters_processed}/"
+                        f"(validated: {validated_clusters}, "
+                        f"skipped: {skipped_clusters}, "
+                        f"processed: {clusters_processed}/"
                         f"{total_count or 'unknown'})"
                     )
 
@@ -337,10 +307,18 @@ class SCOTUSIngester(DocumentIngester):
                         )
                         break
 
+            # Each opinion belongs to exactly one cluster per CourtListener's data model
+            # (Court → Docket → Cluster → Opinions hierarchy is strictly one-to-many)
+            # Therefore, opinion IDs are guaranteed unique - no deduplication needed
+
             logger.info(
                 f"Successfully fetched {len(all_opinion_ids)} opinion IDs "
-                f"from {clusters_processed} clusters"
+                f"from {validated_clusters} validated SCOTUS clusters "
+                f"({skipped_clusters} non-SCOTUS clusters skipped)"
             )
+
+            # Log cluster cache size
+            logger.info(f"Cached metadata for {len(self.cluster_cache)} opinions")
 
         except Exception as e:
             logger.error(f"Error fetching opinion IDs: {e}")
@@ -358,17 +336,20 @@ class SCOTUSIngester(DocumentIngester):
         batch_embeddings: List[List[float]],
     ) -> bool:
         """
-        Process a single Supreme Court opinion with court validation.
+        Process a single Supreme Court opinion using cached cluster data.
 
         This method:
-        1. Validates the opinion belongs to SCOTUS (court_id check)
-        2. Fetches the opinion from CourtListener
-        3. Builds payloads (chunking + metadata extraction)
-        4. Generates embeddings
-        5. Adds to batch lists
+        1. Retrieves cached cluster data (validated during _fetch_document_ids())
+        2. Fetches the opinion from CourtListener with field selection
+        3. Passes cluster data to avoid redundant API call
+        4. Builds payloads (chunking + metadata extraction)
+        5. Generates embeddings
+        6. Adds to batch lists
 
-        The court validation step defends against API index inconsistencies
-        by directly verifying the docket's court_id before processing.
+        Performance Optimization:
+            Court validation already happened in _fetch_document_ids(), so this
+            method skips validation and uses cached cluster data to avoid
+            redundant API calls. This reduces API calls per opinion from 4 to 1.
 
         Args:
             doc_id: Opinion ID to process
@@ -378,10 +359,10 @@ class SCOTUSIngester(DocumentIngester):
         Returns:
             True if successful, False if failed
 
-        Validation Failure Handling:
-            - Non-SCOTUS opinions are logged with WARNING level
-            - Marked as failed in progress tracker with descriptive error
-            - Not processed further (no embedding/storage overhead)
+        Error Handling:
+            - If cluster data not found in cache, falls back to fetching
+            - API failures are logged and marked as failed in progress tracker
+            - Processing failures don't block other opinions in batch
         """
         start_time = time.time()
 
@@ -389,25 +370,27 @@ class SCOTUSIngester(DocumentIngester):
             # Mark as processing
             self.progress_tracker.mark_processing(doc_id)
 
-            # VALIDATION: Verify this opinion belongs to SCOTUS
-            # This defends against API index inconsistencies where non-SCOTUS
-            # opinions may temporarily appear in SCOTUS-filtered queries
-            logger.debug(f"Validating court for opinion {doc_id}")
-            is_valid, error_message = self._validate_court(doc_id)
+            # Retrieve cached cluster data
+            # This was populated during _fetch_document_ids() and already validated
+            cluster_data = self.cluster_cache.get(doc_id)
 
-            if not is_valid:
-                logger.warning(f"Skipping opinion {doc_id}: {error_message}")
-                self.progress_tracker.mark_failed(doc_id, error_message)
-                return False
+            if not cluster_data:
+                # This shouldn't happen if _fetch_document_ids() worked correctly,
+                # but we handle it gracefully by proceeding without cluster data
+                logger.warning(
+                    f"No cached cluster data for opinion {doc_id}, "
+                    f"will fetch from API (slower)"
+                )
 
-            # Fetch opinion data
+            # Fetch opinion data with cached cluster data
+            # This skips the cluster API call since we already have the data
             logger.debug(f"Fetching opinion {doc_id}")
-            document = self.api_client.get_document(doc_id)
+            document = self.api_client.get_document(doc_id, cluster_data=cluster_data)
 
             # Log the document being ingested
             if document:
-                opinion_url = document.metadata.get("url", f"Opinion ID: {doc_id}")
-                logger.info(f"Ingesting SCOTUS opinion: {opinion_url}")
+                case_name = document.title or f"Opinion ID: {doc_id}"
+                logger.info(f"Ingesting SCOTUS opinion: {case_name}")
 
             if not document:
                 raise ValueError(f"Could not fetch document for opinion {doc_id}")

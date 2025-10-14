@@ -126,7 +126,37 @@ class TestCourtListenerClient:
             "html_columbia": None,
             "html_anon_2020": None,
             "xml_harvard": None,
-            "html_with_citations": None,
+            "html_with_citations": """<pre class="inline">SUPREME COURT OF THE UNITED STATES
+
+                TEST CASE, Petitioner v. UNITED STATES
+
+                No. 22-123
+
+                [January 15, 2024]
+
+                CHIEF JUSTICE ROBERTS delivered the opinion of the Court.
+
+                This case presents the question of whether unit tests are essential
+                for software quality. We hold that they are.
+
+                I
+
+                The facts of this case are straightforward. Petitioner developed
+                software without comprehensive unit tests, leading to numerous bugs
+                and system failures. The government brought suit under the Software
+                Quality Act of 2023.
+
+                II
+
+                We have long recognized that testing is fundamental to software
+                reliability. See <a href="/opinion/123/">Previous Case v. United States</a>, 123 U.S. 456 (2020).
+                Unit tests provide the first line of defense against bugs.
+
+                III
+
+                For these reasons, we affirm the judgment of the Court of Appeals.
+
+                It is so ordered.</pre>""",
             "extracted_by_ocr": False,
             "opinions_cited": [],
             "cluster_id": 789012,
