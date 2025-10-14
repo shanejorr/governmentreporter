@@ -514,6 +514,116 @@ class TestChunkSupremeCourtOpinion:
         assert isinstance(chunks, list)
         assert syllabus is None  # No syllabus in empty text
 
+    @patch("governmentreporter.processors.chunking.count_tokens")
+    @patch("governmentreporter.processors.chunking.base.tiktoken")
+    def test_chunk_scotus_opinion_with_subsections(self, mock_tiktoken, mock_count):
+        """
+        Test chunking SCOTUS opinion with hierarchical subsections.
+
+        Verifies that Roman numeral and letter subsections are detected
+        and properly labeled in the plain text format.
+
+        Args:
+            mock_tiktoken: Mock tiktoken module
+            mock_count: Mock token counting
+        """
+        # Arrange
+        mock_encoder = Mock()
+        mock_tiktoken.get_encoding.return_value = mock_encoder
+        mock_count.return_value = 100  # Sufficient tokens
+
+        # Plain text format after HTML stripping
+        # Note: Roman numerals appear inline, not as standalone lines
+        opinion_text = """
+        Syllabus
+
+        The Court addresses whether the statute is constitutional.
+        Held: The statute is constitutional. Pp. 10-25.
+
+        Justice Thomas delivered the opinion of the Court.
+
+        We granted certiorari to resolve this important question.
+        I A The facts are as follows. The plaintiff filed suit in 2020.
+        This case involves complex constitutional questions.
+
+        II Under our precedent, the statute passes strict scrutiny.
+        The government has a compelling interest in this regulation.
+
+        Justice Kagan, with whom Justice Sotomayor joins, concurring.
+
+        I join the Court's opinion and write separately to emphasize
+        the historical context of this decision.
+
+        Justice Alito, dissenting.
+
+        I respectfully dissent because the majority misapplies precedent.
+        """
+
+        # Act
+        chunks, syllabus = chunk_supreme_court_opinion(opinion_text)
+
+        # Assert
+        assert len(chunks) > 0
+        assert syllabus is not None
+
+        # Check that different section types are detected
+        section_labels = [chunk[1].get("section_label") for chunk in chunks]
+
+        # Should have Syllabus, Majority, Concurring, and Dissenting sections
+        assert any("Syllabus" in label for label in section_labels)
+        assert any("Majority" in label for label in section_labels)
+        assert any("Concurring" in label for label in section_labels)
+        assert any("Dissenting" in label for label in section_labels)
+
+    @patch("governmentreporter.processors.chunking.count_tokens")
+    @patch("governmentreporter.processors.chunking.base.tiktoken")
+    def test_chunk_scotus_opinion_concur_dissent(self, mock_tiktoken, mock_count):
+        """
+        Test detection of "concurring in part and dissenting in part" opinions.
+
+        Verifies the negative lookahead patterns work correctly to distinguish
+        between regular concurring/dissenting and mixed opinions.
+
+        Args:
+            mock_tiktoken: Mock tiktoken module
+            mock_count: Mock token counting
+        """
+        # Arrange
+        mock_encoder = Mock()
+        mock_tiktoken.get_encoding.return_value = mock_encoder
+        mock_count.return_value = 100
+
+        opinion_text = """
+        Syllabus
+
+        The Court decides this important case.
+
+        Justice Roberts delivered the opinion of the Court.
+
+        We hold that the statute is constitutional.
+
+        Justice Breyer, concurring in part and dissenting in part.
+
+        I agree with Parts I and II of the Court's opinion, but
+        respectfully dissent from Part III.
+        """
+
+        # Act
+        chunks, syllabus = chunk_supreme_court_opinion(opinion_text)
+
+        # Assert
+        assert len(chunks) > 0
+
+        # Check that the concur/dissent section is detected
+        section_labels = [chunk[1].get("section_label") for chunk in chunks]
+
+        # Should NOT be labeled as just "Concurring" or "Dissenting"
+        # Should be labeled as "Concurring in Part, Dissenting in Part"
+        assert any(
+            "Concurring in Part" in label and "Dissenting" in label
+            for label in section_labels
+        )
+
 
 class TestChunkExecutiveOrder:
     """
@@ -613,18 +723,19 @@ def sample_scotus_text():
 
     Returns:
         str: Sample SCOTUS opinion text with typical structure
+            (plain text format after HTML stripping)
     """
     return """
     Syllabus
 
     The petitioner challenges the constitutionality of...
 
-    CHIEF JUSTICE ROBERTS delivered the opinion of the Court.
+    Justice Roberts delivered the opinion of the Court.
 
     This case presents the question whether...
     We hold that the statute does not violate...
 
-    JUSTICE SOTOMAYOR, dissenting.
+    Justice Sotomayor, dissenting.
 
     I respectfully dissent from the Court's holding...
     """

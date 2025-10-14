@@ -38,7 +38,143 @@ import httpx
 import pytest
 
 from governmentreporter.apis.base import Document
-from governmentreporter.apis.court_listener import CourtListenerClient
+from governmentreporter.apis.court_listener import (
+    CourtListenerClient,
+    strip_html_tags,
+)
+
+
+class TestStripHtmlTags:
+    """
+    Test suite for the strip_html_tags utility function.
+
+    This function removes HTML tags and entities from CourtListener's
+    html_with_citations field to produce clean plain text for chunking.
+
+    Python Learning Notes:
+        - HTML parsing is tricky with nested tags and entities
+        - Whitespace normalization prevents excessive blank lines
+        - Test with realistic HTML from CourtListener API
+    """
+
+    def test_strip_simple_html(self):
+        """
+        Test stripping basic HTML tags.
+
+        Verifies that simple HTML tags are removed while preserving text.
+        """
+        # Arrange
+        html = '<pre class="inline">This is a test.</pre>'
+
+        # Act
+        result = strip_html_tags(html)
+
+        # Assert
+        assert result == "This is a test."
+
+    def test_strip_citation_spans(self):
+        """
+        Test stripping citation span tags with links.
+
+        Verifies that citation markup is removed but citation text is kept.
+        """
+        # Arrange
+        html = (
+            'In <span class="citation" data-id="123">'
+            '<a href="/opinion/123/">Brown v. Board</a></span>, '
+            "the Court held..."
+        )
+
+        # Act
+        result = strip_html_tags(html)
+
+        # Assert
+        assert "Brown v. Board" in result
+        assert "the Court held" in result
+        assert "<span" not in result
+        assert "<a" not in result
+
+    def test_strip_html_entities(self):
+        """
+        Test decoding HTML entities.
+
+        Verifies that HTML entities like &nbsp; and &apos; are decoded.
+        """
+        # Arrange
+        html = "The Court&apos;s decision was&nbsp;unanimous."
+
+        # Act
+        result = strip_html_tags(html)
+
+        # Assert
+        assert "Court's" in result or "Court'" in result
+        assert "&apos;" not in result
+        assert "&nbsp;" not in result
+
+    def test_strip_nested_html(self):
+        """
+        Test stripping nested HTML tags.
+
+        Verifies that nested HTML structures are properly cleaned.
+        """
+        # Arrange
+        html = """
+        <pre class="inline">
+            <span class="page-number">416</span>
+            OCTOBER TERM, 2023
+            <p>Syllabus</p>
+        </pre>
+        """
+
+        # Act
+        result = strip_html_tags(html)
+
+        # Assert
+        assert "416" in result
+        assert "OCTOBER TERM, 2023" in result
+        assert "Syllabus" in result
+        assert "<pre" not in result
+        assert "<span" not in result
+        assert "<p>" not in result
+
+    def test_strip_empty_html(self):
+        """
+        Test stripping empty HTML.
+
+        Ensures empty or whitespace-only HTML returns empty string.
+        """
+        # Arrange & Act
+        result1 = strip_html_tags("")
+        result2 = strip_html_tags("<pre></pre>")
+        result3 = strip_html_tags("   ")
+
+        # Assert
+        assert result1 == ""
+        assert result2.strip() == ""
+        assert result3.strip() == ""
+
+    def test_strip_html_preserves_structure(self):
+        """
+        Test that text structure is preserved after stripping.
+
+        Verifies that line breaks and paragraph structure are maintained.
+        """
+        # Arrange
+        html = """
+        <pre class="inline">
+        Paragraph one.
+
+        Paragraph two.
+        </pre>
+        """
+
+        # Act
+        result = strip_html_tags(html)
+
+        # Assert
+        assert "Paragraph one" in result
+        assert "Paragraph two" in result
+        # Should preserve some separation between paragraphs
 
 
 class TestCourtListenerClient:

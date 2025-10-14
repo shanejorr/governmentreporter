@@ -43,17 +43,23 @@ def chunk_supreme_court_opinion(
 
     Section Detection:
         The function uses regex patterns to identify section boundaries:
-        - Syllabus: ^SYLLABUS or ^Syllabus
-        - Majority: "delivered the opinion of the Court" or "Per Curiam"
-        - Concurrence/Dissent: "JUSTICE X, concurring/dissenting"
+        - Syllabus: Standalone "Syllabus" heading
+        - Majority: "Justice X delivered the opinion of the Court" or "Per Curiam" or
+          "Opinion of the Court" header
+        - Concurrence/Dissent: "Justice X, concurring/dissenting"
+
+    Text Format:
+        - Input text is plain text (HTML already stripped by court_listener.py)
+        - Patterns match against plain text with normalized whitespace
+        - Original HTML with citations was already processed before chunking
 
     Special Handling:
         - Syllabus is extracted separately for LLM analysis
-        - Roman numeral subheadings (I., II., III.) create boundaries
+        - Roman numeral subheadings (I, II, III) create boundaries
         - Overlap is applied within sections but not across boundaries
 
     Args:
-        text (str): Full text of the Supreme Court opinion
+        text (str): Full text of the Supreme Court opinion (plain text, HTML already stripped)
 
     Returns:
         Tuple containing:
@@ -65,11 +71,8 @@ def chunk_supreme_court_opinion(
         SYLLABUS
         The Court held that...
 
-        JUSTICE ROBERTS delivered the opinion of the Court.
+        Justice Roberts delivered the opinion of the Court.
         [Main opinion text...]
-
-        JUSTICE THOMAS, concurring.
-        [Concurring opinion...]
         '''
 
         chunks, syllabus = chunk_supreme_court_opinion(opinion_text)
@@ -91,27 +94,39 @@ def chunk_supreme_court_opinion(
         ov,
     )
 
-    # Section detection patterns
+    # Section detection patterns for plain text (HTML already stripped)
     patterns = {
-        "syllabus": re.compile(r"^\s*SYLLABUS\s*$", re.MULTILINE | re.IGNORECASE),
+        # Syllabus appears as a heading after case citation info
+        # In plain text: "... OCTOBER TERM, 2023 Syllabus CONSUMER FINANCIAL..."
+        "syllabus": re.compile(r"\bSyllabus\b", re.IGNORECASE),
+        # Majority opinion markers
+        # "Justice Thomas delivered the opinion of the Court."
+        # Also matches "Per Curiam" or "Opinion of the Court" headers
         "majority": re.compile(
-            r"^\s*(?:(?:Per Curiam\.)|"
-            r"(?:JUSTICE\s+[A-Z][A-Za-z\-]+\s+delivered the opinion of the Court\.?)|"
-            r"(?:Opinion of the Court))",
-            re.MULTILINE | re.IGNORECASE,
+            r"(?:Justice\s+\w+\s+delivered\s+the\s+opinion\s+of\s+the\s+Court\.?|"
+            r"Per\s+Curiam\.?)",
+            re.IGNORECASE,
         ),
+        # Concurring opinions - "Justice X, concurring"
+        # May include "with whom Justice Y joins"
+        # Uses negative lookahead to exclude "concurring in part and dissenting"
         "concurring": re.compile(
-            r"^\s*JUSTICE\s+[A-Z][A-Za-z\-]+,\s+(?:with whom.*?joins?,\s+)?concurring",
-            re.MULTILINE | re.IGNORECASE,
+            r"Justice\s+\w+,\s+(?:with\s+whom.*?joins?,\s+)?concurring"
+            r"(?!\s+in\s+part\s+and\s+dissenting)",
+            re.IGNORECASE,
         ),
+        # Dissenting opinions - "Justice X, dissenting"
+        # Uses negative lookahead to exclude "dissenting in part"
         "dissenting": re.compile(
-            r"^\s*JUSTICE\s+[A-Z][A-Za-z\-]+,\s+(?:with whom.*?joins?,\s+)?dissenting",
-            re.MULTILINE | re.IGNORECASE,
+            r"Justice\s+\w+,\s+(?:with\s+whom.*?joins?,\s+)?dissenting"
+            r"(?!\s+in\s+part)",
+            re.IGNORECASE,
         ),
+        # Concurring in part and dissenting in part
         "concur_dissent": re.compile(
-            r"^\s*JUSTICE\s+[A-Z][A-Za-z\-]+,\s+(?:with whom.*?joins?,\s+)?"
-            r"concurring in part and dissenting in part",
-            re.MULTILINE | re.IGNORECASE,
+            r"Justice\s+\w+,\s+(?:with\s+whom.*?joins?,\s+)?concurring\s+"
+            r"in\s+part\s+and\s+dissenting\s+in\s+part",
+            re.IGNORECASE,
         ),
     }
 
@@ -170,19 +185,21 @@ def chunk_supreme_court_opinion(
         if section_type == "syllabus":
             # Find the actual Syllabus content (after the header)
             syllabus_lines = section_text.split("\n")
-            syllabus_content = "\n".join(syllabus_lines[1:]).strip()  # Skip header line
+            # Skip header line and get content
+            syllabus_content = "\n".join(syllabus_lines[1:]).strip()
             if syllabus_content:
                 syllabus_text = syllabus_content
 
-        # Handle hierarchical subsections within opinions (per Supreme Court formatting guide)
-        # According to the parsing guide:
-        # - Roman numerals (I, II, III) = Level 1 sections (20+ leading spaces, no period)
-        # - Capital letters (A, B, C) = Level 2 subsections (20+ leading spaces)
-        # - Arabic numerals (1, 2, 3) = Level 3 sub-subsections (20+ leading spaces)
-
-        # Pattern matches lines with 20+ spaces followed by section marker alone
-        # Matches Roman numerals (I, II, III), capital letters (A, B, C), or numbers (1, 2, 3)
-        section_pattern = re.compile(r"^\s{20,}(?:[IVX]+|[A-Z]|\d+)\s*$", re.MULTILINE)
+        # Handle hierarchical subsections within opinions
+        # In plain text after HTML stripping, sections appear inline:
+        # - Roman numerals (I, II, III, IV, V, etc.) = Level 1 sections
+        # - Capital letters (A, B, C) = Level 2 subsections
+        # - Arabic numerals (1, 2, 3) = Level 3 sub-subsections
+        #
+        # Pattern matches section markers that appear with surrounding whitespace
+        # Examples: "...text. I A Page Proof..." or "...reverse. II Under the..."
+        # Match Roman numerals or single capital letters with word boundaries
+        section_pattern = re.compile(r"\s+([IVX]+|[A-Z])\s+(?=[A-Z]|\w)", re.MULTILINE)
         subsections = list(section_pattern.finditer(section_text))
 
         if subsections and len(subsections) > 1:
@@ -196,8 +213,9 @@ def chunk_supreme_court_opinion(
                 )
                 subsection_text = section_text[subsection_start:subsection_end].strip()
 
-                # Create section label with the section marker (Roman numeral, letter, or number)
-                section_marker = match.group().strip()
+                # Create section label with section marker
+                # (Roman numeral, letter, or number)
+                section_marker = match.group(1).strip()
                 subsection_label = f"{section_label} - Part {section_marker}"
 
                 # Chunk the subsection with SCOTUS config
