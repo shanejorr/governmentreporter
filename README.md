@@ -12,7 +12,7 @@ uv sync
 uv run governmentreporter server
 
 # Ingest both Supreme Court opinions and Executive Orders
-uv run governmentreporter ingest all --start-date 2025-01-01 --end-date 2025-12-31
+uv run governmentreporter ingest all --start-date 2024-01-01 --end-date 2025-12-31
 
 # Or ingest individually:
 uv run governmentreporter ingest scotus --start-date 2025-01-01 --end-date 2025-12-31
@@ -275,7 +275,7 @@ uv run python -m governmentreporter.server
 uv run governmentreporter ingest all --start-date 2024-01-01 --end-date 2024-12-31
 
 # Keep system awake during long ingestion (macOS)
-caffeinate -i uv run governmentreporter ingest all --start-date 2024-01-01 --end-date 2024-12-31
+caffeinate -i uv run governmentreporter ingest all --start-date 2024-01-01 --end-date 2025-12-31
 
 # Or ingest individually:
 # Ingest Supreme Court opinions for a date range

@@ -162,6 +162,7 @@ The project follows a modular `src/` layout with main source code in `src/govern
 Reference files in `scratch/` directory show actual API response structures:
 
 **CourtListener API (SCOTUS):**
+- API Documentation: `scratch/courtlistener_caselaw_api.md` - CourtListener API documentation for fetching US Supreme Court decisions
 - Clusters Endpoint: `scratch/courtlistener_clusters_endpoint.json` - Case metadata, citations, vote counts
 - Opinions Endpoint: `scratch/courtlistener_opinion_endpoint.json` - Opinion metadata
 - Opinion Plain Text: `scratch/courtlistener_opinion_plain_text.json` - Full opinion text from 'plain_text' field

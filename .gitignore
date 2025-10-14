@@ -99,3 +99,4 @@ test_qdrant_db/
 .env.example
 custom_progress.db
 ingestion.db
+scotus_ingestion.db
