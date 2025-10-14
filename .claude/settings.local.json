@@ -5,7 +5,13 @@
       "Bash(git push:*)",
       "Bash(docker-compose logs:*)",
       "Bash(curl:*)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(python3:*)",
+      "Bash(timeout 30 uv run:*)",
+      "Bash(echo:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(unset QDRANT_HOST)",
+      "Bash(unset QDRANT_PORT)"
     ],
     "deny": [],
     "ask": [],
