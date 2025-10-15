@@ -125,6 +125,7 @@ class SCOTUSIngester(DocumentIngester):
             "docket__court": "scotus",  # Filter to SCOTUS only (reliable)
             "date_filed__gte": self.start_date,
             "date_filed__lte": self.end_date,
+            "precedential_status": "Published",  # Only published opinions
             # Most recent first, with id as tie-breaker for consistent ordering
             # Per API docs: tie-breaker prevents inconsistent results when
             # multiple clusters have the same date_filed
